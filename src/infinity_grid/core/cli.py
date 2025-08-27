@@ -253,6 +253,26 @@ def cli(ctx: Context, **kwargs: dict) -> None:
     ),
 )
 @option_group(
+    "Additional options",
+    option(
+        "--skip-price-timeout",
+        is_flag=True,
+        default=False,
+        help="""
+        Skip checking if there was a price update in the last 10 minutes. By
+        default, the bot will exit if no recent price data is available. This
+        might be useful for assets that aren't traded that often.
+        """,
+    ),
+    option(
+        "--dry-run",
+        required=False,
+        is_flag=True,
+        default=False,
+        help="Enable dry-run mode which do not execute trades.",
+    ),
+)
+@option_group(
     "Notification Options",
     option(
         "--telegram-token",
@@ -313,26 +333,6 @@ def cli(ctx: Context, **kwargs: dict) -> None:
         ~IsSet("sqlite_file") & ~IsSet("in_memory"),
         then=require_all,
         else_=accept_none,
-    ),
-)
-@option_group(
-    "Additional options",
-    option(
-        "--skip-price-timeout",
-        is_flag=True,
-        default=False,
-        help="""
-        Skip checking if there was a price update in the last 10 minutes. By
-        default, the bot will exit if no recent price data is available. This
-        might be useful for assets that aren't traded that often.
-        """,
-    ),
-    option(
-        "--dry-run",
-        required=False,
-        is_flag=True,
-        default=False,
-        help="Enable dry-run mode which do not execute trades.",
     ),
 )
 @pass_context

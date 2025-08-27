@@ -283,6 +283,7 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
         currency.
 
         FIXME: Is there a way to get the balances of the asset pair directly?
+        FIXME: Respect balances held by auto earn
         """
         custom_base, custom_quote = self.__retrieve_custom_base_quote_names()
 
@@ -353,8 +354,6 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
 
     @cached_property
     def rest_altname(self: Self) -> str:
-        # base_currency, quote_currency = self.ws_symbol.split("/")
-        # return f"{base_currency}{quote_currency}"
         return self.ws_altname
 
     def create_order(

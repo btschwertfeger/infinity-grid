@@ -191,9 +191,9 @@ Technical Breakdown:
   both upward trends (through sell orders) and downward corrections (through
   continued accumulation).
 
-.. NOTE:: ⚠️ It also starts selling the already existing base currency above the
-          current price. This should be kept in mind when choosing this
-          strategy.
+.. NOTE:: ⚠️ The SWING strategy also starts selling the already existing base
+          currency above the current price. This should be kept in mind when
+          choosing this strategy.
 
 .. _strategies-cdca-section:
 

@@ -10,17 +10,16 @@
 Need 2 Knows
 ============
 
-This is a section of the documentation that contains important information
-that you need to know. It is important to read this section before you
-begin using the software.
+This is a section of the documentation that contains some useful information
+that might be worth noting.
 
 What happens to partially filled buy orders?
 --------------------------------------------
 
-The algorithm manages its orders in lean way, meaning partially filled buy orders
-that may get cancelled will be remembered. This is done internally by saving the
-order price and filled amount in order to place a sell order at a higher price
-in the future.
+The algorithm manages its orders in lean way, meaning partially filled buy
+orders that may get cancelled will be remembered. This is done internally by
+saving the order price and filled amount in order to place a sell order at a
+higher price in the future.
 
 The log shows closed connection but the algorithm is still running
 ------------------------------------------------------------------
@@ -43,8 +42,8 @@ Hidden tax benefits
              Users should conduct their own research.
 
 In many countries, the tax principle of First In, First Out (FIFO) is applied to
-cryptocurrency trading. The ``infinity-grid`` benefits from this, as the
-first purchased assets are the first to be sold. This means that in sideways or
+cryptocurrency trading. The ``infinity-grid`` benefits from this, as the first
+purchased assets are the first to be sold. This means that in sideways or
 downward-trending markets over the medium to long term, sell orders may
 liquidate assets bought at higher price levels (from a tax perspective).
 Consequently, even if actual profits are made by selling at a higher price than

@@ -6,11 +6,13 @@
 ..
 .. LINKS
 
-.. _Kraken:                            https://pro.kraken.com
-.. _python-kraken-sdk:                 https://github.com/btschwertfeger/python-kraken-sdk
 .. _infinity-grid:              https://github.com/btschwertfeger/infinity-grid
 .. _infinity-grid/issues:       https://github.com/btschwertfeger/infinity-grid/issues
 .. _infinity-grid/discussions:  https://github.com/btschwertfeger/infinity-grid/discussions
+
+.. _Kraken:                            https://pro.kraken.com
+.. _python-kraken-sdk:                 https://github.com/btschwertfeger/python-kraken-sdk
+.. _kraken-infinity-grid:              https://github.com/btschwertfeger/kraken-infinity-grid
 
 .. BADGES
 

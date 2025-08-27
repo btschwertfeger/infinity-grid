@@ -346,8 +346,8 @@ class GridStrategyBase:
         # Append orders to local orderbook in case they are not saved yet
         self._assign_all_pending_transactions()
 
-        # Try to place missing sell orders that not get through because
-        # of "missing funds".
+        # Try to place missing sell orders that not get through because of
+        # "missing funds".
         self.__add_missed_sell_orders()
 
         # Update the orderbook, check for closed, filled, cancelled trades,
@@ -410,7 +410,7 @@ class GridStrategyBase:
         return [
             order
             for order in self._rest_api.get_open_orders(userref=self._config.userref)
-            if order.pair == self._rest_api.rest_symbol
+            if order.pair == self._rest_api.rest_altname
         ]
 
     def __update_order_book_handle_closed_order(

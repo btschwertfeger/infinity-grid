@@ -16,8 +16,6 @@ This module is the configuration for the Sphinx documentation building process.
 
 import sys
 from pathlib import Path
-from shutil import copyfile
-from typing import Any
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -35,12 +33,12 @@ with Path("links.rst").open(encoding="utf-8") as f:
     rst_epilog += f.read()
 
 
-def setup(app: Any) -> None:  # noqa: ARG001,ANN401
-    """Setup function to modify doc building"""
-    copyfile(
-        Path("..") / "tools" / "backtesting" / "Backtesting.ipynb",
-        Path("Backtesting.ipynb"),
-    )
+# def setup(app: Any) -> None:
+#     """Setup function to modify doc building"""
+#     copyfile(
+#         Path("..") / "tools" / "backtesting" / "Backtesting.ipynb",
+#         Path("Backtesting.ipynb"),
+#     )
 
 
 # -- General configuration ---------------------------------------------------

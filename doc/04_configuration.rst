@@ -37,33 +37,33 @@ Choosing the right base and quote currency
 
 The base and quote currency should be chosen wisely. The base currency is the
 currency you want to trade with, and the quote currency is the currency you want
-to trade against. The base currency should be chosen based on your trading
-preferences and the liquidity of the market. The quote currency should be chosen
-based on your trading preferences and the volatility of the market. Currency
-pairs with high volatility can lead to higher profits but also to higher risks.
+to trade against. The base and quote currencies should be chosen based on your
+trading preferences and the liquidity of the market. Currency pairs with high
+volatility can lead to higher profits but also to higher risks.
 
 Choosing the optimal interval
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The interval defines the percentage difference between the buy and sell orders.
 The interval should be chosen based on the volatility of the market. A higher
-interval, e.g., 4 % leads to a higher profits between buy and selling an asset,
+interval, e.g., 4 % leads to higher profits when selling an asset,
 and reduces the amount of orders in a moderate volatile market. A lower
 interval, e.g., 2 % leads to a higher amount of orders and a lower profit
-margin.
+margin but might be more profitable in markets that oscillate in a smaller
+interval.
 
 Consequently the interval should be chosen based on the volatility of the market
 and the risk you are willing to take. A higher interval is less risky but since
-prices not always reach the buy and sell orders (... since markets don't go
-e.g., 4 % up and down), it can lead to less executed orders resulting in lower
-profits. In contrast to that, a lower interval is more risky, as prices can rise
-and fall rapidly but can lead to a higher profits if the market's volatility
-matches the grid interval.
+prices not always reach the placed buy or sell orders (... since markets don't
+go exactly e.g., 4 % up and down), it can lead to less executed orders resulting
+in lower profits. In contrast to that, a lower interval is more risky, as prices
+can rise and fall rapidly but can lead to a higher profits if the market's
+volatility matches the grid interval.
 
 .. NOTE:: The value passed to the interval is a percentage value. For example,
           an interval of 4 % means that the buy and sell orders are placed 4 %
           apart from each other. In this case, you have to pass a value of
-          ``0.04`` to ``--interval``, or ``INFINITY_GRID_RUN_INTERVAL``.
+          ``0.04`` to ``--interval`` or ``INFINITY_GRID_RUN_INTERVAL``.
 
 Choosing the optimal amount per grid
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -73,7 +73,7 @@ interval. It should be chosen based on the amount of the quote currency you want
 to invest in the market. For example if you want to invest 100 USD per grid
 interval (i.e. per trade), the amount per grid should be set to 100. Combining
 this amount with an interval of 4 % would result in a profit of about 4 USD per
-trade (depending on the strategy used).
+trade (excluding fees) depending on the strategy used.
 
 When choosing the amount per grid, make sure to consider the amount of the quote
 currency in our account, since depending on the number of concurrent open buy
@@ -103,11 +103,11 @@ open buy orders.
 Setting a custom fee
 ~~~~~~~~~~~~~~~~~~~~
 
-Another aspect to consider is the fee that is charged by the exchanges.
-The fee is usually a percentage of the traded amount. If the fee is not set
-during program start, the highest taker fee for that currency pair used which
-doesn't mean that the highest fee is paid. It is used internally to calculate
-order sizes, prices, and ensures that profits are calculated correctly.
+Lastly, exchanges charge fees. The fee is usually a percentage of the traded
+amount. If the fee is not set during program start, the highest taker fee for
+that currency pair is assumed which doesn't mean that the highest fee is paid.
+It is used internally to calculate order sizes, prices, and ensures that profits
+are calculated correctly.
 
 Setting a custom fee via the ``--fee`` or ``INFINITY_GRID_RUN_FEE`` option
 enables, depending on the strategy, a more accurate profit calculation. For the
@@ -175,7 +175,7 @@ run the trading algorithm. The CLI is based on the `Click
 interact with the algorithm.
 
 
-.. click:: infinity_grid.cli:cli
+.. click:: infinity_grid.core.cli:cli
    :prog: infinity-grid
    :nested: full
 
@@ -195,12 +195,15 @@ naming convention.
     * - Variable
       - Type
       - Description
-    * - ``INFINITY_GRID_API_KEY``
+    * - ``INFINITY_GRID_API_PUBLIC_KEY``
       - ``str``
-      - Your API key.
-    * - ``INFINITY_GRID_SECRET_KEY``
+      - The API public key provided by the exchange.
+    * - ``INFINITY_GRID_API_SECRET_KEY``
       - ``str``
-      - Your secret key.
+      - The API secret key provided by the exchange.
+    * - ``INFINITY_GRID_RUN_EXCHANGE``
+      - ``str``
+      - The exchange to trade on.
     * - ``INFINITY_GRID_RUN_NAME``
       - ``str``
       - The name of the instance. Can be any name that is used to differentiate
@@ -213,9 +216,6 @@ naming convention.
     * - ``INFINITY_GRID_BOT_VERBOSE``
       - ``int`` / (``-v``, ``-vv``)
       - Enable verbose logging.
-    * - ``INFINITY_GRID_DRY_RUN``
-      - ``bool``
-      - Enable dry-run mode (no actual trades).
     * - ``INFINITY_GRID_RUN_BASE_CURRENCY``
       - ``str``
       - The base currency e.g., ``BTC`` or ``ETH``.
@@ -245,18 +245,20 @@ naming convention.
     * - ``INFINITY_GRID_RUN_STRATEGY``
       - ``str``
       - The trading strategy, e.g., ``GridHODL``, ``GridSell``, ``SWING``, or ``cDCA``
+    * - ``INFINITY_GRID_DRY_RUN``
+      - ``bool``
+      - Enable dry-run mode (no actual trades).
+    * - ``INFINITY_GRID_RUN_SKIP_PRICE_TIMEOUT``
+      - ``bool``
+      - Skip checking if there was a price update in the last 10 minutes. By
+        default, the bot will exit if no recent price data is available. This
+        might be useful for assets that aren't traded that often.
     * - ``INFINITY_GRID_RUN_TELEGRAM_TOKEN``
       - ``str``
       - The Telegram bot token for notifications.
     * - ``INFINITY_GRID_RUN_TELEGRAM_CHAT_ID``
       - ``str``
       - The Telegram chat ID for notifications.
-    * - ``INFINITY_GRID_RUN_EXCEPTION_TOKEN``
-      - ``str``
-      - The Telegram bot token for exception notifications.
-    * - ``INFINITY_GRID_RUN_EXCEPTION_CHAT_ID``
-      - ``str``
-      - The Telegram chat ID for exception notifications.
     * - ``INFINITY_GRID_RUN_DB_USER``
       - ``str``
       - The PostgreSQL database user.
@@ -276,6 +278,9 @@ naming convention.
       - ``str``
       - The path to a local SQLite database file, e.g., ``/path/to/sqlite.db``,
         will be created if it does not exist. If a SQLite database is used, the PostgreSQL database configuration is ignored.
+    * - ``INFINITY_GRID_RUN_IN_MEMORY``
+      - ``bool``
+      - Use an in-memory database (similar to ``--sqlite-file=":memory:"``).
 
 .. _database-configuration-section:
 

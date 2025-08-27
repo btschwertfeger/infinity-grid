@@ -16,13 +16,12 @@ Welcome to infinity-grid's documentation!
    :caption: Contents:
    :maxdepth: 2
 
-   introduction.rst
-   strategies.rst
-   getting-started.rst
-   configuration.rst
-   need2knows.rst
-   Backtesting.ipynb
-   license.rst
+   00_introduction.rst
+   02_strategies.rst
+   03_getting-started.rst
+   04_configuration.rst
+   05_need2knows.rst
+   99_license.rst
 
 Indices and tables
 ==================
