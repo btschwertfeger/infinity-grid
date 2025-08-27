@@ -1,7 +1,15 @@
-# Design notes
+---
+title: Problems of the kraken-infinity-grid trading bot
+author: Benjamin Thomas Schwertfeger
+date: May 26, 2025
+status: Done
+---
 
-This document contains design decisions and potential future improvement ideas
-that need to be explored.
+# Design opportunities of the kraken-infinity-grid trading bot
+
+This document contains improvement opportunities for the kraken-infinity-grid
+trading bot. Most of the proposed changes have been considered and applied. This
+document only exists for future reference.
 
 ## Improvement Ideas
 
@@ -13,7 +21,7 @@ that need to be explored.
 
    Idea: Separate the components like:
 
-   ```
+   ```yaml
    src/infinity_grid/
    ├── core/
    │   ├── bot.py                 # Orchestration only
