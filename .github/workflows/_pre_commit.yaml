@@ -1,0 +1,31 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright (C) 2023 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+# Template workflow to run pre-commit.
+#
+
+name: Pre-Commit
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  Pre-Commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          egress-policy: audit
+          disable-sudo: true
+      - uses: actions/checkout@cbb722410c2e876e24abbe8de2cc27693e501dcb # v4.2.2
+      - uses: actions/setup-python@3fddbee7870211eda9047db10474808be43c71ec # v5.3.0
+        with:
+          python-version: "3.11"
+      - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1

@@ -1,0 +1,39 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright (C) 2023 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+# Workflow to build the docker image.
+
+name: Build Docker Image
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  Build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          egress-policy: audit
+          disable-sudo: true
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0 # IMPORTANT: otherwise the current tag does not get fetched and the build version gets worse
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6.18.0
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          tags: btschwertfeger/infinity-grid:dev

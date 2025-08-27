@@ -1,0 +1,96 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright (C) 2023 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.2
+    hooks:
+      - id: ruff
+        args:
+          - --preview
+          - --fix
+          - --exit-non-zero-on-fix
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.14.1
+    hooks:
+      - id: mypy
+        name: mypy
+        additional_dependencies:
+          - types-requests
+          - types-SQLAlchemy
+        pass_filenames: false
+        args:
+          - --config-file=pyproject.toml
+          - --install-types
+          - --non-interactive
+          - src
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.23.1
+    hooks:
+      - id: gitleaks
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.3.0
+    hooks:
+      - id: codespell
+        additional_dependencies: [tomli]
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+      - id: check-ast
+      - id: check-json
+      - id: check-toml
+      - id: check-docstring-first
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: check-executables-have-shebangs
+      - id: trailing-whitespace
+      - id: fix-byte-order-marker
+      - id: mixed-line-ending
+      - id: requirements-txt-fixer
+      - id: end-of-file-fixer
+      - id: detect-private-key
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
+    hooks:
+      - id: python-use-type-annotations
+      - id: python-check-blanket-noqa
+      - id: python-check-blanket-type-ignore
+      - id: python-check-mock-methods
+      - id: python-no-eval
+      - id: python-no-log-warn
+      - id: rst-backticks
+      - id: rst-directive-colons
+      - id: rst-inline-touching-normal
+      - id: text-unicode-replacement-char
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+  - repo: https://github.com/rbubley/mirrors-prettier
+    rev: v3.4.2
+    hooks:
+      - id: prettier
+  - repo: https://github.com/PyCQA/isort # TODO: remove as soon as ruff is stable
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args:
+          - --profile=black
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        files: \.(dockerfile|Dockerfile)$|^Dockerfile
+  - repo: https://github.com/docker-compose-linter/pre-commit-dclint
+    rev: v3.1.0
+    hooks:
+      - id: dclint-docker
+        files: (docker-)?compose\.ya?ml$
+        # args: [--fix]
