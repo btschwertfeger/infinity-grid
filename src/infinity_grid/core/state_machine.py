@@ -18,10 +18,10 @@ LOG = getLogger(__name__)
 class States(Enum):
     """Represents the state of the trading bot"""
 
-    INITIALIZING = auto()
-    RUNNING = auto()
-    SHUTDOWN_REQUESTED = auto()
-    ERROR = auto()
+    INITIALIZING = auto()  #: The algorithm is initializing from the beginning.
+    RUNNING = auto()  #: The algorithm is running.
+    SHUTDOWN_REQUESTED = auto()  #: A request to shutdown is being processed.
+    ERROR = auto()  #: The algorithm encountered an error and is handling it.
 
 
 class StateMachine:

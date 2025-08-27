@@ -252,8 +252,8 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
 
     def get_account_balance(self: Self) -> dict[str, float]:
         """
-        NOTE: Currently only used during initialization to check if permissions
-        are set.
+        Function only used to check the API key permissions during
+        initialization.
         """
         return self.__user_service.get_account_balance()  # type: ignore[no-any-return]
 
@@ -263,12 +263,13 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
         trades: bool | None = None,
     ) -> dict[str, Any]:
         """
-        NOTE: Currently only used during initialization to check if permissions
-        are set.
+        Function only used to check the API key permissions during
+        initialization.
         """
         return self.__user_service.get_closed_orders(userref=userref, trades=trades)  # type: ignore[no-any-return]
 
     def get_balances(self: Self) -> list[AssetBalanceSchema]:
+        """Retrieve the user's balances"""
         LOG.debug("Retrieving the user's balances...")
         balances = []
         for symbol, data in self.__user_service.get_balances().items():
@@ -336,7 +337,7 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
                 # When BTC is the base and EUR the quote currency, the altnames
                 # will be BTC and EUR, while the asset pair AVAX/EUR or DOT/EUR
                 # will return AVAX and ZEUR or DOT ZEUR. So we need to cut of
-                # the Z in case
+                # the Z in case.
                 key = key[1:]  # noqa: PLW2901
 
             if key == self.__base_currency:
@@ -354,7 +355,8 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
 
     @cached_property
     def rest_altname(self: Self) -> str:
-        return self.ws_altname
+        base_currency, quote_currency = self.rest_symbol.split("/")
+        return f"{base_currency}{quote_currency}"
 
     def create_order(
         self: Self,
