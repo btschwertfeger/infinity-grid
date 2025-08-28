@@ -1,27 +1,27 @@
 # -*- mode: yaml; coding: utf-8 -*-
 #
-# Copyright (C) 2023 Benjamin Thomas Schwertfeger
-# All rights reserved.
+# Copyright (C) 2023 Benjamin Thomas Schwertfeger All rights reserved.
 # https://github.com/btschwertfeger
 #
-
+# ------------------------------------------------------------------------------
 # This Docker Compose file creates a PostgreSQL and infinity-grid container.
 #
 # In order to use this file to run the trading algorithm, a few environment
-# variables must be set, see
-# https://infinity-grid.readthedocs.io/en/latest/configuration.html#environment-variables
-# for more information.
+# variables must be set, see https://infinity-grid.readthedocs.io/en/latest/ for
+# more information.
 #
 # Note: For running multiple instances of the infinity-grid in parallel, you can
 #       simply duplicate and configure the service, as it supports sharing the
-#       same database.
-#       BUT: Keep in mind to use different API keys as well as different
-#       userref's! Otherwise you will encounter errors.
+#       same database. BUT: Keep in mind to use different API keys as well as
+#       different userref's! Otherwise you will encounter errors.
+# ------------------------------------------------------------------------------
 
 name: infinity-grid
 
 services:
   infinity-grid:
+    # Please do not use the "latest" tag in a real setup! Please only use stable
+    # tags which can be obtained from the repository or Docker Hub.
     image: btschwertfeger/infinity-grid:latest # dclint disable-line service-image-require-explicit-tag
     depends_on:
       postgresql:
@@ -60,6 +60,8 @@ services:
     restart: always
     deploy:
       resources:
+        limits:
+          memory: 250M
         reservations:
           cpus: "0.2"
           memory: 150M
