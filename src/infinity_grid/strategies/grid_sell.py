@@ -170,8 +170,8 @@ class GridSellStrategy(GridStrategyBase):
         # ======================================================================
         # Not enough funds to sell
         message = f"⚠️ {self._config.name} ({self._rest_api.rest_symbol})\n"
-        message += f"├ Not enough {self._config.base_currency}"
-        message += f"├ to sell {volume} {self._config.base_currency}"
+        message += f"├ Not enough {self._config.base_currency}\n"
+        message += f"├ to sell {volume} {self._config.base_currency}\n"
         message += f"└ for {order_price} {self._config.quote_currency}"
 
         self._event_bus.publish("notification", data={"message": message})

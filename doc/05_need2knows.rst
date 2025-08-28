@@ -52,6 +52,27 @@ a loss for tax purposes. This approach can be utilized to accumulate
 cryptocurrencies in declining markets, such as with the :ref:`GridHODL`
 strategy, potentially without incurring any tax liabilities.
 
+Further things to know
+----------------------
+
+- The trading bot allows the use of an in-memory database. Only use this for
+  testing and debugging purposes, since information gets lost after the instance
+  was terminated.
+- Using SQLite as DB for a single instance might be appealing, but can slow down
+  the trading bot and is not as stable as running against a real PostgreSQL
+  instance. Using a PostgreSQL DB backend is the recommended way as it also
+  allows running multiple trading bot instances against the same DB backend.
+- Use different userref's for different bot instances. The userref is used by the
+  bot to identify which orders belong to him. Using the same usererf for
+  different assets or running multiple bot instances for the same or different
+  asset pairs using the same userref will result in errors.
+
+Kraken Crypto Asset Exchange
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- Use different API keys for different bot instances, otherwise you will
+  encounter nonce calculation errors.
+
 Useful tools
 ------------
 

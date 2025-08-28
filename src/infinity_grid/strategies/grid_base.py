@@ -881,9 +881,9 @@ class GridStrategyBase:
 
         # ======================================================================
         # Not enough available funds to place a buy order.
-        message = f"⚠️ {self._rest_api.rest_symbol}"
-        message += f"├ Not enough {self._config.quote_currency}"
-        message += f"├ to buy {volume} {self._config.base_currency}"
+        message = f"⚠️ {self._rest_api.rest_symbol}\n"
+        message += f"├ Not enough {self._config.quote_currency}\n"
+        message += f"├ to buy {volume} {self._config.base_currency}\n"
         message += f"└ for {order_price} {self._config.quote_currency}"
         self._event_bus.publish("notification", data={"message": message})
         LOG.warning("Current balances: %s", current_balances)
