@@ -22,6 +22,7 @@ Welcome to infinity-grid's documentation!
    04_configuration.rst
    05_need2knows.rst
    06_development.rst
+   07_backtesting.rst
    99_license.rst
 
 Indices and tables

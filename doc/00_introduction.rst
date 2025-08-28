@@ -57,20 +57,17 @@ the algorithms's activity.
 
 Note: This project is the successor of the `kraken-infinity-grid`_.
 
-Product Support Matrix
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. list-table:: **Exchange Support**
+.. list-table:: **Product Support Matrix**
   :header-rows: 1
 
   * - Exchange
     - Status
+  * - `Kraken <https://pro.kraken.com>`_
+    - ✅
   * - `Coinbase <https://coinbase.com>`_
     - Planned
   * - `Binance <https://binance.com>`_
     - Planned
-  * - `Kraken <https://pro.kraken.com>`_
-    - ✅
   * - Other ideas? Issues and PRs are welcome!
     - 💡
 

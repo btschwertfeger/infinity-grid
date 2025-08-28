@@ -50,7 +50,14 @@ LOG = getLogger(__name__)
 
 
 class GridStrategyBase:
-    """Base interface for grid-based trading strategies."""
+    """
+    Base class for grid-like strategies.
+
+    This class is intended to be used as base class for subsequent strategies
+    and contains lots of protected and private functions that might need to be
+    disabled when being used in custom strategies that do not belong to
+    GridHODL, GridSell, SWING, or CDCA.
+    """
 
     def __init__(
         self,
@@ -422,8 +429,8 @@ class GridStrategyBase:
         upstream orderbook during the ``update_orderbook`` function in the init
         of the algorithm.
 
-        This function triggers the Notification message of the executed order and
-        places a new order.
+        This function triggers the Notification message of the executed order
+        and places a new order.
         """
         LOG.info("Handling executed order: %s", closed_order.txid)
 
@@ -481,11 +488,12 @@ class GridStrategyBase:
         algorithm.
 
         It checks:
-        - ... if the orderbook is up to date, remove filled, closed, and
+
+        - if the orderbook is up to date, remove filled, closed, and
           canceled orders.
-        - ... the local orderbook for changes - comparison with upstream
+        - if the local orderbook for changes - comparison with upstream
           orderbook
-        - ... and will place new orders if filled.
+        - and will place new orders if filled.
         """
         LOG.info("- Syncing the orderbook with upstream...")
 

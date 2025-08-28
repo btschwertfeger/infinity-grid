@@ -47,8 +47,8 @@ Terms and definitions
   0.04). This technique ensures that buy orders don't get out of scope.
 
 
-Fundamental concepts
---------------------
+📚 Fundamental concepts
+-----------------------
 
 `infinity-grid`_ is a sophisticated trading algorithm designed for automated
 cryptocurrency trading using a grid strategy. This approach is particularly
@@ -102,8 +102,8 @@ Risk Management and Reinvestment
    adjusts buy and and places sell orders to reflect the increased capital, thus
    compounding growth over time.
 
-Available strategies
---------------------
+✅ Available strategies
+-----------------------
 
 Each of the following strategies is designed to leverage different aspects of
 market behavior, providing flexibility and adaptability to traders depending on

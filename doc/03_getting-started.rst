@@ -15,8 +15,8 @@ make sure to fully understand the available trading strategies and their
 configuration. Avoid running the algorithm with real money before you are
 confident in the algorithm's behavior and performance!
 
-Preparation
------------
+🛠️ Preparation
+--------------
 
 Depending on the used exchange, different preparatory steps might be needed. In
 the following, the steps for use with the Kraken Crypto Asset Exchange is shown:
@@ -49,8 +49,8 @@ the following, the steps for use with the Kraken Crypto Asset Exchange is shown:
 
 .. _getting-started-docker-compose-section:
 
-Running via Docker Compose
---------------------------
+🐋 Running via Docker Compose
+-----------------------------
 
 The repository of the `infinity-grid`_ contains a ``docker-compose.yaml`` file
 that can be used to run the algorithm using Docker Compose. This file also
@@ -60,8 +60,10 @@ variables are set, and run ``docker compose up -d``. Watch the logs closely.
 When running a new configuration, it is recommended to enable the dry-run mode
 via setting ``INFINITY_GRID_RUN_DRY_RUN=true``.
 
-Monitoring
-----------
+For configuration options, please see the :ref:`configuration-section` section.
+
+📡 Monitoring
+-------------
 
 Trades as well as open positions can be monitored at the exchanges', where they
 can also be managed. Keep in mind that canceling via UI is possible, but placing

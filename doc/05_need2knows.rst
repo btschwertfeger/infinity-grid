@@ -13,29 +13,8 @@ Need 2 Knows
 This is a section of the documentation that contains some useful information
 that might be worth noting.
 
-What happens to partially filled buy orders?
---------------------------------------------
-
-The algorithm manages its orders in lean way, meaning partially filled buy
-orders that may get cancelled will be remembered. This is done internally by
-saving the order price and filled amount in order to place a sell order at a
-higher price in the future.
-
-The log shows closed connection but the algorithm is still running
-------------------------------------------------------------------
-
-In a case where a traceback or warning containing something like "got an
-exception no close frame received or sent" is shown in the log, the algorithm
-will keep running, as the underlying `python-kraken-sdk`_ library handles the
-reconnect.
-
-In case of uncertainty, the ``infinity-grid`` can be started with verbose
-logging to see the reconnection process (and more). The verbose logging can be
-enabled via ``-v`` for debug logging of the ``infinity-grid`` or ``-vv`` for
-even more logging of used packages.
-
-Hidden tax benefits
--------------------
+🧮 Hidden tax benefits
+----------------------
 
 .. WARNING:: This is no financial advice. The authors of this software are not
              tax advisors. The following scenario may not apply universally.
@@ -52,8 +31,8 @@ a loss for tax purposes. This approach can be utilized to accumulate
 cryptocurrencies in declining markets, such as with the :ref:`GridHODL`
 strategy, potentially without incurring any tax liabilities.
 
-Further things to know
-----------------------
+💡 Further things to know
+-------------------------
 
 - The trading bot allows the use of an in-memory database. Only use this for
   testing and debugging purposes, since information gets lost after the instance
@@ -67,13 +46,21 @@ Further things to know
   different assets or running multiple bot instances for the same or different
   asset pairs using the same userref will result in errors.
 
-Kraken Crypto Asset Exchange
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+🐙 Kraken Crypto Asset Exchange
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - Use different API keys for different bot instances, otherwise you will
   encounter nonce calculation errors.
 
-Useful tools
-------------
+📋 What happens to partially filled buy orders?
+-----------------------------------------------
+
+The algorithm manages its orders in lean way, meaning partially filled buy
+orders that may get cancelled will be remembered. This is done internally by
+saving the order price and filled amount in order to place a sell order at a
+higher price in the future.
+
+⚒️ Useful tools
+---------------
 
 - Kraken PnL Calculator (for tax purposes): https://github.com/btschwertfeger/kraken-pnl-calculator

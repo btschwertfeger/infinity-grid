@@ -15,8 +15,8 @@ needs. The following configuration variables can be either set as command-line
 arguments or via environment variables. They are mapped to the corresponding
 command-line arguments internally.
 
-Strategy configuration
-----------------------
+🛠️ Strategy configuration
+-------------------------
 
 In order to run the available strategies efficiently, one need to know the
 configuration of those. Even though these strategies follow different
@@ -24,16 +24,16 @@ approaches, they share the same fundamental concept and configuration
 properties. In the following, the most important of them are explained in order
 to guide you through the configuration process.
 
-Choosing the right strategy
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+🔭 Choosing the right strategy
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Choosing the right strategy is crucial for success. The strategies differ in
 their approach and are designed for different market conditions (see
 :ref:`Strategies <strategies-section>`). Make sure to understand all of them
 before choosing the right one for your needs.
 
-Choosing the right base and quote currency
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+💵 Choosing the right base and quote currency
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The base and quote currency should be chosen wisely. The base currency is the
 currency you want to trade with, and the quote currency is the currency you want
@@ -41,8 +41,8 @@ to trade against. The base and quote currencies should be chosen based on your
 trading preferences and the liquidity of the market. Currency pairs with high
 volatility can lead to higher profits but also to higher risks.
 
-Choosing the optimal interval
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+📈 Choosing the optimal interval
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The interval defines the percentage difference between the buy and sell orders.
 The interval should be chosen based on the volatility of the market. A higher
@@ -65,8 +65,8 @@ volatility matches the grid interval.
           apart from each other. In this case, you have to pass a value of
           ``0.04`` to ``--interval`` or ``INFINITY_GRID_RUN_INTERVAL``.
 
-Choosing the optimal amount per grid
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+⚖️ Choosing the optimal amount per grid
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The amount per grid defines the amount of the quote currency to use per grid
 interval. It should be chosen based on the amount of the quote currency you want
@@ -86,8 +86,8 @@ can be traded on the exchange. Make sure to set the amount per grid higher than
 the minimal amount to avoid errors. For further information, check the
 exchange's minimum order size for trading documentation.
 
-Choosing the optimal amount of concurrent open buy orders
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+📊 Choosing the optimal amount of concurrent open buy orders
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The number of concurrent open buy orders defines the number of buy orders that
 are open at the same time. This number should be chosen based on the volatility
@@ -100,8 +100,8 @@ amount per grid. For example, if you have 5 open buy orders with an amount per
 grid of 100 USD, you should have at least 500 USD in your account to cover all
 open buy orders.
 
-Setting a custom fee
-~~~~~~~~~~~~~~~~~~~~
+🏷️ Setting a custom fee
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Lastly, exchanges charge fees. The fee is usually a percentage of the traded
 amount. If the fee is not set during program start, the highest taker fee for
@@ -116,8 +116,8 @@ the fee schedule of the respective exchange.
 
 .. NOTE:: The fee is always paid in the quote currency.
 
-Risk management
-~~~~~~~~~~~~~~~
+🛡️ Risk management
+~~~~~~~~~~~~~~~~~~
 
 Risk management is crucial for successful trading. The algorithm provides
 several options to manage the risk. The most important ones are the amount per
@@ -166,8 +166,8 @@ at 4% higher than the buy order.
           levels are calculated based on the interval and current market prices,
           can be shifted up or down based on the market's volatility.
 
-Command-line Interface
-----------------------
+⌨️ Command-line Interface
+-------------------------
 
 `infinity-grid`_ provides a command-line interface (CLI) to configure and
 run the trading algorithm. The CLI is based on the `Click
@@ -179,8 +179,8 @@ interact with the algorithm.
    :prog: infinity-grid
    :nested: full
 
-Environment Variables
----------------------
+🏕️ Environment Variables
+------------------------
 
 Since `infinity-grid`_ is designed to be run in containerized
 environments, the configuration can also be done via environment variables. The
@@ -284,8 +284,8 @@ naming convention.
 
 .. _database-configuration-section:
 
-Database configuration
-----------------------
+🖥 Database configuration
+------------------------
 
 The algorithm requires a PostgreSQL or SQLite database to store the current
 orderbook, trades, and the algorithm's state. The database configuration can be

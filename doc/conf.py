@@ -69,11 +69,26 @@ exclude_patterns = [
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "sphinx_book_theme"  # "sphinx_rtd_theme"
+html_theme = "furo"  # "sphinx_book_theme"  # "sphinx_rtd_theme"
+# html_logo = "images/logo.svg" # FIXME
 html_static_path = ["_static"]
 html_context = {
     "display_github": True,
     "github_user": "btschwertfeger",
     "github_repo": "infinity-grid",
     "github_version": "master/doc/",
+}
+html_theme_options = {
+    # "sidebar_hide_name": True,
+    "light_css_variables": {
+        "color-brand-primary": "#336790",  # "blue"
+        "color-brand-content": "#336790",
+    },
+    "dark_css_variables": {
+        "color-brand-primary": "#E5B62F",  # "yellow"
+        "color-brand-content": "#E5B62F",
+    },
+    "source_repository": "https://github.com/btschwertfeger/infinity-grid",
+    "source_branch": "master",
+    "source_directory": "doc/",
 }
