@@ -15,8 +15,8 @@ infinity-grid trading bot with new exchanges, strategies, or other
 functionality. It provides guidance on the architecture, interfaces, and best
 practices for contributing to the project.
 
-Architecture Overview
-~~~~~~~~~~~~~~~~~~~~~
+🏛️ Architecture Overview
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 The infinity-grid trading bot follows a modular architecture with clear
 separation of concerns:
@@ -34,8 +34,8 @@ separation of concerns:
    notifications.
 7. **Infrastructure**: Low-level components like database management.
 
-Project Structure
-~~~~~~~~~~~~~~~~~
+🩻 Project Structure
+~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: text
     :caption: Schematic Project Structure
@@ -69,8 +69,8 @@ Project Structure
         ├── c_dca.py           # Dollar-cost averaging strategy
         └── swing.py           # Swing trading strategy
 
-Extension Points
-~~~~~~~~~~~~~~~~
+🧩 Extension Points
+~~~~~~~~~~~~~~~~~~~
 
 The infinity-grid bot is designed to be extended in several ways:
 
@@ -82,8 +82,8 @@ The infinity-grid bot is designed to be extended in several ways:
    notification channels.
 4. **Enhanced Monitoring**: Add new metrics or monitoring capabilities.
 
-Adding a New Exchange Adapter
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+🔌 Adding a New Exchange Adapter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To add support for a new exchange, you need to create an adapter that implements
 both the REST and WebSocket interfaces:
@@ -139,8 +139,8 @@ both the REST and WebSocket interfaces:
 
         # Implement all required methods from IExchangeWebSocketService
 
-Creating a New Trading Strategy
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+📈 Creating a New Trading Strategy
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To create a new trading strategy, you should extend one of the existing base
 strategies or create a completely new one:
@@ -191,8 +191,8 @@ strategies or create a completely new one:
 
         # Implement other strategy-specific methods
 
-Testing Your Extensions
-~~~~~~~~~~~~~~~~~~~~~~~
+📝 Testing Your Extensions
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When developing new adapters or strategies, it's important to test them
 thoroughly:
@@ -204,8 +204,8 @@ thoroughly:
 3. **Mocking**: Use mocking to simulate exchange responses without making actual
    API calls.
 
-State Machine and Error Handling
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+🤖 State Machine and Error Handling
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The infinity-grid uses a state machine that must be used for transitioning to
 states. It allows the algorithm to determine the current state and perform
@@ -230,8 +230,8 @@ raised in order to exit the current context.
    :show-inheritance:
    :inherited-members:
 
-Exchange Interfaces
-~~~~~~~~~~~~~~~~~~~
+🛰️ Exchange Interfaces
+~~~~~~~~~~~~~~~~~~~~~~
 
 Exchange adapters must implement all functions of the listed interfaces in order
 to work properly. Please also read the docstrings of required functions
@@ -247,20 +247,8 @@ carefully to avoid errors and misbehavior.
    :show-inheritance:
    :inherited-members:
 
-Exceptions
-~~~~~~~~~~
-
-.. automodule:: infinity_grid.exceptions
-    :members:
-
-Models and Schemas
-~~~~~~~~~~~~~~~~~~
-
-.. automodule:: infinity_grid.models.exchange
-    :members:
-
-Strategies
-~~~~~~~~~~
+🔬 Strategies
+~~~~~~~~~~~~~
 
 .. automodule:: infinity_grid.strategies.grid_base
     :members:
@@ -281,3 +269,15 @@ Strategies
 .. automodule:: infinity_grid.strategies.swing
     :members:
     :private-members:
+
+🎛️ Models and Schemas
+~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: infinity_grid.models.exchange
+    :members:
+
+🩹 Exceptions
+~~~~~~~~~~~~~
+
+.. automodule:: infinity_grid.exceptions
+    :members:

@@ -10,8 +10,7 @@ Introduction
 
 |GitHub badge| |PyVersions badge| |Downloads badge|
 |CI/CD badge| |Typing badge| |codecov badge|
-|Release date badge| |Release version badge| |DOI badge|
-
+|Release date badge| |Release version badge|
 
 Disclaimer
 ----------

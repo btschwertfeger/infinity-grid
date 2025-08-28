@@ -43,8 +43,6 @@ class BotEngine:
             "Initiate the Infinity Grid algorithm instance (v%s)",
             version("infinity-grid"),
         )
-        LOG.debug("Config: %s", bot_config)
-
         self.__event_bus = EventBus()
         self.__state_machine = StateMachine()
         self.__config = bot_config

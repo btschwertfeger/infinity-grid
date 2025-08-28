@@ -17,6 +17,7 @@ authors = [
 ]
 description = "Multi-exchange Infinity Grid Trading Algorithm"
 readme = "README.md"
+license = "LicenseRef-Infinity-Grid-2.0"
 license-files = ["LICENSE"]
 
 requires-python = ">=3.11"

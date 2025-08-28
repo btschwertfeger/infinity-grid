@@ -30,7 +30,7 @@ Dependencies:
 
 from contextlib import suppress
 from decimal import Decimal
-from functools import cache, cached_property
+from functools import cached_property, lru_cache
 from logging import getLogger
 from time import sleep
 from typing import Any, Self
@@ -423,7 +423,7 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
             )
         return AssetPairInfoSchema(**pair_info[next(iter(pair_info))])
 
-    @cache  # noqa: B019
+    @lru_cache(maxsize=1)  # noqa: B019
     def get_exchange_domain(self) -> ExchangeDomain:
         return ExchangeDomain(
             EXCHANGE="Kraken",
@@ -438,10 +438,8 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
 
     # == Custom Kraken Methods for convenience =================================
 
-    @cache  # noqa: B019
-    def __retrieve_custom_base_quote_names(
-        self: Self,
-    ) -> tuple[str, str]:
+    @lru_cache(maxsize=1)  # noqa: B019
+    def __retrieve_custom_base_quote_names(self: Self) -> tuple[str, str]:
         """
         Returns the custom base and quote name for the given currencies.
         On Kraken, crypto assets are prefixed with 'X' (e.g., 'XETH', 'XXBT'),
