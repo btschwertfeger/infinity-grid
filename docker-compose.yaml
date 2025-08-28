@@ -5,17 +5,18 @@
 # https://github.com/btschwertfeger
 #
 
-# This Docker Compose file creates a PostgreSQL and infinity-grid
-# container.
+# This Docker Compose file creates a PostgreSQL and infinity-grid container.
 #
 # In order to use this file to run the trading algorithm, a few environment
 # variables must be set, see
 # https://infinity-grid.readthedocs.io/en/latest/configuration.html#environment-variables
 # for more information.
 #
-# Note: For running multiple instances of the infinity-grid in parallel,
-# you can simply duplicate and configure the service, as it supports sharing the
-# same database.
+# Note: For running multiple instances of the infinity-grid in parallel, you can
+#       simply duplicate and configure the service, as it supports sharing the
+#       same database.
+#       BUT: Keep in mind to use different API keys as well as different
+#       userref's! Otherwise you will encounter errors.
 
 name: infinity-grid
 
@@ -27,35 +28,41 @@ services:
         condition: service_healthy
     environment:
       TZ: Europe/Berlin
+
       # General settings
-      INFINITY_GRID_API_KEY: ${INFINITY_GRID_API_KEY}
-      INFINITY_GRID_SECRET_KEY: ${INFINITY_GRID_SECRET_KEY}
-      INFINITY_GRID_VERBOSE: 0
+      INFINITY_GRID_API_PUBLIC_KEY: "API Public Key" # enter your key here!
+      INFINITY_GRID_API_SECRET_KEY: "API Secret Key" # the secret as well!
+
       # Strategy settings
-      INFINITY_GRID_RUN_NAME: ${INFINITY_GRID_RUN_NAME}
-      INFINITY_GRID_RUN_USERREF: ${INFINITY_GRID_RUN_USERREF}
-      INFINITY_GRID_RUN_BASE_CURRENCY: ${INFINITY_GRID_RUN_BASE_CURRENCY}
-      INFINITY_GRID_RUN_QUOTE_CURRENCY: ${INFINITY_GRID_RUN_QUOTE_CURRENCY}
-      INFINITY_GRID_RUN_AMOUNT_PER_GRID: ${INFINITY_GRID_RUN_AMOUNT_PER_GRID}
-      INFINITY_GRID_RUN_INTERVAL: ${INFINITY_GRID_RUN_INTERVAL}
-      INFINITY_GRID_RUN_N_OPEN_BUY_ORDERS: ${INFINITY_GRID_RUN_N_OPEN_BUY_ORDERS}
-      INFINITY_GRID_RUN_MAX_INVESTMENT: ${INFINITY_GRID_RUN_MAX_INVESTMENT}
-      INFINITY_GRID_RUN_STRATEGY: ${INFINITY_GRID_RUN_STRATEGY}
-      INFINITY_GRID_RUN_DRY_RUN: false
-      # Notification settings
-      INFINITY_GRID_RUN_TELEGRAM_TOKEN: ${INFINITY_GRID_RUN_TELEGRAM_TOKEN}
-      INFINITY_GRID_RUN_TELEGRAM_CHAT_ID: ${INFINITY_GRID_RUN_TELEGRAM_CHAT_ID}
-      INFINITY_GRID_RUN_EXCEPTION_TOKEN: ${INFINITY_GRID_RUN_EXCEPTION_TOKEN}
-      INFINITY_GRID_RUN_EXCEPTION_CHAT_ID: ${INFINITY_GRID_RUN_EXCEPTION_CHAT_ID}
+      INFINITY_GRID_RUN_NAME: "My First Trading Bot" # name as you wish
+      INFINITY_GRID_RUN_USERREF: 1756394883 # change as you wish
+      INFINITY_GRID_RUN_BASE_CURRENCY: "BTC" # change on demand
+      INFINITY_GRID_RUN_QUOTE_CURRENCY: "USD" # change on demand
+      INFINITY_GRID_RUN_AMOUNT_PER_GRID: 20 # i.e. $ 20 per order
+      INFINITY_GRID_RUN_INTERVAL: 0.02 # i.e. 2 % interval between orders
+      INFINITY_GRID_RUN_N_OPEN_BUY_ORDERS: 3 # i.e. 3 concurrent open buy orders
+      INFINITY_GRID_RUN_MAX_INVESTMENT: 1000 # invest a maximum of $ 1000
+      INFINITY_GRID_RUN_STRATEGY: GridHODL # or use any other available strategy
+      INFINITY_GRID_RUN_EXCHANGE: Kraken # exchange to trade on
+
+      # Notification settings (optional):
+      # INFINITY_GRID_RUN_TELEGRAM_TOKEN: ""
+      # INFINITY_GRID_RUN_TELEGRAM_CHAT_ID: ""
+
       # Database settings
-      INFINITY_GRID_RUN_DB_USER: ${INFINITY_GRID_RUN_DB_USER}
-      INFINITY_GRID_RUN_DB_NAME: ${INFINITY_GRID_RUN_DB_NAME}
-      INFINITY_GRID_RUN_DB_PASSWORD: ${INFINITY_GRID_RUN_DB_PASSWORD}
-      INFINITY_GRID_RUN_DB_HOST: ${INFINITY_GRID_RUN_DB_HOST}
-      INFINITY_GRID_RUN_DB_PORT: ${INFINITY_GRID_RUN_DB_PORT}
+      INFINITY_GRID_RUN_DB_HOST: postgresql
+      INFINITY_GRID_RUN_DB_PORT: 5432
+      INFINITY_GRID_RUN_DB_NAME: infinity_grid
+      INFINITY_GRID_RUN_DB_USER: infinity_grid
+      INFINITY_GRID_RUN_DB_PASSWORD: infinity_grid
     networks:
       - internal_network
     restart: always
+    deploy:
+      resources:
+        reservations:
+          cpus: "0.2"
+          memory: 150M
 
   postgresql:
     image: postgres:13-bookworm
@@ -73,6 +80,10 @@ services:
       test: ["CMD-SHELL", "pg_isready -U infinity_grid"]
       interval: 10s
       retries: 5
+    deploy:
+      resources:
+        reservations:
+          memory: 100M
 
 networks:
   infinity_grid_network:
