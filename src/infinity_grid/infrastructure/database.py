@@ -62,18 +62,20 @@ class Orderbook:
         limit: int | None = None,
     ) -> MappingResult:
         """Get orders from the orderbook."""
+        if not filters:
+            filters = {}
+        filters |= {"userref": self.__userref}
+
         LOG.debug(
-            "Getting orders from the orderbook with filters: %s, exclude: %s, order_by: %s, limit: %s",
+            "Getting orders from the orderbook with filter: %s, exclude: %s, order_by: %s, limit: %s",
             filters,
             exclude,
             order_by,
             limit,
         )
-        if not filters:
-            filters = {}
         return self.__db.get_rows(
             self.__table,
-            filters=filters | {"userref": self.__userref},
+            filters=filters,
             exclude=exclude,
             order_by=order_by,
             limit=limit,
@@ -81,13 +83,11 @@ class Orderbook:
 
     def remove(self: Self, filters: dict) -> None:
         """Remove orders from the orderbook."""
-        LOG.debug("Removing orders from the orderbook: %s", filters)
         if not filters:
-            raise ValueError("Filters required for removal in orderbook")
-        self.__db.delete_row(
-            self.__table,
-            filters=filters | {"userref": self.__userref},
-        )
+            raise ValueError("Filters required for removal from orderbook")
+        filters |= {"userref": self.__userref}
+        LOG.debug("Removing orders from the orderbook: %s", filters)
+        self.__db.delete_row(self.__table, filters=filters)
 
     def update(self: Self, updates: OrderInfoSchema) -> None:
         """
@@ -114,14 +114,15 @@ class Orderbook:
         exclude: dict | None = None,
     ) -> int:
         """Count orders in the orderbook."""
+        if not filters:
+            filters = {}
+        filters |= {"userref": self.__userref}
+
         LOG.debug(
             "Counting orders in the orderbook with filters: %s and exclude: %s",
             filters,
             exclude,
         )
-        if not filters:
-            filters = {}
-        filters |= {"userref": self.__userref}
 
         query = (
             select(func.count())  # pylint: disable=not-callable
@@ -271,41 +272,34 @@ class UnsoldBuyOrderTXIDs:
         """Remove txid from the table."""
         LOG.debug(
             "Removing unsold buy order txid from the 'unsold_buy_order_txids'"
-            " table: %s",
-            txid,
+            " with filter: %s",
+            filters := {"userref": self.__userref, "txid": txid},
         )
-        self.__db.delete_row(
-            self.__table,
-            filters={
-                "userref": self.__userref,
-                "txid": txid,
-            },
-        )
+        self.__db.delete_row(self.__table, filters=filters)
 
     def get(self: Self, filters: dict | None = None) -> MappingResult:
         """Retrieve unsold buy order txids from the table."""
+        if not filters:
+            filters = {}
+        filters |= {"userref": self.__userref}
         LOG.debug(
             "Retrieving unsold buy order txids from the"
             " 'unsold_buy_order_txids' table with filters: %s",
             filters,
         )
-        if not filters:
-            filters = {}
-        return self.__db.get_rows(
-            self.__table,
-            filters=filters | {"userref": self.__userref},
-        )
+        return self.__db.get_rows(self.__table, filters=filters)
 
     def count(self: Self, filters: dict | None = None) -> int:
         """Count unsold buy order txids from the table."""
+        if not filters:
+            filters = {}
+        filters |= {"userref": self.__userref}
+
         LOG.debug(
             "Count unsold buy order txids from the table unsold_buy_order_txids"
             " table with filters: %s",
             filters,
         )
-        if not filters:
-            filters = {}
-        filters |= {"userref": self.__userref}
 
         query = (
             select(func.count())  # pylint: disable=not-callable
@@ -340,22 +334,21 @@ class PendingTXIDs:
 
     def get(self: Self, filters: dict | None = None) -> MappingResult:
         """Get pending orders from the table."""
-        LOG.debug(
-            "Getting pending orders from the 'pending_txids' table with filters: %s",
-            filters,
-        )
         if not filters:
             filters = {}
+        filters |= {"userref": self.__userref}
 
-        return self.__db.get_rows(
-            self.__table,
-            filters=filters | {"userref": self.__userref},
+        LOG.debug(
+            "Getting pending orders from the 'pending_txids' table with filter: %s",
+            filters,
         )
+
+        return self.__db.get_rows(self.__table, filters=filters)
 
     def add(self: Self, txid: str) -> None:
         """Add a pending order to the table."""
         LOG.debug(
-            "Adding a pending txid to the 'pending_txids' table: %s",
+            "Adding a pending txid to the 'pending_txids' table: '%s'",
             txid,
         )
         self.__db.add_row(
@@ -366,21 +359,23 @@ class PendingTXIDs:
 
     def remove(self: Self, txid: str) -> None:
         """Remove a pending order from the table."""
-        LOG.debug("Removing pending txid from the 'pending_txids' table: %s", txid)
-        self.__db.delete_row(
-            self.__table,
-            filters={"userref": self.__userref, "txid": txid},
+
+        LOG.debug(
+            "Removing pending txid from the 'pending_txids' table with filters: %s",
+            filters := {"userref": self.__userref, "txid": txid},
         )
+        self.__db.delete_row(self.__table, filters=filters)
 
     def count(self: Self, filters: dict | None = None) -> int:
         """Count pending orders in the table."""
-        LOG.debug(
-            "Counting pending txids of the 'pending_txids' table with filters: %s",
-            filters,
-        )
         if not filters:
             filters = {}
         filters |= {"userref": self.__userref}
+
+        LOG.debug(
+            "Counting pending txids of the 'pending_txids' table with filter: %s",
+            filters,
+        )
 
         query = (
             select(func.count())  # pylint: disable=not-callable

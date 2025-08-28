@@ -95,7 +95,7 @@ class DBConnect:
         updates: dict,
     ) -> None:
         """Update rows in the specified table matching filters."""
-        LOG.debug("Update rows from '%s': %s :: %s", table, filters, updates)
+        LOG.debug("Update rows from '%s' with filter: %s: %s", table, filters, updates)
         query = (
             update(table)
             .where(*(table.c[column] == value for column, value in filters.items()))
