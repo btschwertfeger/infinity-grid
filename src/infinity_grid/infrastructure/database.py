@@ -7,10 +7,11 @@
 
 """Module implementing the database connection and handling of interactions."""
 
+from copy import deepcopy
 from datetime import datetime
 from importlib.metadata import version
 from logging import getLogger
-from typing import Self
+from typing import Any, Self
 
 from sqlalchemy import Column, DateTime, Float, Integer, String, Table, func, select
 from sqlalchemy.engine.result import MappingResult
@@ -143,6 +144,7 @@ class Configuration:
         LOG.debug("Initializing the configuration table...")
         self.__db = db
         self.__userref = userref
+        self.__cache: dict[frozenset, Any] = {}
         self.__table = Table(
             "configuration",
             self.__db.metadata,
@@ -185,29 +187,49 @@ class Configuration:
             )
 
     def get(self: Self, filters: dict | None = None) -> dict:
-        """Get configuration from the table."""
-        LOG.debug(
-            "Getting configuration from the table 'configuration' with filter: %s",
-            filters,
-        )
+        """
+        Get configuration from the table.
+
+        Uses cache if available to avoid unnecessary database queries.
+        """
         if not filters:
             filters = {}
+        filters |= {"userref": self.__userref}
+
+        LOG.debug(
+            "Getting configuration from cache or table 'configuration' with filter: %s",
+            filters,
+        )
+
+        if (cache_key := frozenset((k, v) for k, v in filters.items())) in self.__cache:
+            LOG.debug("Using cached configuration data")
+            return deepcopy(self.__cache[cache_key])
+
+        LOG.debug("Cache miss, fetching from database")
 
         if result := self.__db.get_rows(
             self.__table,
-            filters=filters | {"userref": self.__userref},
+            filters=filters,
         ):
-            return next(result)
+            config = next(result)
+            self.__cache[cache_key] = config
+            return deepcopy(config)
+
         raise ValueError(f"No configuration found for passed {filters=}!")
 
     def update(self: Self, updates: dict) -> None:
-        """Update configuration in the table."""
+        """
+        Update configuration in the table.
+
+        Invalidates the cache to ensure fresh data on next get().
+        """
         LOG.debug("Updating configuration in the table: %s", updates)
         self.__db.update_row(
             self.__table,
             filters={"userref": self.__userref},
             updates=updates,
         )
+        self.__cache = {}
 
 
 class UnsoldBuyOrderTXIDs:
