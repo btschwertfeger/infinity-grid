@@ -15,6 +15,7 @@ from typing import Any, Self
 
 from sqlalchemy import Column, DateTime, Float, Integer, String, Table, func, select
 from sqlalchemy.engine.result import MappingResult
+from sqlalchemy.engine.row import RowMapping
 
 from infinity_grid.models.exchange import OrderInfoSchema
 from infinity_grid.services.database import DBConnect
@@ -151,12 +152,7 @@ class Configuration:
             self.__db.metadata,
             Column("id", Integer, primary_key=True),
             Column("userref", Integer, nullable=False),
-            Column(
-                "version",  # FIXME: This never gets updated
-                String,
-                nullable=False,
-                default=version("infinity-grid"),
-            ),
+            Column("version", String, nullable=False),
             Column("vol_of_unfilled_remaining", Float, nullable=False, default=0),
             Column(
                 "vol_of_unfilled_remaining_max_price",
@@ -175,6 +171,8 @@ class Configuration:
         # Create if not exist
         self.__table.create(bind=self.__db.engine, checkfirst=True)
 
+        current_version = version("infinity-grid")
+
         # Add initial values
         if not self.__db.get_rows(
             self.__table,
@@ -183,15 +181,37 @@ class Configuration:
             self.__db.add_row(
                 self.__table,
                 userref=self.__userref,
+                version=current_version,
                 last_price_time=datetime.now(),
                 last_status_update=datetime.now(),
             )
+        # Check if version needs to be updated
+        elif (config := self.get()) and config.version != current_version:  # type: ignore[attr-defined]
+            LOG.info(
+                "Updating infinity-grid version in database from %s to %s",
+                config.version,  # type: ignore[attr-defined]
+                current_version,
+            )
+            self.update(updates={"version": current_version})
 
-    def get(self: Self, filters: dict | None = None) -> dict:
+    def get(self: Self, filters: dict | None = None) -> RowMapping:
         """
         Get configuration from the table.
 
         Uses cache if available to avoid unnecessary database queries.
+
+        Returns:
+            RowMapping with the following attributes:
+                - id: Primary key
+                - userref: User reference ID
+                - version: Version of the software
+                - vol_of_unfilled_remaining: Volume of unfilled orders remaining
+                - vol_of_unfilled_remaining_max_price: Max price of unfilled volume remaining
+                - price_of_highest_buy: Price of the highest buy order
+                - amount_per_grid: Amount allocated per grid
+                - interval: Interval setting
+                - last_price_time: Timestamp of last price update
+                - last_status_update: Timestamp of last status update
         """
         if not filters:
             filters = {}
@@ -204,17 +224,14 @@ class Configuration:
 
         if (cache_key := frozenset((k, v) for k, v in filters.items())) in self.__cache:
             LOG.debug("Using cached configuration data")
-            return deepcopy(self.__cache[cache_key])
+            return deepcopy(self.__cache[cache_key])  # type: ignore[no-any-return]
 
         LOG.debug("Cache miss, fetching from database")
 
-        if result := self.__db.get_rows(
-            self.__table,
-            filters=filters,
-        ):
+        if result := self.__db.get_rows(self.__table, filters=filters):
             config = next(result)
             self.__cache[cache_key] = config
-            return deepcopy(config)
+            return deepcopy(config)  # type: ignore[no-any-return]
 
         raise ValueError(f"No configuration found for passed {filters=}!")
 
