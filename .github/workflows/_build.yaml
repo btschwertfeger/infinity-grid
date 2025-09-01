@@ -1,0 +1,112 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright (C) 2023 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+# Template workflow to build the project for a specific os
+# and Python version.
+#
+
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      os:
+        type: string
+        required: true
+      python-version:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  Build:
+    runs-on: ${{ inputs.os }}
+    name: Build the Python package for ${{ inputs.os }} ${{ inputs.python-version }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            files.pythonhosted.org:443
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            release-assets.githubusercontent.com:443
+
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0 # IMPORTANT: otherwise the current tag does not get fetched and the build version gets worse
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Check git status (not Windows)
+        if: runner.os != 'Windows'
+        run: |
+          if [[ -z "$(git status --porcelain)" ]]; then
+            echo "No changes found."
+          else
+            echo "Changes detected. Please commit or discard changes before publishing."
+            git status --porcelain
+            exit 1
+          fi
+
+      - name: Check git status (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          if (-not (git status --porcelain)) {
+              Write-Output "No changes found."
+          } else {
+              Write-Output "Changes detected. Please commit or discard changes before publishing."
+              git status --porcelain
+              exit 1
+          }
+
+      - name: Build Linux
+        if: runner.os == 'linux'
+        run: |
+          uv build .
+          uv tool install dist/infinity_grid*.whl
+          uv run infinity-grid --version
+
+      - name: Build macOS
+        if: runner.os == 'macOS'
+        run: |
+          uv build .
+          uv tool install dist/infinity_grid*.whl
+          uv run infinity-grid --version
+
+      - name: Build Windows
+        if: runner.os == 'Windows'
+        run: |
+          uv build .
+          try {
+              $WHEEL = Get-ChildItem -Path ./dist -Filter "infinity_grid*.whl" -ErrorAction Stop
+              uv tool install $WHEEL#
+              uv run infinity-grid --version
+          } catch {
+              Write-Error "Error: .whl file not found in .\dist."
+              exit 1
+          }
+
+      - name: Store the distribution packages
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        # upload artifacts with the oldest supported version
+        if: runner.os == 'linux' && inputs.python-version == '3.11'
+        with:
+          name: python-package-distributions
+          path: dist/

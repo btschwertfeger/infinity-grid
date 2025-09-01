@@ -1,0 +1,21 @@
+# -*- coding: utf-8 -*-
+# Copyright (C) 2025 Benjamin Thomas Schwertfeger
+# GitHub: https://github.com/btschwertfeger
+#
+
+include README.md LICENSE pyproject.toml
+
+graft src
+prune .cache
+prune .github
+prune doc
+prune tools
+prune tests
+prune .venv
+
+prune .gitignore
+prune .pre-commit-config.yaml
+prune .readthedocs.yaml
+prune Makefile
+prune Dockerfile
+prune docker-compose.yaml
