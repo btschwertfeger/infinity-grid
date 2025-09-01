@@ -38,7 +38,14 @@ RUN --mount=type=bind,target=/context,from=builder,source=/apps \
         procps \
     && locale-gen en_US.UTF-8 \
     && rm -rf /var/lib/apt/lists/* \
-    && python -m pip install --compile --no-cache-dir $(find /context/dist -name "*.whl")[kraken]
+    && python -m pip install --compile --no-cache-dir $(find /context/dist -name "*.whl")[kraken] \
+    && groupadd -r infinity-grid \
+    && useradd -r -g infinity-grid -d /home/infinity-grid -s /bin/bash -c "Infinity Grid User" infinity-grid \
+    && mkdir -p /home/infinity-grid \
+    && chown -R infinity-grid:infinity-grid /home/infinity-grid
+
+USER infinity-grid
+WORKDIR /home/infinity-grid
 
 ENTRYPOINT ["infinity-grid", "run"]
 

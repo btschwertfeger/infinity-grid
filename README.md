@@ -1,4 +1,4 @@
-<h1 align="center">Multi-exchange Infinity Grid Trading Algorithm</h1>
+<h1 align="center">Multi-Exchange Infinity Grid Trading Algorithm</h1>
 
 <div align="center">
 
