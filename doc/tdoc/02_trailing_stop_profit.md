@@ -2,43 +2,77 @@
 
 Concept: Optional Custom Trailing Stop Profit
 
-Scenario:
+In order to increase profits by letting them run beyond the defined interval, we
+could implement a custom trailing stop profit mechanism.
 
-Amount per grid: 100 €
-Interval: 2 %
+This mechanism ensures that the profit made by a trade is at least based on the
+defined interval or better. This "_or better_" can be realized by letting
+profits run $x$% beyond the defined interval and then lock in profits, in case
+the price come back down.
 
-```
-When a buy order at 100 € is executed
-  Then place a sell order O1 at 104 € (2x interval)
+## Parameters
 
-  When the price falls to or below 100 €
-    Then do nothing
+- Amount per grid: 100 €
+- Interval: 2 %
+- TSTP: 1 %
 
-  When the price reaches 103 € (1.5x interval)
-    Then remember to sell at 102 € in case the price drops (1x interval from buy price)
-    And cancel the sell order O1 at 104 €
-    And place a sell order O2 at 105 € (buy price * 2.5x interval)
+## Gherkin Specification
 
-    When the price falls to or below 102 €
-      Then cancel O2
-      And create limit sell order at 102 €
-      END
+```gherkin
+Feature: Trailing Stop Profit
+  As a trader
+  I want to implement a trailing stop profit mechanism
+  So that I can maximize profits when the price trends upward
 
-    When the price rises to 104 € (2x interval of buy price)
-      Then remember to sell at 103 € in case the price drops (1.5x interval from buy price)
-      And cancel the sell order O2
-      And place a sell order O3 at 106 € (current price * 3x interval)
+  Background:
+    Given the grid amount is 100 €
+    And the interval is 2 %
 
-      When the price rises to 105 € (2.5x interval of buy price)
-        Then remember to sell at 104 € in case the price drops (2x interval from buy price)
-        And cancel the sell order O2
-        And place a sell order O4 at 107 € (buy price * 3.5x interval)
+  Scenario: Managing buy order with trailing stop profit
+    When a buy order at 100 € is executed
+    Then a sell order O1 is placed at 104 € (interval + 2x TSTP)
 
-        When the price falls to 104 € (2x interval of buy price)
-          Then cancel the sell order O4
-          And place a limit sell order at 104 €
-          END
-      END
-    END
-  END
+    Scenario: Price falls to or below buy price
+      Given a buy order at 100 € was executed
+      And a sell order O1 exists at 104 €
+      When the price falls to or below 100 €
+      Then no action is taken
+
+    Scenario: Price reaches 103 € (interval + TSTP)
+      Given a buy order at 100 € was executed
+      And a sell order O1 exists at 104 €
+      When the price reaches 103 € (interval + TSTP)
+      Then the system remembers to sell at 102 € in case the price drops
+      And the sell order O1 at 104 € is canceled
+      And a new sell order O2 is placed at 105 € (interval + 3x TSTP)
+
+      Scenario: Price falls after reaching 103 € (interval + TSTP)
+        Given the price reached 103 €
+        And a sell order O2 exists at 105 €
+        When the price falls to or below 102 €
+        Then the sell order O2 is canceled
+        And a limit sell order is created at 102 €
+
+      Scenario: Price rises to 104 € (interval + 2x TSTP)
+        Given the price reached 103 €
+        And a sell order O2 exists at 105 €
+        When the price rises to 104 € (interval + 2TSTP)
+        Then the system remembers to sell at 103 € in case the price drops
+        And the sell order O2 is canceled
+        And a new sell order O3 is placed at 106 € (interval + 4x TSTP)
+
+        Scenario: Price rises to 106 € (interval + 4 TSTP)
+          Given the price reached 104 €
+          And a sell order O3 exists at 106 €
+          When the price rises to 105 € (interval + 3 TSTP)
+          Then the system remembers to sell at 104 € in case the price drops
+          And the sell order O3 is canceled
+          And a new sell order O4 is placed at 107 € (interval + 4x TSTP)
+
+          Scenario: Price falls after reaching 105 € (interval + 3x TSTP)
+            Given the price reached 105 €
+            And a sell order O4 exists at 107 €
+            When the price falls to 104 € (interval + 2x TSTP)
+            Then the sell order O4 is canceled
+            And a limit sell order is created at 104 €
 ```
