@@ -21,6 +21,9 @@ Practices](https://www.bestpractices.dev/projects/9956/badge)](https://www.bestp
 [![release](https://img.shields.io/pypi/v/infinity-grid)](https://pypi.org/project/infinity-grid/)
 [![Documentation Status Stable](https://readthedocs.org/projects/infinity-grid/badge/?version=stable)](https://infinity-grid.readthedocs.io/en/stable)
 
+[![Telegram](https://img.shields.io/badge/Join_our_community-Telegram-blue?logo=telegram&logoColor=whiteg)](https://t.me/mx_infinity_grid)
+[![Running instance](https://img.shields.io/badge/Preview_a_running_instance-Telegram-blue?logo=telegram&logoColor=whiteg)](https://t.me/mx_infinity_grid/3)
+
 <!-- [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14735203.svg)](https://doi.org/10.5281/zenodo.14735203) -->
 
 </div>
@@ -321,6 +324,7 @@ docker compose up -d
 | `INFINITY_GRID_RUN_SKIP_PRICE_TIMEOUT` | `bool`             | Skip checking if there was a price update in the last 10 minutes. By default, the bot will exit if no recent price data is available. This might be useful for assets that aren't traded that often.                                                                                                           |
 | `INFINITY_GRID_RUN_TELEGRAM_TOKEN`     | `str`              | The Telegram bot token for notifications.                                                                                                                                                                                                                                                                      |
 | `INFINITY_GRID_RUN_TELEGRAM_CHAT_ID`   | `str`              | The Telegram chat ID for notifications.                                                                                                                                                                                                                                                                        |
+| `INFINITY_GRID_RUN_TELEGRAM_THREAD_ID` | `str`              | The Telegram thread ID for notifications.                                                                                                                                                                                                                                                                      |
 | `INFINITY_GRID_RUN_DB_USER`            | `str`              | The PostgreSQL database user.                                                                                                                                                                                                                                                                                  |
 | `INFINITY_GRID_RUN_DB_NAME`            | `str`              | The PostgreSQL database name.                                                                                                                                                                                                                                                                                  |
 | `INFINITY_GRID_RUN_DB_PASSWORD`        | `str`              | The PostgreSQL database password.                                                                                                                                                                                                                                                                              |

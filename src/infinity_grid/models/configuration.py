@@ -123,6 +123,7 @@ class TelegramConfigDTO(BaseModel):
 
     token: str | None = None
     chat_id: str | None = None
+    thread_id: str | None = None
 
     @field_validator("token")
     @classmethod

@@ -18,9 +18,15 @@ LOG = getLogger(__name__)
 class TelegramNotificationChannelAdapter(INotificationChannel):
     """Telegram implementation of the notification channel."""
 
-    def __init__(self: Self, bot_token: str, chat_id: str) -> None:
-        self.__chat_id = chat_id
+    def __init__(
+        self: Self,
+        bot_token: str,
+        chat_id: str,
+        thread_id: str | None = None,
+    ) -> None:
         self.__base_url = f"https://api.telegram.org/bot{bot_token}"
+        self.__chat_id = chat_id
+        self.__thread_id = thread_id
 
     def send(self: Self, message: str) -> bool:
         """Send a notification message through Telegram."""
@@ -31,6 +37,7 @@ class TelegramNotificationChannelAdapter(INotificationChannel):
                 data={
                     "chat_id": self.__chat_id,
                     "text": message,
+                    "message_thread_id": self.__thread_id,
                     "parse_mode": "markdown",
                 },
                 timeout=10,

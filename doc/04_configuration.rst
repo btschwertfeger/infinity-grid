@@ -259,6 +259,9 @@ naming convention.
     * - ``INFINITY_GRID_RUN_TELEGRAM_CHAT_ID``
       - ``str``
       - The Telegram chat ID for notifications.
+    * - ``INFINITY_GRID_RUN_TELEGRAM_THREAD_ID``
+      - ``str``
+      - The Telegram thread ID for notifications.
     * - ``INFINITY_GRID_RUN_DB_USER``
       - ``str``
       - The PostgreSQL database user.

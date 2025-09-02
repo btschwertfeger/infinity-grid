@@ -12,6 +12,8 @@ Introduction
 |CI/CD badge| |Typing badge| |codecov badge|
 |Release date badge| |Release version badge|
 
+|Join us on Telegram| |Telegram Demo|
+
 Disclaimer
 ----------
 
