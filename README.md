@@ -20,11 +20,10 @@ Practices](https://www.bestpractices.dev/projects/9956/badge)](https://www.bestp
 [![release](https://shields.io/github/release-date/btschwertfeger/infinity-grid)](https://github.com/btschwertfeger/infinity-grid/releases)
 [![release](https://img.shields.io/pypi/v/infinity-grid)](https://pypi.org/project/infinity-grid/)
 [![Documentation Status Stable](https://readthedocs.org/projects/infinity-grid/badge/?version=stable)](https://infinity-grid.readthedocs.io/en/stable)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17034315.svg)](https://doi.org/10.5281/zenodo.17034315)
 
 [![Telegram](https://img.shields.io/badge/Join_our_community-Telegram-blue?logo=telegram&logoColor=whiteg)](https://t.me/mx_infinity_grid)
 [![Running instance](https://img.shields.io/badge/Preview_a_running_instance-Telegram-blue?logo=telegram&logoColor=whiteg)](https://t.me/mx_infinity_grid/3)
-
-<!-- [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14735203.svg)](https://doi.org/10.5281/zenodo.14735203) -->
 
 </div>
 

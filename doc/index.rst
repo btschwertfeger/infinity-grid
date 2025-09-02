@@ -10,7 +10,7 @@ Welcome to infinity-grid's documentation!
 
 |GitHub badge| |PyVersions badge| |Downloads badge|
 |CI/CD badge| |Typing badge| |codecov badge|
-|Release date badge| |Release version badge|
+|Release date badge| |Release version badge| |DOI badge|
 
 |Join us on Telegram| |Telegram Demo|
 
