@@ -12,6 +12,8 @@ Welcome to infinity-grid's documentation!
 |CI/CD badge| |Typing badge| |codecov badge|
 |Release date badge| |Release version badge|
 
+|Join us on Telegram| |Telegram Demo|
+
 .. toctree::
    :caption: Contents:
    :maxdepth: 2

@@ -28,19 +28,27 @@ class NotificationService:
             self.add_telegram_channel(
                 token=self.__config.telegram.token,
                 chat_id=self.__config.telegram.chat_id,
+                thread_id=self.__config.telegram.thread_id,
             )
 
     def add_channel(self: Self, channel: INotificationChannel) -> None:
         """Add a notification channel to the service."""
         self.__channels.append(channel)
 
-    def add_telegram_channel(self: Self, token: str, chat_id: str) -> None:
+    def add_telegram_channel(
+        self: Self,
+        token: str,
+        chat_id: str,
+        thread_id: str | None,
+    ) -> None:
         """Convenience method to add a Telegram notification channel."""
         from infinity_grid.adapters.notification import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
             TelegramNotificationChannelAdapter,
         )
 
-        self.add_channel(TelegramNotificationChannelAdapter(token, chat_id))
+        self.add_channel(
+            TelegramNotificationChannelAdapter(token, chat_id, thread_id),
+        )
 
     def notify(self: Self, message: str) -> bool:
         """Send a notification through all configured channels."""

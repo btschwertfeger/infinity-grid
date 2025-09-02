@@ -286,6 +286,12 @@ def cli(ctx: Context, **kwargs: dict) -> None:
         type=STRING,
         help="The telegram chat ID to use.",
     ),
+    option(
+        "--telegram-thread-id",
+        required=False,
+        type=STRING,
+        help="The telegram thread ID to use.",
+    ),
 )
 @option_group(
     "General Database Configuration",
@@ -359,6 +365,7 @@ def run(ctx: Context, **kwargs: dict[str, Any]) -> None:
         telegram=TelegramConfigDTO(
             token=kwargs.pop("telegram_token", None),
             chat_id=kwargs.pop("telegram_chat_id", None),
+            thread_id=kwargs.pop("telegram_thread_id", None),
         ),
     )
     ctx.obj |= kwargs
