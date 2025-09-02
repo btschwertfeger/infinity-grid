@@ -39,7 +39,7 @@ class NotificationService:
         self: Self,
         token: str,
         chat_id: str,
-        thread_id: str | None,
+        thread_id: str | None = None,
     ) -> None:
         """Convenience method to add a Telegram notification channel."""
         from infinity_grid.adapters.notification import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415

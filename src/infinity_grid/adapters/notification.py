@@ -22,7 +22,7 @@ class TelegramNotificationChannelAdapter(INotificationChannel):
         self: Self,
         bot_token: str,
         chat_id: str,
-        thread_id: str | None,
+        thread_id: str | None = None,
     ) -> None:
         self.__base_url = f"https://api.telegram.org/bot{bot_token}"
         self.__chat_id = chat_id

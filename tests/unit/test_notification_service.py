@@ -22,6 +22,7 @@ from infinity_grid.services.notification_service import NotificationService
 
 TOKEN = "123:abdsljhbfadshkjfgbakrjhfbadjfhbac"  # noqa: S105
 CHAT_ID = "456"
+THREAD_ID = "3"
 
 
 class TestNotificationService:
@@ -48,7 +49,7 @@ class TestNotificationService:
         service = NotificationService(config)
 
         # Should create telegram adapter when enabled
-        mock_telegram_adapter.assert_called_once_with(TOKEN, CHAT_ID)
+        mock_telegram_adapter.assert_called_once_with(TOKEN, CHAT_ID, None)
 
     def test_add_channel(self) -> None:
         """Test adding a notification channel"""
@@ -77,9 +78,9 @@ class TestNotificationService:
         )
         service = NotificationService(config)
 
-        service.add_telegram_channel("token123", "chat456")
+        service.add_telegram_channel(TOKEN, CHAT_ID, THREAD_ID)
 
-        mock_telegram_adapter.assert_called_once_with("token123", "chat456")
+        mock_telegram_adapter.assert_called_once_with(TOKEN, CHAT_ID, THREAD_ID)
 
     def test_notify_no_channels(self) -> None:
         """Test notification when no channels are configured"""
@@ -236,7 +237,7 @@ class TestNotificationService:
         # This should trigger _setup_channels_from_config in __init__
         NotificationService(config)
 
-        mock_telegram_adapter.assert_called_once_with(TOKEN, CHAT_ID)
+        mock_telegram_adapter.assert_called_once_with(TOKEN, CHAT_ID, None)
 
     def test_setup_channels_from_config_disabled(self) -> None:
         """Test that _setup_channels_from_config doesn't create channels when disabled"""
