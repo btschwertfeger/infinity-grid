@@ -46,9 +46,9 @@
 .. |Docs stable|               image:: https://readthedocs.org/projects/infinity-grid/badge/?version=stable
                               :target: https://infinity-grid.readthedocs.io/en/stable
                               :alt:    Documentation status stable
-.. .. |DOI badge|                 image:: https://zenodo.org/badge/DOI/10.5281/zenodo.14735203.svg
-..                               :target: https://doi.org/10.5281/zenodo.14735203
-..                               :alt:    Zenodo DOI
+.. |DOI badge|                 image:: https://zenodo.org/badge/DOI/10.5281/zenodo.17034315.svg
+                              :target: https://doi.org/10.5281/zenodo.17034315
+                              :alt:    Zenodo DOI
 
 .. |Telegram  Demo|           image:: https://img.shields.io/badge/Preview_a_running_instance-Telegram-blue?logo=telegram&logoColor=white
                              :target: https://t.me/mx_infinity_grid/3
