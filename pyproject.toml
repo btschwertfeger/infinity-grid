@@ -50,6 +50,12 @@ classifiers = [
   "Typing :: Typed",
 ]
 
+[project.urls]
+Homepage = "https://github.com/btschwertfeger/infinity-grid"
+Documentation = "https://infinity-grid.readthedocs.io/en/stable/"
+Changelog = "https://github.com/btschwertfeger/infinity-grid/releases"
+"Bug Tracker" = "https://github.com/btschwertfeger/infinity-grid/issues"
+
 [project.optional-dependencies]
 dev = ["mypy", "black", "ruff"]
 test = ["pytest", "pytest-cov", "pytest-asyncio", "python-kraken-sdk~=3.2"]
