@@ -89,10 +89,10 @@ class GridStrategyBase:
 
         # Tracks the last time a ticker message was received for checking
         # connectivity.
-        self._last_price_time: datetime = None
-        # Memory the last time when a status notification was sent to ensure
+        self._last_price_time: datetime | None = None
+        # Remember the last time when a status notification was sent to ensure
         # this only happens once an hour.
-        self._last_status_update: datetime = None
+        self._last_status_update: datetime | None = None
 
         self._cost_decimals: int
         self._amount_per_grid_plus_fee: float
