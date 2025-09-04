@@ -87,8 +87,12 @@ class GridStrategyBase:
         )
         db.init_db()
 
-        # Set this initially in case the DB contains a value that is too old.
-        self._configuration_table.update({"last_price_time": datetime.now()})
+        # Tracks the last time a ticker message was received for checking
+        # connectivity.
+        self._last_price_time: datetime = None
+        # Memory the last time when a status notification was sent to ensure
+        # this only happens once an hour.
+        self._last_status_update: datetime = None
 
         self._cost_decimals: int
         self._amount_per_grid_plus_fee: float
@@ -168,20 +172,22 @@ class GridStrategyBase:
 
         while True:
             try:
-                conf = self._configuration_table.get()
                 last_hour = (now := datetime.now()) - timedelta(hours=1)
 
                 if self._state_machine.state == States.RUNNING and (
-                    not conf["last_price_time"]
-                    or not conf["last_status_update"]
-                    or conf["last_status_update"] < last_hour
+                    self._last_price_time
+                    and (
+                        not self._last_status_update
+                        or self._last_status_update < last_hour
+                    )
                 ):
                     # Send update once per hour
                     self.send_status_update()
 
                 if (
                     not self._config.skip_price_timeout
-                    and conf["last_price_time"] + timedelta(seconds=600) < now
+                    and self._last_price_time
+                    and self._last_price_time + timedelta(seconds=600) < now
                 ):
                     LOG.error("No price update since 10 minutes - exiting!")
                     self._state_machine.transition_to(States.ERROR)
@@ -317,7 +323,7 @@ class GridStrategyBase:
             return
 
         self._ticker = float(ticker_info.last)
-        self._configuration_table.update({"last_price_time": datetime.now()})
+        self._last_price_time = datetime.now()
 
         if self._state_machine.state == States.RUNNING:
             if self._unsold_buy_order_txids_table.count() != 0:
@@ -1269,7 +1275,7 @@ class GridStrategyBase:
         message += "\n```"
 
         self._event_bus.publish("notification", data={"message": message})
-        self._configuration_table.update({"last_status_update": datetime.now()})
+        self._last_status_update = datetime.now()
 
     # ==========================================================================
 

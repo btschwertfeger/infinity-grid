@@ -8,12 +8,11 @@
 """Module implementing the database connection and handling of interactions."""
 
 from copy import deepcopy
-from datetime import datetime
 from importlib.metadata import version
 from logging import getLogger
 from typing import Any, Self
 
-from sqlalchemy import Column, DateTime, Float, Integer, String, Table, func, select
+from sqlalchemy import Column, Float, Integer, String, Table, func, select
 from sqlalchemy.engine.result import MappingResult
 from sqlalchemy.engine.row import RowMapping
 
@@ -163,8 +162,6 @@ class Configuration:
             Column("price_of_highest_buy", Float, nullable=False, default=0),
             Column("amount_per_grid", Float),
             Column("interval", Float),
-            Column("last_price_time", DateTime, nullable=False),
-            Column("last_status_update", DateTime, nullable=False),
             extend_existing=True,
         )
 
@@ -182,8 +179,6 @@ class Configuration:
                 self.__table,
                 userref=self.__userref,
                 version=current_version,
-                last_price_time=datetime.now(),
-                last_status_update=datetime.now(),
             )
         # Check if version needs to be updated
         elif (config := self.get()) and config.version != current_version:  # type: ignore[attr-defined]
@@ -210,8 +205,6 @@ class Configuration:
                 - price_of_highest_buy: Price of the highest buy order
                 - amount_per_grid: Amount allocated per grid
                 - interval: Interval setting
-                - last_price_time: Timestamp of last price update
-                - last_status_update: Timestamp of last status update
         """
         if not filters:
             filters = {}
