@@ -66,7 +66,7 @@ Feature: Trailing Stop Profit
 
         Scenario: Price falls after reaching 104 € (interval + 2x TSP)
           Given the price reached 104 €
-          And a sell order O2 exists at 106 €
+          And a sell order O3 exists at 106 €
           When the price falls to or below 104 €
           Then the sell order O3 is canceled
           And a limit sell order is created at 104 €
