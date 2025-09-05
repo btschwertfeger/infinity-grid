@@ -76,7 +76,7 @@ higher price in the future.
   instance. Using a PostgreSQL DB backend is the recommended way as it also
   allows running multiple trading bot instances against the same DB backend.
 - *Use different userref's for different bot instances*. The userref is used by
-  the bot to identify which orders belong to him. Using the same usererf for
+  the bot to identify which orders belong to him. Using the same userref for
   different assets or running multiple bot instances for the same or different
   asset pairs using the same userref will result in errors.
 
