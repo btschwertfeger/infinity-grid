@@ -29,6 +29,7 @@ from infinity_grid.infrastructure.database import (
     Orderbook,
     PendingTXIDs,
     UnsoldBuyOrderTXIDs,
+    FutureOrders,
 )
 from infinity_grid.interfaces.exchange import (
     IExchangeRESTService,
@@ -85,6 +86,7 @@ class GridStrategyBase:
             self._config.userref,
             db,
         )
+        self._future_orders_table: FutureOrders = FutureOrders(self._config.userref, db)
         db.init_db()
 
         # Tracks the last time a ticker message was received for checking
@@ -1158,9 +1160,7 @@ class GridStrategyBase:
             self._orderbook_table.add(order_details)
             self._pending_txids_table.remove(order_details.txid)
         else:
-            self._orderbook_table.update(
-                order_details,
-            )
+            self._orderbook_table.update(order_details)
             LOG.info("Updated order '%s' in orderbook.", order_details.txid)
 
         LOG.info(
@@ -1358,149 +1358,53 @@ class GridStrategyBase:
         """
         Check TSP conditions for all open sell orders.
 
-        For each sell order that was placed with TSP enabled:
-        1. Calculate if TSP should be activated (price >= buy_price * (1 +
-           interval + TSP))
-        2. If activated and price moved up, cancel current sell order and place
-           higher
-        3. If activated and price moved down to stop level, place stop-loss sell
-           order
-
-        # FIXME: we might need a new table for tracking orders that were
-                 cancelled by TSP and need a new placement
+        FIXME: Set tsp_active to orders placed from future_orders table
         """
+
         if not self._ticker or self._config.dry_run:
             return
-
-        current_price = self._ticker
 
         sell_orders = self._orderbook_table.get_orders(
             filters={"side": self._exchange_domain.SELL},
         ).all()
 
+        for order in self._future_orders_table.get():
+            # create a new sell order
+            # self._new_sell_order cannot be used!
+            pass
+
         for sell_order in sell_orders:
             sell_price = sell_order["price"]
-            sell_txid = sell_order["txid"]
-
-            # Calculate the original buy price from the sell price
-            # For TSP orders: sell_price = buy_price * (1 + interval + 2×TSP)
-            # For normal orders: sell_price = buy_price * (1 + interval)
-
-            # We need to determine if this was a TSP order or normal order
-            # We can do this by checking if the sell price fits the TSP pattern
-            tsp_factor = (
-                1 + self._config.interval + (2 * self._config.trailing_stop_profit)
+            reference_price = sell_price / (  # buy price or last shift-up price
+                1 + self._config.interval + 2 * self._config.trailing_stop_profit,
             )
-            normal_factor = 1 + self._config.interval
+            if self._ticker < reference_price:  # only interested in profitable things
+                # If market price is below buy/reference price
+                continue
 
-            # Try to back-calculate buy price assuming TSP
-            potential_buy_price_tsp = sell_price / tsp_factor
-            potential_buy_price_normal = sell_price / normal_factor
-
-            # Check which scenario is more likely based on current price patterns
-            # If the sell order is much higher than normal, it's likely a TSP order
-            price_diff_tsp = abs(
-                current_price
-                - potential_buy_price_tsp
-                * (1 + self._config.interval + self._config.trailing_stop_profit)
-            )
-            price_diff_normal = abs(
-                current_price - potential_buy_price_normal * (1 + self._config.interval)
+            tsp_price = reference_price + sell_price * (
+                2 * self._config.trailing_stop_profit
             )
 
-            # If TSP pattern fits better, treat as TSP order
-            if price_diff_tsp < price_diff_normal and tsp_factor > normal_factor:
-                buy_price = potential_buy_price_tsp
-                activation_price = buy_price * (
-                    1 + self._config.interval + self._config.trailing_stop_profit
+            if (
+                sell_order["tsp_active"]  # TSP must be activated
+                and self._ticker <= tsp_price  # Price must be lower or equal than TSP
+                and self._ticker
+                > reference_price * (1 + 2 * self._config.fee)  # Must be profitable
+            ):
+                # FIXME: place market sell order
+                #        Ensure that sell is profitable
+                self._rest_api.cancel_order(txid=sell_order["txid"])
+                continue
+            if self._ticker >= reference_price * (
+                1 + self._config.interval + self._config.trailing_stop_profit
+            ):
+                # FIXME: only shift up in case the filled volume is 0.0
+                # Shift up the leading limit order
+                self._future_orders_table.add(
+                    sell_order["txid"],
+                    price=sell_price
+                    + reference_price * self._config.trailing_stop_profit,
                 )
-
-                LOG.debug(
-                    "Checking TSP for sell order %s: buy_price=%s, activation_price=%s, current_price=%s",
-                    sell_txid,
-                    buy_price,
-                    activation_price,
-                    current_price,
-                )
-
-                # Case 1: TSP should be activated (price reached activation level)
-                if current_price >= activation_price:
-                    LOG.info(
-                        "TSP activation for sell order %s: price %s >= activation %s",
-                        sell_txid,
-                        current_price,
-                        activation_price,
-                    )
-
-                    # Cancel current sell order and place new higher one
-                    try:
-                        self._rest_api.cancel_order(txid=sell_txid)
-                        self._orderbook_table.remove(filters={"txid": sell_txid})
-
-                        # Calculate new sell price based on how much higher the price went
-                        # New sell price = buy_price * (1 + interval + (N+2)×TSP)
-                        # where N is how many TSP increments above activation we are
-                        tsp_increments = (
-                            int(
-                                (current_price - activation_price)
-                                / (buy_price * self._config.trailing_stop_profit)
-                            )
-                            + 1
-                        )
-                        new_sell_factor = (
-                            1
-                            + self._config.interval
-                            + ((tsp_increments + 2) * self._config.trailing_stop_profit)
-                        )
-                        new_sell_price = buy_price * new_sell_factor
-
-                        LOG.info(
-                            "Placing new TSP sell order at %s (was %s)",
-                            new_sell_price,
-                            sell_price,
-                        )
-
-                        # Place new sell order via strategy's method
-                        self._handle_arbitrage(
-                            side=self._exchange_domain.SELL,
-                            order_price=new_sell_price,
-                        )
-
-                    except Exception as exc:
-                        LOG.error(
-                            "Failed to update TSP sell order %s: %s", sell_txid, exc
-                        )
-
-                # Case 2: Check if price dropped to trailing stop level
-                elif current_price <= buy_price * (1 + self._config.interval):
-                    LOG.info(
-                        "TSP stop triggered for sell order %s: price %s <= stop level %s",
-                        sell_txid,
-                        current_price,
-                        buy_price * (1 + self._config.interval),
-                    )
-
-                    # Cancel current sell order and place stop-loss order
-                    try:
-                        self._rest_api.cancel_order(txid=sell_txid)
-                        self._orderbook_table.remove(filters={"txid": sell_txid})
-
-                        # Place stop-loss sell order at minimum profit level
-                        stop_price = buy_price * (1 + self._config.interval)
-
-                        LOG.info(
-                            "Placing TSP stop-loss sell order at %s",
-                            stop_price,
-                        )
-
-                        self._handle_arbitrage(
-                            side=self._exchange_domain.SELL,
-                            order_price=stop_price,
-                        )
-
-                    except Exception as exc:
-                        LOG.error(
-                            "Failed to place TSP stop-loss order for %s: %s",
-                            sell_txid,
-                            exc,
-                        )
+                self._rest_api.cancel_order(txid=sell_order["txid"])
+                continue

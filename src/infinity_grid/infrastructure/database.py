@@ -12,7 +12,7 @@ from importlib.metadata import version
 from logging import getLogger
 from typing import Any, Self
 
-from sqlalchemy import Column, Float, Integer, String, Table, func, select
+from sqlalchemy import Column, Float, Integer, String, Table, func, select, Boolean
 from sqlalchemy.engine.result import MappingResult
 from sqlalchemy.engine.row import RowMapping
 
@@ -39,6 +39,7 @@ class Orderbook:
             Column("side", String, nullable=False),
             Column("price", Float, nullable=False),
             Column("volume", Float, nullable=False),
+            Column("tsp_active", Boolean, default=False),
         )
 
     def add(self: Self, order: OrderInfoSchema) -> None:
@@ -101,11 +102,20 @@ class Orderbook:
             self.__table,
             filters={"userref": self.__userref, "txid": updates.txid},
             updates={
-                "symbol": updates.pair,
                 "side": updates.side,
                 "price": updates.price,
                 "volume": updates.vol,
             },
+        )
+
+    def enable_tsp(self: Self, txid: str) -> None:
+        """Enabling trailing stop profit for a specific order."""
+        LOG.debug("Enabling trailing stop profit for order '%s'", txid)
+
+        self.__db.update_row(
+            self.__table,
+            filters={"userref": self.__userref, "txid": txid},
+            updates={"tsp_active": True},
         )
 
     def count(
@@ -350,7 +360,7 @@ class PendingTXIDs:
         filters |= {"userref": self.__userref}
 
         LOG.debug(
-            "Getting pending orders from the 'pending_txids' table with filter: %s",
+            "Getting orders from the 'pending_txids' table with filter: %s",
             filters,
         )
 
@@ -359,20 +369,16 @@ class PendingTXIDs:
     def add(self: Self, txid: str) -> None:
         """Add a pending order to the table."""
         LOG.debug(
-            "Adding a pending txid to the 'pending_txids' table: '%s'",
+            "Adding an order to the 'pending_txids' table: '%s'",
             txid,
         )
-        self.__db.add_row(
-            self.__table,
-            userref=self.__userref,
-            txid=txid,
-        )
+        self.__db.add_row(self.__table, userref=self.__userref, txid=txid)
 
     def remove(self: Self, txid: str) -> None:
         """Remove a pending order from the table."""
 
         LOG.debug(
-            "Removing pending txid from the 'pending_txids' table with filters: %s",
+            "Removing order from the 'pending_txids' table with filters: %s",
             filters := {"userref": self.__userref, "txid": txid},
         )
         self.__db.delete_row(self.__table, filters=filters)
@@ -384,7 +390,7 @@ class PendingTXIDs:
         filters |= {"userref": self.__userref}
 
         LOG.debug(
-            "Counting pending txids of the 'pending_txids' table with filter: %s",
+            "Counting orders in 'pending_txids' table with filter: %s",
             filters,
         )
 
@@ -396,3 +402,53 @@ class PendingTXIDs:
             )
         )
         return self.__db.session.execute(query).scalar()  # type: ignore[no-any-return]
+
+
+class FutureOrders:
+    """
+    Table containing orders that need to be placed as soon as possible.
+    """
+
+    def __init__(self: Self, userref: int, db: DBConnect) -> None:
+        LOG.debug("Initializing the FutureOrders table...")
+        self.__db = db
+        self.__userref = userref
+        self.__table = Table(
+            "future_orders",
+            self.__db.metadata,
+            Column("id", Integer, primary_key=True),
+            Column("previous_txid", String, nullable=False),
+            Column("price", Float, nullable=False),
+        )
+
+    def get(self: Self, filters: dict | None = None) -> MappingResult:
+        """Get row from the table."""
+        if not filters:
+            filters = {}
+        filters |= {"userref": self.__userref}
+
+        LOG.debug(
+            "Getting rows from the 'future_orders' table with filter: %s",
+            filters,
+        )
+
+        return self.__db.get_rows(self.__table, filters=filters)
+
+    def add(self: Self, previous_txid: str, price: float) -> None:
+        """Add an order to the table."""
+        LOG.debug("Adding a order to the 'future_orders' table: price: %s", price)
+        self.__db.add_row(
+            self.__table,
+            userref=self.__userref,
+            previous_txid=previous_txid,
+            price=price,
+        )
+
+    def remove(self: Self, previous_txid: str) -> None:
+        """Remove a row from the table."""
+
+        LOG.debug(
+            "Removing row from the 'future_orders' table with filters: %s",
+            filters := {"userref": self.__userref, "previous_txid": previous_txid},
+        )
+        self.__db.delete_row(self.__table, filters=filters)
