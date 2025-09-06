@@ -4,7 +4,6 @@ cloup~=3.0
 # sphinx-rtd-theme
 # sphinx-book-theme
 furo
-git-lfs
 ipython
 nbsphinx
 psycopg2-binary~=2.9
