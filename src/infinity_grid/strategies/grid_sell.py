@@ -24,25 +24,14 @@ class GridSellStrategy(GridStrategyBase):
         self: Self,
         last_price: float,
         extra_sell: bool = False,  # noqa: ARG002
+        buy_txid: str | None = None,
     ) -> float:
         """
         Returns the sell order price depending. Also assigns a new highest buy
         price to configuration if there was a new highest buy.
         """
-        LOG.debug("Computing the order price...")
-
-        order_price: float
-        price_of_highest_buy = self._configuration_table.get()["price_of_highest_buy"]
-        last_price = float(last_price)
-
-        if last_price > price_of_highest_buy:
-            self._configuration_table.update({"price_of_highest_buy": last_price})
-
-        # Sell price 1x interval above buy price
-        factor = 1 + self._config.interval
-        if (order_price := last_price * factor) < self._ticker:
-            order_price = self._ticker * factor
-        return order_price
+        # Use the base class implementation which handles TSP
+        return super()._get_sell_order_price(last_price, buy_txid)
 
     def _check_extra_sell_order(self: Self) -> None:
         """Not applicable for GridSell strategy."""

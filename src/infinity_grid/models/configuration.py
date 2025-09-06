@@ -36,6 +36,9 @@ class BotConfigDTO(BaseModel):
     interval: float
     n_open_buy_orders: int
 
+    # Optional trailing stop profit configuration
+    trailing_stop_profit: float | None = None
+
     @field_validator("strategy")
     @classmethod
     def validate_strategy(cls, value: str) -> str:
@@ -98,6 +101,14 @@ class BotConfigDTO(BaseModel):
         """Validate fee is between 0 and 1 if provided."""
         if value is not None and (value < 0 or value > 1):
             raise ValueError("fee must be between 0 and 1 (inclusive)")
+        return value
+
+    @field_validator("trailing_stop_profit")
+    @classmethod
+    def validate_trailing_stop_profit(cls, value: float | None) -> float | None:
+        """Validate trailing_stop_profit is between 0 and 1 if provided."""
+        if value is not None and (value <= 0 or value >= 1):
+            raise ValueError("trailing_stop_profit must be between 0 and 1 (exclusive)")
         return value
 
 

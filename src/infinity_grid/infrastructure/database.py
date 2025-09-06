@@ -162,6 +162,7 @@ class Configuration:
             Column("price_of_highest_buy", Float, nullable=False, default=0),
             Column("amount_per_grid", Float),
             Column("interval", Float),
+            Column("trailing_stop_profit", Float, nullable=True),
             extend_existing=True,
         )
 

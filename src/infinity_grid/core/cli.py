@@ -243,6 +243,19 @@ def cli(ctx: Context, **kwargs: dict) -> None:
         can be caught immediately.
         """,
     ),
+    option(
+        "--trailing-stop-profit",
+        type=FLOAT,
+        required=False,
+        callback=ensure_larger_than_zero,
+        help="""
+        The trailing stop profit percentage, e.g. '0.01' for 1%. When enabled,
+        allows profits to run beyond the defined interval and locks in profits
+        when price reverses. The mechanism activates when price reaches
+        (interval + TSP) and dynamically adjusts both stop level and target
+        sell price as price moves favorably.
+        """,
+    ),
     constraint=If(  # Useless if no further strategies are implemented
         Equal("strategy", "cDCA")
         | Equal("strategy", "GridHODL")
