@@ -9,6 +9,7 @@
 .. _infinity-grid:              https://github.com/btschwertfeger/infinity-grid
 .. _infinity-grid/issues:       https://github.com/btschwertfeger/infinity-grid/issues
 .. _infinity-grid/discussions:  https://github.com/btschwertfeger/infinity-grid/discussions
+.. _changelog:     https://github.com/btschwertfeger/infinity-grid/releases
 
 .. _Kraken:                            https://pro.kraken.com
 .. _python-kraken-sdk:                 https://github.com/btschwertfeger/python-kraken-sdk
@@ -50,10 +51,10 @@
                               :target: https://doi.org/10.5281/zenodo.17034315
                               :alt:    Zenodo DOI
 
-.. |Telegram  Demo|           image:: https://img.shields.io/badge/Preview_a_running_instance-Telegram-blue?logo=telegram&logoColor=white
-                             :target: https://t.me/mx_infinity_grid/3
-                             :alt: Telegram Demo Channel
+.. |Telegram  Demo|            image:: https://img.shields.io/badge/Preview_a_running_instance-Telegram-blue?logo=telegram&logoColor=white
+                              :target: https://t.me/mx_infinity_grid/3
+                              :alt:    Telegram Demo Channel
 
-.. |Join us on Telegram|         image:: https://img.shields.io/badge/Join_our_community-Telegram-blue?logo=telegram&logoColor=white
-                             :target: https://t.me/mx_infinity_grid
-                             :alt:    Telegram Group
+.. |Join us on Telegram|       image:: https://img.shields.io/badge/Join_our_community-Telegram-blue?logo=telegram&logoColor=white
+                              :target: https://t.me/mx_infinity_grid
+                              :alt:    Telegram Group
