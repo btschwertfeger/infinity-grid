@@ -17,7 +17,18 @@ the defined interval or better. This "_or better_" can be realized by letting
 profits run $x$% beyond the defined interval and then lock in profits, in case
 the price come back down, while ensuring to not sell below the defined interval.
 
-## Parameter Summary
+## Concept Summary
+
+The TSP mechanism works by:
+
+1. Setting an initial sell target higher than the standard interval (interval +
+   2×TSP)
+2. Activating TSP tracking when price reaches a threshold (interval + TSP)
+3. Dynamically adjusting both the stop level and the target sell price as the
+   price continues to move favorably
+4. Executing a sell when price reverses and hits the trailing stop level
+
+## Trailing Stop Profit
 
 | Parameter           | Value | Description                                        |
 | ------------------- | ----- | -------------------------------------------------- |
@@ -28,11 +39,9 @@ the price come back down, while ensuring to not sell below the defined interval.
 | Initial Sell Target | 104 $ | Initial sell order (interval + 2x TSP)             |
 | TSP Activation      | 103 $ | Price at which TSP becomes active (interval + TSP) |
 
-## Visualization
-
 ![Trailing Stop Profit Visualization](02_tsp_visualization.png)
 
-## Gherkin Sample Specification and Visualization
+### Gherkin Sample Specification and Visualization
 
 ```gherkin
 Feature: Trailing Stop Profit
@@ -104,6 +113,8 @@ Feature: Trailing Stop Profit
             # This is the end, no longer tracking of TSP
 ```
 
+### Gherkin Specification Visualized
+
 ```mermaid
 %%{init: {'theme': 'default'}}%%
 sequenceDiagram
@@ -150,3 +161,26 @@ sequenceDiagram
         Note over P,T: TSP tracking ends
     end
 ```
+
+## Considerations
+
+**Strengths**
+
+- _Enhanced Profit Potential_: Allows capturing additional gains during strong
+  directional price movements without manual intervention
+- _Risk Management_: Maintains the minimum profit defined by the interval while
+  seeking better returns
+- _Complements Grid Strategy_: Aligns well with the bot's existing grid trading
+  approach while adding trend-following capabilities
+- _Parameterized Approach_: The TSP percentage is configurable, allowing for
+  adjustment based on market conditions
+
+**Weaknesses**
+
+- _Increased Complexity_: Adds complexity to the state machine which already
+  manages various trading states
+- _Order Management Overhead_: Increases the frequency of order cancellations and
+  replacements, which could:
+  - Incur additional exchange fees
+  - Hit rate limits on certain exchanges
+  - Create race conditions during high volatility
