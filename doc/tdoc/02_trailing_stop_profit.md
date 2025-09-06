@@ -40,10 +40,10 @@ Feature: Trailing Stop Profit
       When the price falls to or below 100 €
       Then no action is taken
 
-    Scenario: Price reaches 103 € (interval + TSP)
+    Scenario: Price rises to 103 € (interval + TSP)
       Given a buy order at 100 € was executed
       And a sell order O1 exists at 104 €
-      When the price reaches 103 € (interval + TSP) # now TSP gets activated
+      When the price rises to 103 € (interval + TSP) # now TSP gets activated
       Then the system remembers to sell at 102 € in case the price drops
       And the sell order O1 at 104 € is canceled
       And a new sell order O2 is placed at 105 € (interval + 3x TSP)
@@ -69,16 +69,16 @@ Feature: Trailing Stop Profit
           And a sell order O3 exists at 106 €
           When the price falls to or below 104 €
           Then the sell order O3 is canceled
-          And a limit sell order is created at 104 €
+          And a limit sell order is created at 103 €
           # This is the end, no longer tracking of TSP
 
-        Scenario: Price rises to 106 € (interval + 4x TSP)
+        Scenario: Price rises to 105 € (interval + 3x TSP)
           Given the price reached 104 €
           And a sell order O3 exists at 106 €
           When the price rises to 105 € (interval + 3x TSP)
           Then the system remembers to sell at 104 € in case the price drops
           And the sell order O3 is canceled
-          And a new sell order O4 is placed at 107 € (interval + 4x TSP)
+          And a new sell order O4 is placed at 107 € (interval + 5x TSP)
 
           Scenario: Price falls after reaching 105 € (interval + 3x TSP)
             Given the price reached 105 €
