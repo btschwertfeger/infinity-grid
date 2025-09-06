@@ -253,7 +253,8 @@ def cli(ctx: Context, **kwargs: dict) -> None:
         allows profits to run beyond the defined interval and locks in profits
         when price reverses. The mechanism activates when price reaches
         (interval + TSP) and dynamically adjusts both stop level and target
-        sell price as price moves favorably.
+        sell price as price moves favorably. It is recommended to set a TSP to
+        half an interval, e.g., '0.01' in case the interval is '0.02'.
         """,
     ),
     constraint=If(  # Useless if no further strategies are implemented

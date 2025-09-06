@@ -20,18 +20,6 @@ LOG = getLogger(__name__)
 
 
 class GridSellStrategy(GridStrategyBase):
-    def _get_sell_order_price(
-        self: Self,
-        last_price: float,
-        extra_sell: bool = False,  # noqa: ARG002
-        buy_txid: str | None = None,
-    ) -> float:
-        """
-        Returns the sell order price depending. Also assigns a new highest buy
-        price to configuration if there was a new highest buy.
-        """
-        # Use the base class implementation which handles TSP
-        return super()._get_sell_order_price(last_price, buy_txid)
 
     def _check_extra_sell_order(self: Self) -> None:
         """Not applicable for GridSell strategy."""

@@ -1308,7 +1308,7 @@ class GridStrategyBase:
         Returns the order price. Also assigns a new highest buy price to
         configuration if there was a new highest buy.
 
-        If TSP is enabled, sets initial sell price higher (interval + 2×TSP).
+        If TSP is enabled, sets initial sell price higher (interval + 2x TSP).
         """
         LOG.debug("Computing the order price...")
 
@@ -1366,19 +1366,17 @@ class GridStrategyBase:
         3. If activated and price moved down to stop level, place stop-loss sell
            order
 
-        NOTE: for cDCA, there are no sell orders, so this must be skipped
+        # FIXME: we might need a new table for tracking orders that were
+                 cancelled by TSP and need a new placement
         """
         if not self._ticker or self._config.dry_run:
             return
 
         current_price = self._ticker
 
-        # Get all open sell orders
-        sell_orders = list(
-            self._orderbook_table.get_orders(
-                filters={"side": self._exchange_domain.SELL},
-            )
-        )
+        sell_orders = self._orderbook_table.get_orders(
+            filters={"side": self._exchange_domain.SELL},
+        ).all()
 
         for sell_order in sell_orders:
             sell_price = sell_order["price"]
