@@ -11,6 +11,18 @@ bot is designed to run in a containerized environment.
 - `./doc`: Contains documentation for the project, including how to set it up,
   develop with, and concepts to extend the project.
 - `./src`: Contains the source code for the trading bot.
+- `./src/infinity_grid/adapters`: Contains exchange and notification adapters
+- `./src/infinity_grid/core`: Contains the CLI, bot engine, state machine and
+  event bus
+- `./src/infinity_grid/infrastructure`: Contains the database table classes
+- `./src/infinity_grid/interfaces`: Contains the interfaces for exchanges,
+  notification channels, and strategies
+- `./src/infinity_grid/models`: Contains schemas, models, and data transfer
+  objects
+- `./src/infinity_grid/services`: Contains services like Notification service
+  and database connectors
+- `./src/infinity_grid/strategies`: Contains the implementations of the
+  strategies
 - `./tests`: Contains the unit, integration, acceptance, etc tests for this
   project.
 
@@ -21,7 +33,7 @@ bot is designed to run in a containerized environment.
   framework for allowing to extend and add new strategies and exchanges to the
   project.
 
-## Coding Standards
+## Guidelines
 
-- Use black for formatting Python code.
-- Pre-commit hooks must pass before committing
+- Best Software Engineering practices like KISS, modularization, and efficiency
+  must be followed.

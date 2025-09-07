@@ -39,7 +39,6 @@ class Orderbook:
             Column("side", String, nullable=False),
             Column("price", Float, nullable=False),
             Column("volume", Float, nullable=False),
-            Column("tsp_active", Boolean, default=False),
         )
 
     def add(self: Self, order: OrderInfoSchema) -> None:
@@ -106,16 +105,6 @@ class Orderbook:
                 "price": updates.price,
                 "volume": updates.vol,
             },
-        )
-
-    def enable_tsp(self: Self, txid: str) -> None:
-        """Enabling trailing stop profit for a specific order."""
-        LOG.debug("Enabling trailing stop profit for order '%s'", txid)
-
-        self.__db.update_row(
-            self.__table,
-            filters={"userref": self.__userref, "txid": txid},
-            updates={"tsp_active": True},
         )
 
     def count(
@@ -417,9 +406,13 @@ class FutureOrders:
             "future_orders",
             self.__db.metadata,
             Column("id", Integer, primary_key=True),
+            Column("userref", Integer, nullable=False),
             Column("price", Float, nullable=False),
             Column("placed", Boolean, default=False, nullable=False),
         )
+
+        # Create the table if it doesn't exist
+        self.__table.create(bind=self.__db.engine, checkfirst=True)
 
     def get(self: Self, filters: dict | None = None) -> MappingResult:
         """Get row from the table."""
@@ -441,7 +434,11 @@ class FutureOrders:
 
     def set_placed(self: Self, price: float) -> None:
         LOG.debug("Setting order with price %s as placed", price)
-        self.__db.add_row(self.__table, userref=self.__userref, price=price)
+        self.__db.update_row(
+            self.__table,
+            filters={"userref": self.__userref, "price": price, "placed": False},
+            updates={"placed": True},
+        )
 
     def remove_placed_orders(self: Self) -> None:
         """Remove a row from the table."""
@@ -450,3 +447,170 @@ class FutureOrders:
             filters := {"userref": self.__userref, "placed": True},
         )
         self.__db.delete_row(self.__table, filters=filters)
+
+
+class TSPState:
+    """
+    Table for tracking Trailing Stop Profit state independently of orders.
+    This table maintains TSP state even when orders are canceled and replaced,
+    ensuring continuity of TSP tracking.
+    """
+
+    def __init__(
+        self: Self, userref: int, db: DBConnect, tsp_percentage: float = 0.01
+    ) -> None:
+        LOG.debug("Initializing the 'tsp_state' table...")
+        self.__db = db
+        self.__userref = userref
+        self.__tsp_percentage = tsp_percentage
+        self.__table = Table(
+            "tsp_state",
+            self.__db.metadata,
+            Column("id", Integer, primary_key=True),
+            Column("userref", Integer, nullable=False),
+            Column("original_buy_txid", String, nullable=False),  # UNIQUE KEY per position
+            Column("original_buy_price", Float, nullable=False),  # Never changes
+            Column("current_stop_price", Float, nullable=False),  # Updates as trailing stop moves
+            Column("highest_price_reached", Float, nullable=False),  # Updates as price rises
+            Column("tsp_active", Boolean, default=False),  # Whether TSP is currently active
+            Column("current_sell_order_txid", String, nullable=True),  # Updates when orders shift
+        )
+
+        # Create the table if it doesn't exist
+        self.__table.create(bind=self.__db.engine, checkfirst=True)
+
+    def add(
+        self: Self,
+        original_buy_txid: str,
+        original_buy_price: float,
+        initial_stop_price: float,
+        sell_order_txid: str,
+    ) -> None:
+        """Add a new TSP tracking entry."""
+        LOG.debug(
+            "Adding TSP state: buy_txid=%s, buy_price=%s, stop_price=%s, sell_txid=%s",
+            original_buy_txid,
+            original_buy_price,
+            initial_stop_price,
+            sell_order_txid,
+        )
+        self.__db.add_row(
+            self.__table,
+            userref=self.__userref,
+            original_buy_txid=original_buy_txid,
+            original_buy_price=original_buy_price,
+            current_stop_price=initial_stop_price,
+            highest_price_reached=original_buy_price,
+            tsp_active=False,
+            current_sell_order_txid=sell_order_txid,
+        )
+
+    def update_sell_order_txid(self: Self, old_txid: str | None, new_txid: str) -> None:
+        """Update the sell order TXID when order is replaced."""
+        LOG.debug("Updating TSP sell order TXID from %s to %s", old_txid, new_txid)
+
+        if old_txid is None:
+            # Special case: updating from None (unlinked state)
+            # We need to find the record and update it, but we can't filter by None
+            # This is handled in the calling code with a direct update
+            return
+
+        self.__db.update_row(
+            self.__table,
+            filters={"userref": self.__userref, "current_sell_order_txid": old_txid},
+            updates={"current_sell_order_txid": new_txid},
+        )
+
+    def update_sell_order_txid_by_buy_txid(self: Self, original_buy_txid: str, new_sell_txid: str) -> None:
+        """Update sell order TXID for a specific buy TXID."""
+        LOG.debug("Updating sell order TXID for buy %s to %s", original_buy_txid, new_sell_txid)
+        self.__db.update_row(
+            self.__table,
+            filters={"userref": self.__userref, "original_buy_txid": original_buy_txid},
+            updates={"current_sell_order_txid": new_sell_txid},
+        )
+
+    def activate_tsp(self: Self, original_buy_txid: str, current_price: float) -> None:
+        """Activate TSP for a specific position."""
+        LOG.debug(
+            "Activating TSP for buy_txid %s at current price %s",
+            original_buy_txid,
+            current_price,
+        )
+        self.__db.update_row(
+            self.__table,
+            filters={"userref": self.__userref, "original_buy_txid": original_buy_txid},
+            updates={
+                "tsp_active": True,
+                "highest_price_reached": current_price,
+                "current_stop_price": current_price * (1 - self.__get_tsp_percentage()),
+            },
+        )
+
+    def update_trailing_stop(
+        self: Self, original_buy_txid: str, current_price: float
+    ) -> None:
+        """Update trailing stop level if price has moved higher."""
+        current_state = self.get_by_buy_txid(original_buy_txid)
+        if not current_state or not current_state["tsp_active"]:
+            return
+
+        if current_price > current_state["highest_price_reached"]:
+            new_stop_price = current_price * (1 - self.__get_tsp_percentage())
+            LOG.debug(
+                "Updating trailing stop for buy_txid=%s: new_stop=%s, highest=%s",
+                original_buy_txid,
+                new_stop_price,
+                current_price,
+            )
+            self.__db.update_row(
+                self.__table,
+                filters={"userref": self.__userref, "original_buy_txid": original_buy_txid},
+                updates={
+                    "highest_price_reached": current_price,
+                    "current_stop_price": new_stop_price,
+                },
+            )
+
+    def get_by_buy_txid(self: Self, original_buy_txid: str) -> RowMapping | None:
+        """Get TSP state for a specific buy TXID."""
+        result = self.__db.get_rows(
+            self.__table,
+            filters={"userref": self.__userref, "original_buy_txid": original_buy_txid},
+        )
+        return result.fetchone()
+
+    def get_by_sell_txid(self: Self, sell_txid: str) -> RowMapping | None:
+        """Get TSP state by current sell order TXID."""
+        result = self.__db.get_rows(
+            self.__table,
+            filters={"userref": self.__userref, "current_sell_order_txid": sell_txid},
+        )
+        return result.fetchone()
+
+    def get_all_active(self: Self) -> MappingResult:
+        """Get all active TSP states."""
+        return self.__db.get_rows(
+            self.__table,
+            filters={"userref": self.__userref, "tsp_active": True},
+        )
+
+    def remove_by_buy_txid(self: Self, original_buy_txid: str) -> None:
+        """Remove TSP state when position is closed."""
+        LOG.debug("Removing TSP state for buy TXID %s", original_buy_txid)
+        self.__db.delete_row(
+            self.__table,
+            filters={"userref": self.__userref, "original_buy_txid": original_buy_txid},
+        )
+
+    def remove_by_txid(self: Self, txid: str) -> None:
+        """Remove TSP state by sell order TXID."""
+        LOG.debug("Removing TSP state for sell order %s", txid)
+        self.__db.delete_row(
+            self.__table,
+            filters={"userref": self.__userref, "current_sell_order_txid": txid},
+        )
+
+    def __get_tsp_percentage(self: Self) -> float:
+        """Get TSP percentage from configuration."""
+        return self.__tsp_percentage

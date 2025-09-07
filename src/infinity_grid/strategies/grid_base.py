@@ -29,6 +29,7 @@ from infinity_grid.infrastructure.database import (
     FutureOrders,
     Orderbook,
     PendingTXIDs,
+    TSPState,
     UnsoldBuyOrderTXIDs,
 )
 from infinity_grid.interfaces.exchange import (
@@ -87,6 +88,10 @@ class GridStrategyBase:
             db,
         )
         self._future_orders_table: FutureOrders = FutureOrders(self._config.userref, db)
+        # FIXME: not needed if tsp not activated
+        self._tsp_state_table: TSPState = TSPState(
+            self._config.userref, db, tsp_percentage=self._config.trailing_stop_profit
+        )
         db.init_db()
 
         # Tracks the last time a ticker message was received for checking
@@ -650,7 +655,39 @@ class GridStrategyBase:
 
         # Check TSP conditions if enabled
         if self._config.trailing_stop_profit:
+            # Process future orders (TSP shifted orders)
+            self.__process_future_orders()
+            # First associate any unlinked sell orders with TSP states
+            self.__associate_sell_orders_with_tsp()
+            # Then run the main TSP logic
             self.__check_tsp()
+
+    def __process_future_orders(self: Self) -> None:
+        """
+        Process pending future orders (mainly from TSP shifts).
+
+        This creates actual sell orders from the future_orders table entries.
+        """
+        if self._config.dry_run:
+            LOG.debug("Dry run, not processing future orders.")
+            return
+
+        future_orders = self._future_orders_table.get(filters={"placed": False})
+
+        for future_order in future_orders:
+            price = future_order["price"]
+
+            LOG.info("Processing future order at price %s", price)
+
+            # Create the sell order using the standard mechanism
+            # The volume calculation will be handled by _new_sell_order
+            self._new_sell_order(order_price=price, txid_to_delete=None)
+
+            # Mark this future order as placed
+            self._future_orders_table.set_placed(price=price)
+
+            # Clean up placed orders (must be done immediately)
+            self._future_orders_table.remove_placed_orders()
 
     # ==========================================================================
     def __add_missed_sell_orders(self: Self) -> None:
@@ -968,8 +1005,8 @@ class GridStrategyBase:
             LOG.warning(
                 "Can not handle filled order, since the fetched order is not"
                 " closed in upstream!"
-                " This may happen due to Kraken's websocket API being faster"
-                " than their REST backend. Retrying in a few seconds...",
+                " This may happen due to websocket API being faster"
+                " than the REST backend. Retrying in a few seconds...",
             )
             self.handle_filled_order_event(txid=txid)
             return
@@ -1001,36 +1038,51 @@ class GridStrategyBase:
         # Create a sell order for the executed buy order.
         ##
         if order_details.side == self._exchange_domain.BUY:
+            sell_price = self._get_sell_order_price(last_price=order_details.price)
+
             self._handle_arbitrage(
                 side=self._exchange_domain.SELL,
-                order_price=self._get_sell_order_price(last_price=order_details.price),
+                order_price=sell_price,
                 txid_to_delete=txid,
             )
 
-        # ======================================================================
+            # Initialize TSP state if TSP is enabled
+            if self._config.trailing_stop_profit:
+                self._initialize_tsp_for_new_position(
+                    original_buy_txid=txid,
+                    buy_price=order_details.price,
+                    sell_price=sell_price,
+                )
+
+        # ==================================================================
         # Create a buy order for the executed sell order.
         ##
-        elif (
-            self._orderbook_table.count(
-                filters={"side": self._exchange_domain.SELL},
-                exclude={"txid": txid},
-            )
-            != 0
-        ):
-            # A new buy order will only be placed if there is another sell
-            # order, because if the last sell order was filled, the price is so
-            # high, that all buy orders will be canceled anyway and new buy
-            # orders will be placed in ``check_price_range`` during shift-up.
-            self._handle_arbitrage(
-                side=self._exchange_domain.BUY,
-                order_price=self._get_buy_order_price(
-                    last_price=order_details.price,
-                ),
-                txid_to_delete=txid,
-            )
-        else:
-            # Remove filled order from list of all orders
-            self._orderbook_table.remove(filters={"txid": txid})
+        elif order_details.side == self._exchange_domain.SELL:
+            # Clean up TSP state if a sell order was filled
+            if self._config.trailing_stop_profit:
+                self._cleanup_tsp_state_for_filled_sell_order(txid)
+
+            if (
+                self._orderbook_table.count(
+                    filters={"side": self._exchange_domain.SELL},
+                    exclude={"txid": txid},
+                )
+                != 0
+            ):
+                # A new buy order will only be placed if there is another sell
+                # order, because if the last sell order was filled, the price is so
+                # high, that all buy orders will be canceled anyway and new buy
+                # orders will be placed in ``check_price_range`` during shift-up.
+                self._handle_arbitrage(
+                    side=self._exchange_domain.BUY,
+                    order_price=self._get_buy_order_price(
+                        last_price=order_details.price,
+                    ),
+                    txid_to_delete=txid,
+                )
+            else:
+                # Remove filled order from list of all orders
+                self._orderbook_table.remove(filters={"txid": txid})
 
     def _handle_cancel_order(self: Self, txid: str) -> None:
         """
@@ -1080,6 +1132,12 @@ class GridStrategyBase:
             )
 
         self._orderbook_table.remove(filters={"txid": txid})
+
+        # Clean up TSP state if this was a sell order being canceled
+        if order_details.side == self._exchange_domain.SELL:
+            # Don't remove TSP state here as the order might be replaced
+            # TSP state cleanup happens when position is actually closed
+            pass
 
         # Check if the order has some vol_exec to sell
         ##
@@ -1357,13 +1415,11 @@ class GridStrategyBase:
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
+    # ==========================================================================
+    #  Trailing Stop Profit
+
     def __check_tsp(self: Self) -> None:
-        """
-        Check TSP conditions for all open sell orders.
-
-        FIXME: Set tsp_active to orders placed from future_orders table
-        """
-
+        """Check and manage Trailing Stop Profit for all tracked positions."""
         if (
             not self._ticker
             or self._config.dry_run
@@ -1371,49 +1427,262 @@ class GridStrategyBase:
         ):
             return
 
-        for order in self._future_orders_table.get():
-            # create a new sell order
-            # self._new_sell_order cannot be used!
-            # 1. place a new sell order
-            # 2. ensure that it as tsp active
+        LOG.debug("Checking TSP conditions at price: %s", self._ticker)
 
-            pass
-
-        tsp_p = self._config.trailing_stop_profit
+        tsp_percentage = self._config.trailing_stop_profit
         interval = self._config.interval
 
+        # Process each sell order and match with TSP state
         for sell_order in self._orderbook_table.get_orders(
             filters={"side": self._exchange_domain.SELL},
         ).all():
             sell_price = sell_order["price"]
+            sell_txid = sell_order["txid"]
 
-            # buy price or last shift-up price
-            reference_price = sell_price / (1 + interval + 2 * tsp_p)
-
-            if self._ticker < reference_price:  # only interested in profitable things
-                # If market price is below buy/reference price
-                continue
-
-            tsp_price = reference_price + sell_price * (2 * tsp_p)
-
-            # 1. Cancel leading sell order in case of shifting up sell order due
-            #    to reached threshold
-            if self._ticker >= reference_price * (1 + self._config.interval + tsp_p):
-                # FIXME: only shift up in case the filled volume is 0.0
-                # Shift up the leading limit order
-                self._future_orders_table.add(
-                    price=sell_price + reference_price * tsp_p,
+            # Try to find existing TSP state for this sell order
+            if not (tsp_state := self._tsp_state_table.get_by_sell_txid(sell_txid)):
+                # This sell order doesn't have TSP state yet
+                # This can happen for:
+                # 1. Sell orders from shift-up operations
+                # 2. Extra sell orders from SWING strategy
+                LOG.debug(
+                    "No TSP state found for sell order '%s', skipping TSP check",
+                    sell_txid,
                 )
-                self._handle_cancel_order(txid=sell_order["txid"])
                 continue
 
-            if (
-                sell_order["tsp_active"]  # TSP must be activated
-                and self._ticker <= tsp_price  # Price must be lower or equal than TSP
-                and self._ticker
-                > reference_price * (1 + 2 * self._config.fee)  # Must be profitable
-            ):
-                # FIXME: place market sell order
-                #        Ensure that sell is profitable
-                self._handle_cancel_order(txid=sell_order["txid"])
+            original_buy_price = tsp_state["original_buy_price"]
+            original_buy_txid = tsp_state["original_buy_txid"]
+
+            # Skip if current price is below original buy price (not profitable)
+            if self._ticker < original_buy_price:
                 continue
+
+            # Check if TSP should be activated
+            tsp_activation_price = original_buy_price * (1 + interval + tsp_percentage)
+
+            if not tsp_state["tsp_active"] and self._ticker >= tsp_activation_price:
+                LOG.info(
+                    "Activating TSP for position %s (buy_price=%s) at current price %s",
+                    original_buy_txid,
+                    original_buy_price,
+                    self._ticker,
+                )
+
+                # Activate TSP
+                self._tsp_state_table.activate_tsp(original_buy_txid, self._ticker)
+
+                # Cancel current sell order and place new one higher
+                self._handle_cancel_order(txid=sell_txid)
+
+                # Calculate new sell order price (move it up by TSP amount)
+                new_sell_price = sell_price + (original_buy_price * tsp_percentage)
+
+                # Use future orders to place the new sell order
+                self._future_orders_table.add(price=new_sell_price)
+
+                # Update the TSP state to clear the old sell order TXID
+                # The new sell order will get associated later in __associate_sell_orders_with_tsp
+                self._tsp_state_table.update_sell_order_txid_by_buy_txid(
+                    original_buy_txid, ""
+                )
+
+                LOG.info(
+                    "Shifted sell order from %s to %s (TSP activation)",
+                    sell_price,
+                    new_sell_price,
+                )
+                continue
+
+            # For active TSP positions, check for trailing stop updates and triggers
+            if tsp_state["tsp_active"]:
+                current_stop_price = tsp_state["current_stop_price"]
+                highest_price = tsp_state["highest_price_reached"]
+
+                # Update trailing stop if price has moved higher
+                if self._ticker > highest_price:
+                    self._tsp_state_table.update_trailing_stop(
+                        original_buy_txid, self._ticker
+                    )
+                    LOG.debug(
+                        "Updated trailing stop for position %s to new level",
+                        original_buy_txid,
+                    )
+
+                    # Shift the leading sell order up further
+                    new_sell_price = sell_price + (original_buy_price * tsp_percentage)
+                    self._handle_cancel_order(txid=sell_txid)
+                    self._future_orders_table.add(price=new_sell_price)
+
+                    # Update the TSP state to clear the old sell order TXID
+                    self._tsp_state_table.update_sell_order_txid_by_buy_txid(
+                        original_buy_txid, ""
+                    )
+
+                    LOG.debug("Shifted leading sell order up to %s", new_sell_price)
+
+                # Check if trailing stop should trigger
+                elif self._ticker <= current_stop_price:
+                    LOG.info(
+                        "TSP triggered! Selling position %s at trailing stop level %s",
+                        original_buy_txid,
+                        current_stop_price,
+                    )
+
+                    # Cancel the leading sell order
+                    self._handle_cancel_order(txid=sell_txid)
+
+                    # Create sell order at the trailing stop level
+                    # Ensure the sale is profitable (above minimum)
+                    min_profitable_price = original_buy_price * (
+                        1 + interval + 2 * self._config.fee
+                    )
+                    actual_sell_price = max(current_stop_price, min_profitable_price)
+
+                    # Place immediate sell order
+                    self._place_tsp_sell_order(original_buy_txid, actual_sell_price)
+
+                    # Clean up TSP state
+                    self._tsp_state_table.remove_by_buy_txid(original_buy_txid)
+
+                    LOG.info(
+                        "TSP sell executed at %s for position %s",
+                        actual_sell_price,
+                        original_buy_txid,
+                    )
+
+    def _place_tsp_sell_order(
+        self: Self, original_buy_txid: str, sell_price: float
+    ) -> None:
+        """
+        Place a TSP-triggered sell order.
+
+        This uses the existing arbitrage mechanism to place an immediate sell order.
+        """
+        LOG.info(
+            "Placing TSP sell order at price %s for position %s",
+            sell_price,
+            original_buy_txid,
+        )
+
+        # Use the standard arbitrage mechanism to place the sell order
+        # This will call _new_sell_order which is implemented by subclasses
+        self._handle_arbitrage(
+            side=self._exchange_domain.SELL,
+            order_price=sell_price,
+            txid_to_delete=None,  # No specific buy order to delete for TSP
+        )
+
+    def _cleanup_tsp_state_for_filled_sell_order(self: Self, sell_txid: str) -> None:
+        """
+        Clean up TSP state when a sell order is filled.
+
+        This is crucial to prevent orphaned TSP states.
+        """
+        LOG.debug("Cleaning up TSP state for filled sell order: %s", sell_txid)
+
+        # Find and remove TSP state associated with this sell order
+        if tsp_state := self._tsp_state_table.get_by_sell_txid(sell_txid):
+            LOG.info(
+                "Removing TSP state for position %s after sell order %s filled",
+                original_buy_txid := tsp_state["original_buy_txid"],
+                sell_txid,
+            )
+            self._tsp_state_table.remove_by_buy_txid(original_buy_txid)
+        else:
+            LOG.debug("No TSP state found for sell order %s", sell_txid)
+
+    def _initialize_tsp_for_new_position(
+        self: Self, original_buy_txid: str, buy_price: float, sell_price: float
+    ) -> None:
+        """
+        Initialize TSP state when a new position is created (buy order filled +
+        sell order placed).
+
+        This sets up TSP tracking from the beginning of the position lifecycle.
+        We store the buy order information and will link it to the sell order
+        later when we process the TSP check loop.
+        """
+        LOG.debug(
+            "Initializing TSP for position: buy_txid=%s, buy_price=%s, sell_price=%s",
+            original_buy_txid,
+            buy_price,
+            sell_price,
+        )
+
+        interval = self._config.interval
+        initial_stop_price = buy_price * (1 + interval)  # Minimum profit level
+
+        # Store the buy information with a placeholder for sell TXID
+        # The sell TXID will be updated in the next TSP check cycle
+        self._tsp_state_table.add(
+            original_buy_txid=original_buy_txid,
+            original_buy_price=buy_price,
+            initial_stop_price=initial_stop_price,
+            sell_order_txid=None,  # Will be updated in __associate_sell_orders_with_tsp()
+        )
+
+    def __associate_sell_orders_with_tsp(self: Self) -> None:
+        """
+        Associate sell orders with their corresponding TSP states.
+
+        This solves the timing issue where TSP state is created before
+        the sell order TXID is available.
+        """
+        # Get TSP states that don't have sell orders associated yet
+        if not (
+            unlinked_states := [
+                state
+                for state in self._tsp_state_table.get_all_active().all()
+                if state["current_sell_order_txid"] is None
+            ]
+        ):
+            return
+
+        sell_orders = self._orderbook_table.get_orders(
+            filters={"side": self._exchange_domain.SELL},
+        ).all()
+
+        for tsp_state in unlinked_states:
+            original_buy_price = tsp_state["original_buy_price"]
+            original_buy_txid = tsp_state["original_buy_txid"]
+
+            # Find sell order that matches this position
+            # We calculate what the sell price should be based on original buy price
+            expected_sell_price = original_buy_price * (
+                1 + self._config.interval + 2 * self._config.trailing_stop_profit
+            )
+
+            # Find closest matching sell order (within tolerance)
+            tolerance = 0.01  # 1% tolerance for price matching
+            matching_sell_order = None
+
+            for sell_order in sell_orders:
+                price_diff = (
+                    abs(sell_order["price"] - expected_sell_price) / expected_sell_price
+                )
+                if price_diff <= tolerance:
+                    # Check if this sell order is already associated with another TSP state
+                    existing_tsp = self._tsp_state_table.get_by_sell_txid(
+                        sell_order["txid"]
+                    )
+                    if not existing_tsp:
+                        matching_sell_order = sell_order
+                        break
+
+            if matching_sell_order:
+                LOG.debug(
+                    "Associating sell order %s with TSP state for buy %s",
+                    matching_sell_order["txid"],
+                    original_buy_txid,
+                )
+                self._tsp_state_table.update_sell_order_txid_by_buy_txid(
+                    original_buy_txid=original_buy_txid,
+                    new_sell_txid=matching_sell_order["txid"],
+                )
+            else:
+                LOG.warning(
+                    "Could not find matching sell order for TSP state with buy TXID %s (expected price: %s)",
+                    original_buy_txid,
+                    expected_sell_price,
+                )
