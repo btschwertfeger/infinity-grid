@@ -12,7 +12,7 @@ from importlib.metadata import version
 from logging import getLogger
 from typing import Any, Self
 
-from sqlalchemy import Column, Float, Integer, String, Table, func, select, Boolean
+from sqlalchemy import Boolean, Column, Float, Integer, String, Table, func, select
 from sqlalchemy.engine.result import MappingResult
 from sqlalchemy.engine.row import RowMapping
 
@@ -410,15 +410,15 @@ class FutureOrders:
     """
 
     def __init__(self: Self, userref: int, db: DBConnect) -> None:
-        LOG.debug("Initializing the FutureOrders table...")
+        LOG.debug("Initializing the 'future_orders' table...")
         self.__db = db
         self.__userref = userref
         self.__table = Table(
             "future_orders",
             self.__db.metadata,
             Column("id", Integer, primary_key=True),
-            Column("previous_txid", String, nullable=False),
             Column("price", Float, nullable=False),
+            Column("placed", Boolean, default=False, nullable=False),
         )
 
     def get(self: Self, filters: dict | None = None) -> MappingResult:
@@ -434,21 +434,19 @@ class FutureOrders:
 
         return self.__db.get_rows(self.__table, filters=filters)
 
-    def add(self: Self, previous_txid: str, price: float) -> None:
+    def add(self: Self, price: float) -> None:
         """Add an order to the table."""
         LOG.debug("Adding a order to the 'future_orders' table: price: %s", price)
-        self.__db.add_row(
-            self.__table,
-            userref=self.__userref,
-            previous_txid=previous_txid,
-            price=price,
-        )
+        self.__db.add_row(self.__table, userref=self.__userref, price=price)
 
-    def remove(self: Self, previous_txid: str) -> None:
+    def set_placed(self: Self, price: float) -> None:
+        LOG.debug("Setting order with price %s as placed", price)
+        self.__db.add_row(self.__table, userref=self.__userref, price=price)
+
+    def remove_placed_orders(self: Self) -> None:
         """Remove a row from the table."""
-
         LOG.debug(
-            "Removing row from the 'future_orders' table with filters: %s",
-            filters := {"userref": self.__userref, "previous_txid": previous_txid},
+            "Removing rows from the 'future_orders' table with filters: %s",
+            filters := {"userref": self.__userref, "placed": True},
         )
         self.__db.delete_row(self.__table, filters=filters)

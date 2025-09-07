@@ -42,7 +42,6 @@ class GridHODLStrategy(GridStrategyBase):
         # ======================================================================
         volume: float | None = None
         if txid_to_delete is not None:  # If corresponding buy order filled
-            # GridSell always has txid_to_delete set.
 
             # Add the txid of the corresponding buy order to the unsold buy
             # order txids in order to ensure that the corresponding sell order
@@ -77,9 +76,11 @@ class GridHODLStrategy(GridStrategyBase):
                 )
                 sleep(1)
                 self._new_sell_order(
-                    order_price=order_price, txid_to_delete=txid_to_delete
+                    order_price=order_price,
+                    txid_to_delete=txid_to_delete,
                 )
                 return
+
         order_price = float(
             self._rest_api.truncate(amount=order_price, amount_type="price"),
         )
@@ -138,7 +139,7 @@ class GridHODLStrategy(GridStrategyBase):
 
         self._event_bus.publish(
             "notification",
-            data={"message": message}
+            data={"message": message},
         )
         LOG.warning("Current balances: %s", fetched_balances)
 

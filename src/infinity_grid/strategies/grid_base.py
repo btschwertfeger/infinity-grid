@@ -26,10 +26,10 @@ from infinity_grid.core.state_machine import StateMachine, States
 from infinity_grid.exceptions import BotStateError, UnknownOrderError
 from infinity_grid.infrastructure.database import (
     Configuration,
+    FutureOrders,
     Orderbook,
     PendingTXIDs,
     UnsoldBuyOrderTXIDs,
-    FutureOrders,
 )
 from infinity_grid.interfaces.exchange import (
     IExchangeRESTService,
@@ -1035,7 +1035,8 @@ class GridStrategyBase:
     def _handle_cancel_order(self: Self, txid: str) -> None:
         """
         Cancels an order by txid, removes it from the orderbook, and checks if
-        there there was some volume executed which can be sold later.
+        there there was some volume executed which can be sold later in case of
+        a buy order.
 
         NOTE: The orderbook is the "gate keeper" of this function. If the order
               is not present in the local orderbook, nothing will happen.
@@ -1048,7 +1049,6 @@ class GridStrategyBase:
         via API and removed from the orderbook. The incoming "canceled" message
         by the websocket will be ignored, as the order is already removed from
         the orderbook.
-
         """
         if self._orderbook_table.count(filters={"txid": txid}) == 0:
             return
@@ -1083,7 +1083,10 @@ class GridStrategyBase:
 
         # Check if the order has some vol_exec to sell
         ##
-        if order_details.vol_exec != 0.0:
+        if (
+            order_details.vol_exec != 0.0
+            and order_details.side == self._exchange_domain.BUY
+        ):
             LOG.info(
                 "Order '%s' is partly filled - saving those funds.",
                 txid,
@@ -1361,30 +1364,48 @@ class GridStrategyBase:
         FIXME: Set tsp_active to orders placed from future_orders table
         """
 
-        if not self._ticker or self._config.dry_run:
+        if (
+            not self._ticker
+            or self._config.dry_run
+            or not self._config.trailing_stop_profit
+        ):
             return
-
-        sell_orders = self._orderbook_table.get_orders(
-            filters={"side": self._exchange_domain.SELL},
-        ).all()
 
         for order in self._future_orders_table.get():
             # create a new sell order
             # self._new_sell_order cannot be used!
+            # 1. place a new sell order
+            # 2. ensure that it as tsp active
+
             pass
 
-        for sell_order in sell_orders:
+        tsp_p = self._config.trailing_stop_profit
+        interval = self._config.interval
+
+        for sell_order in self._orderbook_table.get_orders(
+            filters={"side": self._exchange_domain.SELL},
+        ).all():
             sell_price = sell_order["price"]
-            reference_price = sell_price / (  # buy price or last shift-up price
-                1 + self._config.interval + 2 * self._config.trailing_stop_profit,
-            )
+
+            # buy price or last shift-up price
+            reference_price = sell_price / (1 + interval + 2 * tsp_p)
+
             if self._ticker < reference_price:  # only interested in profitable things
                 # If market price is below buy/reference price
                 continue
 
-            tsp_price = reference_price + sell_price * (
-                2 * self._config.trailing_stop_profit
-            )
+            tsp_price = reference_price + sell_price * (2 * tsp_p)
+
+            # 1. Cancel leading sell order in case of shifting up sell order due
+            #    to reached threshold
+            if self._ticker >= reference_price * (1 + self._config.interval + tsp_p):
+                # FIXME: only shift up in case the filled volume is 0.0
+                # Shift up the leading limit order
+                self._future_orders_table.add(
+                    price=sell_price + reference_price * tsp_p,
+                )
+                self._handle_cancel_order(txid=sell_order["txid"])
+                continue
 
             if (
                 sell_order["tsp_active"]  # TSP must be activated
@@ -1394,17 +1415,5 @@ class GridStrategyBase:
             ):
                 # FIXME: place market sell order
                 #        Ensure that sell is profitable
-                self._rest_api.cancel_order(txid=sell_order["txid"])
-                continue
-            if self._ticker >= reference_price * (
-                1 + self._config.interval + self._config.trailing_stop_profit
-            ):
-                # FIXME: only shift up in case the filled volume is 0.0
-                # Shift up the leading limit order
-                self._future_orders_table.add(
-                    sell_order["txid"],
-                    price=sell_price
-                    + reference_price * self._config.trailing_stop_profit,
-                )
-                self._rest_api.cancel_order(txid=sell_order["txid"])
+                self._handle_cancel_order(txid=sell_order["txid"])
                 continue
