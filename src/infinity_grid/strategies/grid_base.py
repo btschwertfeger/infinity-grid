@@ -786,7 +786,8 @@ class GridStrategyBase:
                 self._handle_cancel_order(txid=order.txid)
                 sleep(0.2)  # Avoid rate limiting
 
-        self._orderbook_table.remove(filters={"side": self._exchange_domain.BUY})
+        # FIXME: Check if not needed, handle_cancel_order should take care of it
+        # self._orderbook_table.remove(filters={"side": self._exchange_domain.BUY})
 
     def __shift_buy_orders_up(self: Self) -> bool:
         """
