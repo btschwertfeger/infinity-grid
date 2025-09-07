@@ -408,7 +408,6 @@ class FutureOrders:
             Column("id", Integer, primary_key=True),
             Column("userref", Integer, nullable=False),
             Column("price", Float, nullable=False),
-            Column("placed", Boolean, default=False, nullable=False),
         )
 
         # Create the table if it doesn't exist
@@ -432,19 +431,12 @@ class FutureOrders:
         LOG.debug("Adding a order to the 'future_orders' table: price: %s", price)
         self.__db.add_row(self.__table, userref=self.__userref, price=price)
 
-    def set_placed(self: Self, price: float) -> None:
-        LOG.debug("Setting order with price %s as placed", price)
-        self.__db.update_row(
-            self.__table,
-            filters={"userref": self.__userref, "price": price, "placed": False},
-            updates={"placed": True},
-        )
 
-    def remove_placed_orders(self: Self) -> None:
+    def remove_by_price(self: Self, price: float) -> None:
         """Remove a row from the table."""
         LOG.debug(
             "Removing rows from the 'future_orders' table with filters: %s",
-            filters := {"userref": self.__userref, "placed": True},
+            filters := {"userref": self.__userref, "price": price},
         )
         self.__db.delete_row(self.__table, filters=filters)
 
@@ -471,12 +463,10 @@ class TSPState:
             Column("original_buy_txid", String, nullable=False),  # UNIQUE KEY per position
             Column("original_buy_price", Float, nullable=False),  # Never changes
             Column("current_stop_price", Float, nullable=False),  # Updates as trailing stop moves
-            Column("highest_price_reached", Float, nullable=False),  # Updates as price rises
             Column("tsp_active", Boolean, default=False),  # Whether TSP is currently active
             Column("current_sell_order_txid", String, nullable=True),  # Updates when orders shift
         )
 
-        # Create the table if it doesn't exist
         self.__table.create(bind=self.__db.engine, checkfirst=True)
 
     def add(
@@ -500,7 +490,6 @@ class TSPState:
             original_buy_txid=original_buy_txid,
             original_buy_price=original_buy_price,
             current_stop_price=initial_stop_price,
-            highest_price_reached=original_buy_price,
             tsp_active=False,
             current_sell_order_txid=sell_order_txid,
         )
@@ -542,51 +531,41 @@ class TSPState:
             filters={"userref": self.__userref, "original_buy_txid": original_buy_txid},
             updates={
                 "tsp_active": True,
-                "highest_price_reached": current_price,
                 "current_stop_price": current_price * (1 - self.__get_tsp_percentage()),
             },
         )
 
     def update_trailing_stop(
-        self: Self, original_buy_txid: str, current_price: float
+        self: Self, original_buy_txid: str, current_price: float,
     ) -> None:
         """Update trailing stop level if price has moved higher."""
-        current_state = self.get_by_buy_txid(original_buy_txid)
-        if not current_state or not current_state["tsp_active"]:
-            return
-
-        if current_price > current_state["highest_price_reached"]:
-            new_stop_price = current_price * (1 - self.__get_tsp_percentage())
-            LOG.debug(
-                "Updating trailing stop for buy_txid=%s: new_stop=%s, highest=%s",
-                original_buy_txid,
-                new_stop_price,
-                current_price,
-            )
-            self.__db.update_row(
-                self.__table,
-                filters={"userref": self.__userref, "original_buy_txid": original_buy_txid},
-                updates={
-                    "highest_price_reached": current_price,
-                    "current_stop_price": new_stop_price,
-                },
-            )
+        LOG.debug(
+            "Updating trailing stop for buy_txid=%s: new_stop=%s, highest=%s",
+            original_buy_txid,
+            new_stop_price:= current_price * (1 - self.__get_tsp_percentage()),
+            current_price,
+        )
+        self.__db.update_row(
+            self.__table,
+            filters={"userref": self.__userref, "original_buy_txid": original_buy_txid},
+            updates={
+                "current_stop_price": new_stop_price
+            },
+        )
 
     def get_by_buy_txid(self: Self, original_buy_txid: str) -> RowMapping | None:
         """Get TSP state for a specific buy TXID."""
-        result = self.__db.get_rows(
+        return self.__db.get_rows(
             self.__table,
             filters={"userref": self.__userref, "original_buy_txid": original_buy_txid},
-        )
-        return result.fetchone()
+        ).fetchone()
 
     def get_by_sell_txid(self: Self, sell_txid: str) -> RowMapping | None:
         """Get TSP state by current sell order TXID."""
-        result = self.__db.get_rows(
+        return self.__db.get_rows(
             self.__table,
             filters={"userref": self.__userref, "current_sell_order_txid": sell_txid},
-        )
-        return result.fetchone()
+        ).fetchone()
 
     def get_all_active(self: Self) -> MappingResult:
         """Get all active TSP states."""
