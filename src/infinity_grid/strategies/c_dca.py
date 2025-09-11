@@ -18,6 +18,7 @@ class CDCAStrategy(GridStrategyBase):
     def _get_sell_order_price(
         self: Self,
         last_price: float,
+        buy_txid: str | None = None,
     ) -> float:
         """Returns the order price for the next sell order."""
         LOG.debug("cDCA strategy does not place sell orders.")

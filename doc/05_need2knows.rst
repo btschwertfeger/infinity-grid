@@ -79,6 +79,9 @@ higher price in the future.
   the bot to identify which orders belong to him. Using the same userref for
   different assets or running multiple bot instances for the same or different
   asset pairs using the same userref will result in errors.
+- It is recommended to not trade the same asset pair by hand or running multiple
+  instances of the infinity-grid bot on the same asset pair, otherwise there
+  will be conflicts rising raise conditions.
 
 🐙 Kraken Crypto Asset Exchange
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

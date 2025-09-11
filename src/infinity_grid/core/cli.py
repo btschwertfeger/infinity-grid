@@ -255,6 +255,13 @@ def cli(ctx: Context, **kwargs: dict) -> None:
 @option_group(
     "Additional options",
     option(
+        "--dry-run",
+        required=False,
+        is_flag=True,
+        default=False,
+        help="Enable dry-run mode which do not execute trades.",
+    ),
+    option(
         "--skip-price-timeout",
         is_flag=True,
         default=False,
@@ -265,11 +272,17 @@ def cli(ctx: Context, **kwargs: dict) -> None:
         """,
     ),
     option(
-        "--dry-run",
+        "--trailing-stop-profit",
+        type=FLOAT,
         required=False,
-        is_flag=True,
-        default=False,
-        help="Enable dry-run mode which do not execute trades.",
+        help="""
+        The trailing stop profit percentage, e.g. '0.01' for 1%. When enabled,
+        allows profits to run beyond the defined interval and locks in profits
+        when price reverses. The mechanism activates when price reaches
+        (interval + TSP) and dynamically adjusts both stop level and target
+        sell price as price moves favorably. It is recommended to set a TSP to
+        half an interval, e.g., '0.01' in case the interval is '0.02'.
+        """,
     ),
 )
 @option_group(

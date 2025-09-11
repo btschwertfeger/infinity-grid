@@ -42,7 +42,6 @@ class GridHODLStrategy(GridStrategyBase):
         # ======================================================================
         volume: float | None = None
         if txid_to_delete is not None:  # If corresponding buy order filled
-            # GridSell always has txid_to_delete set.
 
             # Add the txid of the corresponding buy order to the unsold buy
             # order txids in order to ensure that the corresponding sell order
@@ -81,11 +80,9 @@ class GridHODLStrategy(GridStrategyBase):
                     txid_to_delete=txid_to_delete,
                 )
                 return
+
         order_price = float(
-            self._rest_api.truncate(
-                amount=order_price,
-                amount_type="price",
-            ),
+            self._rest_api.truncate(amount=order_price, amount_type="price"),
         )
 
         # Respect the fee to not reduce the quote currency over time, while
