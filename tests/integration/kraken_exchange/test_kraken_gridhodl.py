@@ -43,6 +43,7 @@ def kraken_gridhodl_bot_config() -> BotConfigDTO:
         amount_per_grid=100.0,
         interval=0.01,
         n_open_buy_orders=5,
+        verbosity=0,
     )
 
 

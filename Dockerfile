@@ -7,11 +7,13 @@ COPY . /apps
 
 # hadolint ignore=DL3013,DL3008
 RUN --mount=type=cache,target=/var/lib/apt/,sharing=locked \
-    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+--mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=tmpfs,target=/var/log/apt/ \
     apt-get update \
-    && apt-get install --no-install-recommends -y git \
-    && python -m pip install --no-cache-dir --compile --upgrade pip build \
+    && apt-get install --no-install-recommends -y git
+
+# hadolint ignore=DL3013
+RUN python -m pip install --no-cache-dir --compile --upgrade pip build \
     && python -m build .
 
 # ------------------------------------------------------------------------------
@@ -20,9 +22,15 @@ FROM python:3.13-slim-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# hadolint ignore=DL3008,DL3013,SC2102
-RUN --mount=type=bind,target=/context,from=builder,source=/apps \
-    --mount=type=cache,target=/var/lib/apt/,sharing=locked \
+WORKDIR /home/infinity-grid
+
+RUN groupadd -r infinity-grid \
+    && useradd -r -g infinity-grid -d /home/infinity-grid -s /bin/bash -c "Infinity Grid User" infinity-grid \
+    && mkdir -p /home/infinity-grid \
+    && chown -R infinity-grid:infinity-grid /home/infinity-grid
+
+# hadolint ignore=DL3008
+RUN --mount=type=cache,target=/var/lib/apt/,sharing=locked \
     --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=tmpfs,target=/var/log/apt/ \
     rm -f /etc/apt/apt.conf.d/docker-clean \
@@ -37,15 +45,15 @@ RUN --mount=type=bind,target=/context,from=builder,source=/apps \
         locales \
         procps \
     && locale-gen en_US.UTF-8 \
-    && rm -rf /var/lib/apt/lists/* \
-    && python -m pip install --compile --no-cache-dir $(find /context/dist -name "*.whl")[kraken] \
-    && groupadd -r infinity-grid \
-    && useradd -r -g infinity-grid -d /home/infinity-grid -s /bin/bash -c "Infinity Grid User" infinity-grid \
-    && mkdir -p /home/infinity-grid \
-    && chown -R infinity-grid:infinity-grid /home/infinity-grid
+    && rm -rf /var/lib/apt/lists/*
+
+# hadolint ignore=SC2102,DL3013
+RUN --mount=type=bind,target=/context,from=builder,source=/apps \
+    python -m pip install --compile --no-cache-dir $(find /context/dist -name "*.whl")[kraken]
 
 USER infinity-grid
-WORKDIR /home/infinity-grid
+
+EXPOSE 8080
 
 ENTRYPOINT ["infinity-grid", "run"]
 
