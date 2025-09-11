@@ -40,6 +40,7 @@ RUN --mount=type=cache,target=/var/lib/apt/,sharing=locked \
     && apt-get update \
     && apt-get -y upgrade \
     && apt-get -y --no-install-recommends install \
+        curl \
         gcc \
         libpq-dev \
         locales \
