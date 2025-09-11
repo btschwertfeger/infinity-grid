@@ -58,9 +58,11 @@ class TestCDCAStrategy:
         mock_strategy: mock.MagicMock,
     ) -> None:
         """Test that the cDCA strategy does not provide a sell order price"""
-        with pytest.raises(RuntimeError, match="cDCA strategy does not place sell orders."):
+        with pytest.raises(
+            RuntimeError,
+            match="cDCA strategy does not place sell orders.",
+        ):
             mock_strategy._get_sell_order_price(50000)
-
 
     def test_get_sell_order_price_updates_highest_buy_price(
         self: Self,

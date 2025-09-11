@@ -5,8 +5,7 @@
 # https://github.com/btschwertfeger
 #
 
-from pydantic import BaseModel, computed_field, field_validator
-from pydantic import RootModel
+from pydantic import BaseModel, RootModel, computed_field, field_validator
 
 
 class BotConfigDTO(BaseModel):
@@ -110,7 +109,9 @@ class BotConfigDTO(BaseModel):
         """Validate trailing_stop_profit is between 0 and 1 if provided."""
         if value is not None:
             if value <= 0 or value >= 1:
-                raise ValueError("trailing_stop_profit must be between 0 and 1 (exclusive)")
+                raise ValueError(
+                    "trailing_stop_profit must be between 0 and 1 (exclusive)",
+                )
             # The trailing stop profit should be smaller than the interval
             # to ensure it triggers before the next grid level
             root = RootModel.model_validate(cls.__pydantic_parent_namespace__)

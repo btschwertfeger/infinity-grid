@@ -90,7 +90,9 @@ class GridStrategyBase:
         self._future_orders_table: FutureOrders = FutureOrders(self._config.userref, db)
         # FIXME: not needed if tsp not activated
         self._tsp_state_table: TSPState = TSPState(
-            self._config.userref, db, tsp_percentage=self._config.trailing_stop_profit
+            self._config.userref,
+            db,
+            tsp_percentage=self._config.trailing_stop_profit,
         )
         db.init_db()
 
@@ -1478,7 +1480,7 @@ class GridStrategyBase:
                         "message": "↗️ Shifting up sell order from"
                         f" {sell_price} {self._config.quote_currency}"
                         f" to {new_sell_price} {self._config.quote_currency}"
-                        f" due to activated TSP at {current_stop_price} {self._config.quote_currency}"
+                        f" due to activated TSP at {current_stop_price} {self._config.quote_currency}",
                     },
                 )
 
@@ -1514,8 +1516,8 @@ class GridStrategyBase:
                             "message": "↗️ Shifting up sell order from"
                             f" {sell_price} {self._config.quote_currency}"
                             f" to {new_sell_price} {self._config.quote_currency}"
-                            f" new trailing stop at {self._ticker * (1-tsp_percentage)}"
-                            f" {self._config.quote_currency}"
+                            f" new trailing stop at {self._ticker * (1 - tsp_percentage)}"
+                            f" {self._config.quote_currency}",
                         },
                     )
 
@@ -1529,7 +1531,7 @@ class GridStrategyBase:
                     self._event_bus.publish(
                         "notification",
                         data={
-                            "message": f"⚠️ Trailing stop profit triggered at {current_stop_price}"
+                            "message": f"⚠️ Trailing stop profit triggered at {current_stop_price}",
                         },
                     )
 
@@ -1556,7 +1558,9 @@ class GridStrategyBase:
                     )
 
     def _place_tsp_sell_order(
-        self: Self, original_buy_txid: str, sell_price: float,
+        self: Self,
+        original_buy_txid: str,
+        sell_price: float,
     ) -> None:
         """
         Place a TSP-triggered sell order.
@@ -1593,7 +1597,10 @@ class GridStrategyBase:
             LOG.debug("No TSP state found for sell order %s", sell_txid)
 
     def _initialize_tsp_for_new_position(
-        self: Self, original_buy_txid: str, buy_price: float, sell_price: float
+        self: Self,
+        original_buy_txid: str,
+        buy_price: float,
+        sell_price: float,
     ) -> None:
         """
         Initialize TSP state when a new position is created (buy order filled +
@@ -1665,7 +1672,7 @@ class GridStrategyBase:
                     # Check if this sell order is already associated with
                     # another TSP state.
                     existing_tsp = self._tsp_state_table.get_by_sell_txid(
-                        sell_order["txid"]
+                        sell_order["txid"],
                     )
                     if not existing_tsp:
                         matching_sell_order = sell_order
