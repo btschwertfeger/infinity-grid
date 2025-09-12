@@ -36,6 +36,8 @@ class BotConfigDTO(BaseModel):
     interval: float
     n_open_buy_orders: int
 
+    verbosity: int
+
     @field_validator("strategy")
     @classmethod
     def validate_strategy(cls, value: str) -> str:
@@ -146,3 +148,19 @@ class NotificationConfigDTO(BaseModel):
     """Pydantic model for notification service configuration."""
 
     telegram: TelegramConfigDTO
+
+
+class MetricsConfigDTO(BaseModel):
+    """Pydantic model for metrics server configuration."""
+
+    enabled: bool
+    host: str
+    port: int
+
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, value: int) -> int:
+        """Validate port is within valid range."""
+        if value < 1 or value > 65535:
+            raise ValueError("port must be between 1 and 65535")
+        return value

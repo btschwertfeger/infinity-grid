@@ -14,13 +14,15 @@ from typing import Self
 
 from infinity_grid.core.event_bus import EventBus
 from infinity_grid.core.state_machine import StateMachine, States
-from infinity_grid.exceptions import BotStateError
+from infinity_grid.exceptions import BotStateError, MetricsServerError
 from infinity_grid.models.configuration import (
     BotConfigDTO,
     DBConfigDTO,
+    MetricsConfigDTO,
     NotificationConfigDTO,
 )
 from infinity_grid.services.database import DBConnect
+from infinity_grid.services.metrics_service import MetricsServer
 from infinity_grid.services.notification_service import NotificationService
 from infinity_grid.strategies.grid_base import GridStrategyBase
 
@@ -38,6 +40,7 @@ class BotEngine:
         bot_config: BotConfigDTO,
         db_config: DBConfigDTO,
         notification_config: NotificationConfigDTO,
+        metrics_config: MetricsConfigDTO | None = None,
     ) -> None:
         LOG.info(
             "Initiate the Infinity Grid algorithm instance (v%s)",
@@ -54,6 +57,15 @@ class BotEngine:
         # == Application services ==============================================
         ##
         self.__notification_service = NotificationService(notification_config)
+
+        # Metrics server (optional)
+        self.__metrics_server = None
+        if metrics_config and metrics_config.enabled:
+            self.__metrics_server = MetricsServer(
+                state_machine=self.__state_machine,
+                config=metrics_config,
+                verbosity=self.__config.verbosity,
+            )
 
         # Create the appropriate strategy based on config
         self.__strategy = self.__strategy_factory()
@@ -97,6 +109,17 @@ class BotEngine:
     async def run(self: Self) -> None:
         """Start the bot"""
         LOG.info("Starting the Infinity Grid Algorithm...")
+
+        # ======================================================================
+        # Start metrics server if enabled
+        ##
+        if self.__metrics_server:
+            try:
+                await self.__metrics_server.start()
+            except MetricsServerError as e:
+                LOG.warning("Failed to start metrics server: %s", e)
+                # Continue without metrics server
+                self.__metrics_server = None
 
         # ======================================================================
         # Handle the shutdown signals
@@ -160,12 +183,20 @@ class BotEngine:
         """
         Handle the termination of the algorithm.
 
-        1. Stops the websocket connections and aiohttp sessions managed by the
+        1. Stops the metrics server if running
+        2. Stops the websocket connections and aiohttp sessions managed by the
            python-kraken-sdk
-        2. Stops the connection to the database.
-        3. Notifies the user via Telegram about the termination.
-        4. Exits the algorithm.
+        3. Stops the connection to the database.
+        4. Notifies the user via Telegram about the termination.
+        5. Exits the algorithm.
         """
+        # Stop metrics server
+        if self.__metrics_server:
+            try:
+                await self.__metrics_server.stop()
+            except MetricsServerError as e:
+                LOG.warning("Failed to stop metrics server: %s", e)
+
         await self.__strategy.stop()
         self.__db.close()
 

@@ -15,6 +15,7 @@ from cloup.constraints import Equal, If, IsSet, accept_none, require_all
 from infinity_grid.models.configuration import (
     BotConfigDTO,
     DBConfigDTO,
+    MetricsConfigDTO,
     NotificationConfigDTO,
     TelegramConfigDTO,
 )
@@ -101,20 +102,19 @@ def cli(ctx: Context, **kwargs: dict) -> None:
     """
     ctx.ensure_object(dict)
     ctx.obj |= kwargs
-
-    verbosity = kwargs.pop("verbose", 0)
+    ctx.obj["verbosity"] = ctx.obj.pop("verbose", 0)
 
     basicConfig(
         format="%(asctime)s %(levelname)8s | %(message)s",
         datefmt="%Y/%m/%d %H:%M:%S",
-        level=INFO if verbosity == 0 else DEBUG,
+        level=INFO if ctx.obj["verbosity"] == 0 else DEBUG,
     )
 
     getLogger("requests").setLevel(WARNING)
     getLogger("urllib3").setLevel(WARNING)
     getLogger("websockets").setLevel(WARNING)
 
-    if verbosity > 1:  # type: ignore[operator]
+    if ctx.obj["verbosity"] > 1:
         getLogger("requests").setLevel(DEBUG)
         getLogger("websockets").setLevel(DEBUG)
         getLogger("kraken").setLevel(DEBUG)
@@ -146,8 +146,8 @@ def cli(ctx: Context, **kwargs: dict) -> None:
                 "cDCA",
                 "GridHODL",
                 "GridSell",
-                "SWING",
-            ),  # FIXME: rename to "Swing"
+                "SWING",  # FIXME: rename to "Swing"
+            ),
             case_sensitive=True,
         ),
         help="The strategy to run.",
@@ -173,6 +173,7 @@ def cli(ctx: Context, **kwargs: dict) -> None:
         required=False,
         type=FLOAT,
         default=10e10,
+        show_default=True,
         callback=ensure_larger_than_zero,
         help="""
         The maximum investment, e.g. 1000 USD that the algorithm will manage.
@@ -227,6 +228,7 @@ def cli(ctx: Context, **kwargs: dict) -> None:
         "--interval",
         type=FLOAT,
         default=0.02,
+        show_default=True,
         callback=ensure_larger_than_zero,
         help="The interval between orders (e.g. 0.02 equals 2%).",
     ),
@@ -234,6 +236,7 @@ def cli(ctx: Context, **kwargs: dict) -> None:
         "--n-open-buy-orders",
         type=INT,
         default=3,
+        show_default=True,
         callback=ensure_larger_than_zero,
         help="""
         The number of concurrent open buy orders e.g., ``5``. The number of
@@ -273,32 +276,12 @@ def cli(ctx: Context, **kwargs: dict) -> None:
     ),
 )
 @option_group(
-    "Notification Options",
-    option(
-        "--telegram-token",
-        required=False,
-        type=STRING,
-        help="The Telegram token to use.",
-    ),
-    option(
-        "--telegram-chat-id",
-        required=False,
-        type=STRING,
-        help="The telegram chat ID to use.",
-    ),
-    option(
-        "--telegram-thread-id",
-        required=False,
-        type=STRING,
-        help="The telegram thread ID to use.",
-    ),
-)
-@option_group(
     "General Database Configuration",
     option(
         "--db-name",
         type=STRING,
         default="infinity_grid",
+        show_default=True,
         help="The database name.",
     ),
     option(
@@ -310,6 +293,7 @@ def cli(ctx: Context, **kwargs: dict) -> None:
         "--in-memory",
         is_flag=True,
         default=False,
+        show_default=True,
         help='Use an in-memory database (similar to --sqlite-file=":memory:").',
     ),
 )
@@ -341,6 +325,50 @@ def cli(ctx: Context, **kwargs: dict) -> None:
         else_=accept_none,
     ),
 )
+@option_group(
+    "Notification Options",
+    option(
+        "--telegram-token",
+        required=False,
+        type=STRING,
+        help="The Telegram token to use.",
+    ),
+    option(
+        "--telegram-chat-id",
+        required=False,
+        type=STRING,
+        help="The telegram chat ID to use.",
+    ),
+    option(
+        "--telegram-thread-id",
+        required=False,
+        type=STRING,
+        help="The telegram thread ID to use.",
+    ),
+)
+@option_group(
+    "Metrics Server Options",
+    option(
+        "--metrics-enabled/--no-metrics-enabled",
+        default=True,
+        show_default=True,
+        help="Enable or disable the metrics HTTP server.",
+    ),
+    option(
+        "--metrics-host",
+        type=STRING,
+        default="127.0.0.1",
+        show_default=True,
+        help="Host address for the metrics server.",
+    ),
+    option(
+        "--metrics-port",
+        type=INT,
+        default=8080,
+        show_default=True,
+        help="Port for the metrics server.",
+    ),
+)
 @pass_context
 def run(ctx: Context, **kwargs: dict[str, Any]) -> None:
     """Run the trading algorithm using the specified options."""
@@ -368,6 +396,11 @@ def run(ctx: Context, **kwargs: dict[str, Any]) -> None:
             thread_id=kwargs.pop("telegram_thread_id", None),
         ),
     )
+    metrics_config = MetricsConfigDTO(
+        enabled=kwargs.pop("metrics_enabled"),
+        host=kwargs.pop("metrics_host"),
+        port=kwargs.pop("metrics_port"),
+    )
     ctx.obj |= kwargs
 
     asyncio.run(
@@ -375,5 +408,6 @@ def run(ctx: Context, **kwargs: dict[str, Any]) -> None:
             bot_config=BotConfigDTO(**ctx.obj),
             db_config=db_config,
             notification_config=notification_config,
+            metrics_config=metrics_config,
         ).run(),
     )

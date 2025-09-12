@@ -303,6 +303,12 @@ docker compose up -d
 
 ## 🛠 Configuration
 
+The most important configuration options are shown in the table below. The
+infinity-grid leverages [click](https://click.palletsprojects.com/en/stable)'s
+`auto_envvar_prefix` to map environment variables to command-line options,
+flags, and inputs. The complete list of options available can be obtained by
+running `infinity-grid --help` or `infinity-grid run --help`.
+
 | Variable                               | Type               | Description                                                                                                                                                                                                                                                                                                    |
 | -------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `INFINITY_GRID_API_PUBLIC_KEY`         | `str`              | The API public key provided by the exchange.                                                                                                                                                                                                                                                                   |

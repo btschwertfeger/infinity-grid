@@ -80,6 +80,7 @@ class TestBotConfigDTO:
                 amount_per_grid=100.0,
                 interval=0.02,
                 n_open_buy_orders=5,
+                verbosity=0,
             )
             assert config.strategy == strategy
 

@@ -38,3 +38,24 @@ class UnknownOrderError(Exception):
     """
     Exception used to be raised when an order that was requested is unknown.
     """
+
+
+class MetricsServerError(Exception):
+    """
+    Custom exception for metrics server related errors.
+
+    This exception is raised when the metrics server encounters errors
+    during startup, shutdown, or request handling.
+
+    Attributes:
+        message (str): The error message describing what went wrong.
+
+    Example:
+
+    .. code-block:: python
+
+        try:
+            await metrics_server.start()
+        except Exception as exc:
+            raise MetricsServerError("Failed to start metrics server") from exc
+    """

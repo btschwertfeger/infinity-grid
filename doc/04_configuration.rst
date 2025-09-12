@@ -189,7 +189,7 @@ the ``INFINITY_GRID_`` prefix and `Click's
 <https://click.palletsprojects.com/en/stable/options/#values-from-environment-variables>`_
 naming convention.
 
-.. list-table:: Configuration Variables
+.. list-table:: Most important configuration options
     :header-rows: 1
 
     * - Variable
