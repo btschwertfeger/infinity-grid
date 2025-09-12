@@ -349,7 +349,7 @@ def cli(ctx: Context, **kwargs: dict) -> None:
 @option_group(
     "Metrics Server Options",
     option(
-        "--metrics-enabled/--no-metrics",
+        "--metrics-enabled/--no-metrics-enabled",
         default=True,
         show_default=True,
         help="Enable or disable the metrics HTTP server.",
