@@ -1,4 +1,7 @@
+# Ignore all files and directories
 *
+
+# Except:
 !src
 !pyproject.toml
 !.git

@@ -1,3 +1,10 @@
+# -*- mode: dockerfile; coding: utf-8 -*-
+#
+# Copyright (C) 2023 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+
 FROM python:3.13-slim-bookworm AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -53,8 +60,6 @@ RUN --mount=type=bind,target=/context,from=builder,source=/apps \
     python -m pip install --compile --no-cache-dir $(find /context/dist -name "*.whl")[kraken]
 
 USER infinity-grid
-
-EXPOSE 8080
 
 ENTRYPOINT ["infinity-grid", "run"]
 

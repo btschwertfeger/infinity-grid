@@ -55,13 +55,6 @@ services:
       INFINITY_GRID_RUN_DB_NAME: infinity_grid
       INFINITY_GRID_RUN_DB_USER: infinity_grid
       INFINITY_GRID_RUN_DB_PASSWORD: infinity_grid
-
-      # Metrics settings (optional):
-      # INFINITY_GRID_RUN_METRICS_ENABLED: true
-      # INFINITY_GRID_RUN_METRICS_HOST: "0.0.0.0"
-      # INFINITY_GRID_RUN_METRICS_PORT: 8080
-    ports:
-      - "0.0.0.0:8080:8080" # Metrics endpoint
     networks:
       - internal_network
     restart: always
