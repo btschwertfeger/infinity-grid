@@ -36,7 +36,7 @@ class KrakenAPI(Market, Trade, User):
         self.__orders = {}
         self.__balances = {
             "XXBT": {"balance": "100.0", "hold_trade": "0.0"},
-            "ZUSD": {"balance": "1000000.0", "hold_trade": "0.0"},
+            "ZUSD": {"balance": "1_000_000.0", "hold_trade": "0.0"},
         }
         self.__fee = 0.0025
 

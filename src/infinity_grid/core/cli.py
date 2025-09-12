@@ -357,7 +357,7 @@ def cli(ctx: Context, **kwargs: dict) -> None:
     option(
         "--metrics-host",
         type=STRING,
-        default="0.0.0.0",  # noqa: S104
+        default="127.0.0.1",
         show_default=True,
         help="Host address for the metrics server.",
     ),
