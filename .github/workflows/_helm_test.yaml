@@ -79,6 +79,9 @@ jobs:
           echo "=== Checking generated manifests ==="
           helm template test-release helm/infinity-grid/ \
             --values tests/deployment/values.yaml \
+            --set-string infinityGrid.apiPublicKey="foo" \
+            --set-string infinityGrid.apiSecretKey="bar" \
+            --set-string database.password="baz" \
             --output-dir /tmp/helm-output
 
           echo "=== Generated files ==="
