@@ -7,6 +7,11 @@ Python 3.11+ that implements automated trading strategies using
 grid-based approaches. The bot is designed with clean hexagonal architecture,
 emphasizing modularity, testability, and extensibility.
 
+The infinity-grid is designed to run in containerized environments and the
+repository provides a `Dockerfile`, as well as a `docker-compose.yaml` to run
+the application using Docker. Additionally a Helm Chart (`helm/infinity-grid`)
+is also provided.
+
 ## Architecture & Design Patterns
 
 ### Core Architecture

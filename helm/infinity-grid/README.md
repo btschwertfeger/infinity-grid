@@ -28,23 +28,16 @@ The chart enforces `replicas: 1` and does not support autoscaling.
 Before installing the Infinity Grid, you need to have a PostgreSQL database
 ready. The database should:
 
-- Be accessible from your Kubernetes cluster
-- Have a database created for the infinity-grid application
-- Have appropriate user credentials with read/write permissions
+- Be accessible from your Kubernetes cluster.
+- Have a database created for the infinity-grid application. The DB name must
+  match the name when starting the infinity-grid (e.g. via option `--db-name`).
+- Have appropriate user credentials with read/write permissions.
 
 ### 2. Install the Chart
 
 Create a `values.yaml` file:
 
 ```yaml
-# Database configuration (required)
-database:
-  host: "your-postgres-host.example.com"
-  port: 5432
-  username: "infinity_grid_user"
-  password: "your-secure-password"
-  database: "infinity_grid_db"
-
 # Trading configuration
 infinityGrid:
   strategy: "GridHODL"
@@ -67,6 +60,14 @@ infinityGrid:
     token: "your-telegram-bot-token" # set via --set-string
     chatId: "your-telegram-chat-id"
     threadId: "your-telegram-thread-id"
+
+# Database configuration (required)
+database:
+  host: "your-postgres-host.example.com" # "your-cloud-postgres.amazonaws.com"
+  port: 5432
+  username: "infinity_grid"
+  password: "your-secure-password" # set via --set-string
+  database: "infinity_grid"
 ```
 
 Then install:
@@ -98,7 +99,7 @@ helm install infinity-grid helm/infinity-grid \
 | `infinityGrid.apiPublicKey` | Exchange API public key | `""` (required)   |
 | `infinityGrid.apiSecretKey` | Exchange API secret key | `""` (required)   |
 
-### Trading Configuration
+### Infinity Grid Bot Configuration
 
 | Parameter                     | Description                                        | Sample                     |
 | ----------------------------- | -------------------------------------------------- | -------------------------- |
@@ -112,21 +113,6 @@ helm install infinity-grid helm/infinity-grid \
 | `infinityGrid.nOpenBuyOrders` | Number of open buy orders                          | `3`                        |
 | `infinityGrid.maxInvestment`  | Maximum investment amount                          | `1000`                     |
 | `infinityGrid.userref`        | Unique user reference ID                           | `1756394883`               |
-
-## Database Setup Examples
-
-### Cloud PostgreSQL
-
-For cloud providers like AWS RDS, Google Cloud SQL, or Azure Database:
-
-```yaml
-database:
-  host: "your-cloud-postgres.amazonaws.com"
-  port: 5432
-  username: "infinity_grid_user"
-  password: "your-secure-password"
-  database: "infinity_grid_db"
-```
 
 ## Security Considerations
 

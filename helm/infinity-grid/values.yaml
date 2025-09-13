@@ -36,7 +36,7 @@ image:
   pullPolicy: IfNotPresent
 
   # Override the image tag (defaults to chart appVersion if empty)
-  tag: ""
+  tag: "v1.1.0"
 
 # Image pull secrets for private Docker registries
 # Uncomment and add secret names if using private registries
@@ -217,77 +217,77 @@ infinityGrid:
   # Trading Strategy Configuration
   # -----------------------------
 
-  # Trading strategy to use
+  # Trading strategy to use (REQUIRED - must be specified during deployment)
   # Options: cDCA, GridHODL, GridSell, SWING
   # - cDCA: Continuous Dollar Cost Averaging with grid characteristics
   # - GridHODL: Accumulate base currency over time, selling slightly less than bought
   # - GridSell: Liquidate entire bought amount each cycle for immediate profits
   # - SWING: Extends GridHODL with swing selling on significant upward movements
-  strategy: "GridHODL"
+  strategy: "" # REQUIRED
 
-  # Human-readable name for this trading bot instance
-  name: "Kubernetes Trading Bot"
+  # Human-readable name for this trading bot instance (REQUIRED)
+  name: "" # REQUIRED
 
-  # Exchange to trade on (currently only "Kraken" is supported)
-  exchange: "Kraken"
+  # Exchange to trade on (REQUIRED - currently only "Kraken" is supported)
+  exchange: "" # REQUIRED
 
-  # Base currency (the asset you want to accumulate)
+  # Base currency (the asset you want to accumulate) - REQUIRED
   # Examples: BTC, ETH, ADA, DOT
-  baseCurrency: "BTC"
+  baseCurrency: "" # REQUIRED
 
-  # Quote currency (the currency used to buy the base currency)
+  # Quote currency (the currency used to buy the base currency) - REQUIRED
   # Examples: USD, EUR, GBP
-  quoteCurrency: "USD"
+  quoteCurrency: "" # REQUIRED
 
   # Grid Trading Parameters
   # ----------------------
 
-  # Amount to invest per grid level (in quote currency)
+  # Amount to invest per grid level (in quote currency) - REQUIRED
   # This determines the size of each buy order
-  amountPerGrid: 20
+  amountPerGrid: "" # REQUIRED
 
-  # Percentage interval between grid levels
+  # Percentage interval between grid levels - REQUIRED
   # 0.02 = 2% price difference between buy orders
-  interval: 0.02
+  interval: "" # REQUIRED
 
-  # Number of open buy orders to maintain simultaneously
+  # Number of open buy orders to maintain simultaneously - REQUIRED
   # Higher values create a denser grid but require more capital
-  nOpenBuyOrders: 3
+  nOpenBuyOrders: "" # REQUIRED
 
-  # Maximum total investment amount (in quote currency)
+  # Maximum total investment amount (in quote currency) - OPTIONAL
   # Acts as a safety limit to prevent overinvestment
-  maxInvestment: 1000
+  maxInvestment: null
 
-  # Unique user reference ID for order tracking
+  # Unique user reference ID for order tracking - REQUIRED
   # IMPORTANT: Change this value for different bot instances
   # to avoid conflicts in order management
-  userref: 1756394883
+  userref: "" # REQUIRED
 
-  # Custom trading fee percentage (optional)
+  # OPTIONAL: Custom trading fee percentage (optional)
   # Leave as null to use exchange's default fee structure
   fee: null
 
   # API Authentication
   # -----------------
 
-  # Exchange API public key (required)
+  # Exchange API public key - REQUIRED
   # Should be set via environment variables or Helm secrets
   # Environment variable: INFINITY_GRID_API_PUBLIC_KEY
-  apiPublicKey: ""
+  apiPublicKey: "" # REQUIRED
 
-  # Exchange API secret key (required)
+  # Exchange API secret key - REQUIRED
   # Should be set via environment variables or Helm secrets
   # Environment variable: INFINITY_GRID_API_SECRET_KEY
-  apiSecretKey: ""
+  apiSecretKey: "" # REQUIRED
 
   # Bot Behavior Options
   # -------------------
 
-  # Enable dry-run mode (no real trades, simulation only)
+  # OPTIONAL: Enable dry-run mode (no real trades, simulation only)
   # Useful for testing strategies without risking capital
   dryRun: false
 
-  # Skip price timeout checks
+  # OPTIONAL: Skip price timeout checks
   # Advanced option, leave false unless you understand the implications
   skipPriceTimeout: false
 
@@ -307,17 +307,17 @@ infinityGrid:
 
   # Telegram bot notifications (optional)
   telegram:
-    # Telegram bot token (required if using notifications)
+    # OPTIONAL: Telegram bot token (required if using notifications)
     # Obtain from @BotFather on Telegram
     # Environment variable: INFINITY_GRID_RUN_TELEGRAM_TOKEN
     token: ""
 
-    # Telegram chat ID where notifications will be sent
+    # OPTIONAL: Telegram chat ID where notifications will be sent
     # Can be a user ID, group ID, or channel ID
     # Environment variable: INFINITY_GRID_RUN_TELEGRAM_CHAT_ID
     chatId: ""
 
-    # Telegram thread ID for forum groups (optional)
+    # OPTIONAL: Telegram thread ID for forum groups (optional)
     # Leave empty for regular chats
     # Environment variable: INFINITY_GRID_RUN_TELEGRAM_THREAD_ID
     threadId: ""
@@ -329,25 +329,25 @@ infinityGrid:
 # You must provide your own PostgreSQL database instance
 # The bot does not include a database as part of this chart
 database:
-  # PostgreSQL server hostname or IP address (required)
+  # PostgreSQL server hostname or IP address - REQUIRED
   # Example: "postgres.example.com" or "10.0.0.1"
-  host: ""
+  host: "" # REQUIRED
 
-  # PostgreSQL server port (required)
+  # PostgreSQL server port
   # Default PostgreSQL port is 5432
   port: 5432
 
-  # Database username for authentication (required)
+  # Database username for authentication - REQUIRED
   # This user must have CREATE, INSERT, UPDATE, DELETE permissions
-  username: ""
+  username: "" # REQUIRED
 
-  # Database password for authentication (required)
+  # Database password for authentication - REQUIRED
   # Should be set via environment variables or Helm secrets
-  password: ""
+  password: "" # REQUIRED
 
-  # Database name to use (required)
+  # Database name to use - REQUIRED
   # The database should exist and be accessible by the specified user
-  database: ""
+  database: "" # REQUIRED
 
 # Custom Environment Variables
 # ============================

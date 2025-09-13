@@ -11,6 +11,9 @@ __pycache__/
 *.egg-info
 build/
 dist/
+*.tar
+*.tgz
+*.tar.gz
 
 # Version file
 infinity_grid/_version.py
@@ -32,7 +35,6 @@ del/
 del.*
 *tar.gz
 uv.lock
-
 .cache/
 
 # Unit test / coverage reports

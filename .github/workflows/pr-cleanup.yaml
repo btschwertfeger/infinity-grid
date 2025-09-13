@@ -77,12 +77,6 @@ jobs:
           echo "Uninstalling Helm release: ${{ steps.release-name.outputs.name }}"
           helm uninstall "${{ steps.release-name.outputs.name }}" --namespace infinity-grid --timeout 5m
 
-          echo "Waiting for resources to be cleaned up..."
-          sleep 20
-
-          echo "=== Checking remaining resources ==="
-          kubectl get all -n infinity-grid -l app.kubernetes.io/instance="${{ steps.release-name.outputs.name }}" || echo "No resources found (expected)"
-
       - uses: dataaxiom/ghcr-cleanup-action@v1
         with:
           delete-tags: "pr-${{ github.event.number }}"
