@@ -43,7 +43,7 @@ jobs:
           tags: btschwertfeger/infinity-grid:build-artifact
 
       - name: Test Docker image
-        run: docker run --rm btschwertfeger/infinity-grid:build-artifact --help
+        run: docker run --rm --entrypoint=infinity-grid btschwertfeger/infinity-grid:build-artifact --help
 
       - name: Export Docker image to tar
         run: |
