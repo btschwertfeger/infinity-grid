@@ -258,6 +258,25 @@ def cli(ctx: Context, **kwargs: dict) -> None:
 @option_group(
     "Additional options",
     option(
+        "--dry-run",
+        required=False,
+        is_flag=True,
+        default=False,
+        help="Enable dry-run mode which do not execute trades.",
+    ),
+    option(
+        "--skip-permission-check",
+        required=False,
+        is_flag=True,
+        default=False,
+        help="""
+        Disable the API key permission check. This should by only used together
+        with the --dry-run flag in order to start and run the algorithm with API
+        keys that do not have all the required permissions e.g., for testing
+        purposes.
+        """,
+    ),
+    option(
         "--skip-price-timeout",
         is_flag=True,
         default=False,
@@ -266,13 +285,6 @@ def cli(ctx: Context, **kwargs: dict) -> None:
         default, the bot will exit if no recent price data is available. This
         might be useful for assets that aren't traded that often.
         """,
-    ),
-    option(
-        "--dry-run",
-        required=False,
-        is_flag=True,
-        default=False,
-        help="Enable dry-run mode which do not execute trades.",
     ),
 )
 @option_group(

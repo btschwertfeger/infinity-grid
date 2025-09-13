@@ -137,7 +137,13 @@ class GridStrategyBase:
         )
 
         self._rest_api.check_exchange_status()
-        self._rest_api.check_api_key_permissions()
+        if self._config.skip_permission_check:
+            LOG.warning(
+                "'--skip-permission-check' detected!"
+                " Not checking API key permissions.",
+            )
+        else:
+            self._rest_api.check_api_key_permissions()
 
         if self._state_machine.state == States.ERROR:
             raise BotStateError(

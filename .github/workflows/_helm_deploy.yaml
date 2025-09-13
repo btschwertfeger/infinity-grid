@@ -1,0 +1,123 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright (C) 2025 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+# Template file for deploying the infinity-grid Helm Chart to Kubernetes
+# for pull request testing.
+#
+
+name: Helm Review Deployment
+
+on:
+  workflow_call:
+    secrets:
+      KUBECONFIG:
+        required: true
+      INFINITY_GRID_API_PUBLIC_KEY:
+        required: true
+      INFINITY_GRID_API_SECRET_KEY:
+        required: true
+      INFINITY_GRID_RUN_DB_PASSWORD:
+        required: true
+      INFINITY_GRID_RUN_DB_USER:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  Review-Deployment:
+    runs-on: ubuntu-latest
+    environment: Kubernetes Review Deployment
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          egress-policy: audit
+          disable-sudo: false
+
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0 # IMPORTANT: otherwise the current tag does not get fetched and the build version gets worse
+
+      - name: Set up Kubernetes config
+        env:
+          KUBECONFIG: ${{ secrets.KUBECONFIG }}
+        run: |
+          mkdir -p ~/.kube
+          chmod go-rwx ~/.kube
+          echo "$KUBECONFIG" > ~/.kube/config
+
+      - name: Set up Helm
+        uses: azure/setup-helm@fe7b79cd5ee1e45176fcad797de68ecaf3ca4814 # v4.2.0
+        with:
+          version: "latest"
+
+      - name: Generate release name
+        id: release-name
+        run: |
+          # Extract branch name and sanitize it for Kubernetes naming
+          BRANCH_NAME="${{ github.head_ref }}"
+          # Replace invalid characters with hyphens and convert to lowercase
+          RELEASE_NAME=$(echo "ig-${BRANCH_NAME}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
+          # Ensure it doesn't exceed 53 characters (Kubernetes DNS-1123 subdomain limit)
+          RELEASE_NAME=$(echo "$RELEASE_NAME" | cut -c1-53 | sed 's/-$//')
+          echo "name=$RELEASE_NAME" >> $GITHUB_OUTPUT
+          echo "Release name: $RELEASE_NAME"
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install "${{ steps.release-name.outputs.name }}" helm/infinity-grid/ \
+            --namespace infinity-grid \
+            --values tests/deployment/values.yaml \
+            --set-string infinityGrid.apiPublicKey="${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}" \
+            --set-string infinityGrid.apiSecretKey="${{ secrets.INFINITY_GRID_API_SECRET_KEY }}" \
+            --set-string database.password="${{ secrets.INFINITY_GRID_RUN_DB_PASSWORD }}" \
+            --set-string database.username="${{ secrets.INFINITY_GRID_RUN_DB_USER }}" \
+            --set image.tag="dev" \
+            --timeout 5m \
+            --atomic
+
+      - name: Verify deployment
+        run: |
+          echo "=== Checking deployment status ==="
+          kubectl get pods -n infinity-grid -l app.kubernetes.io/instance="${{ steps.release-name.outputs.name }}"
+
+          echo "=== Checking services ==="
+          kubectl get services -n infinity-grid -l app.kubernetes.io/instance="${{ steps.release-name.outputs.name }}"
+
+          echo "=== Checking deployment logs ==="
+          kubectl logs -n infinity-grid -l app.kubernetes.io/instance="${{ steps.release-name.outputs.name }}" --tail=50 || true
+
+      - name: Comment on PR with deployment info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const releaseName = '${{ steps.release-name.outputs.name }}';
+            const namespace = 'infinity-grid';
+
+            const comment = `## 🚀 Deployment Status
+
+            **Release Name:** \`${releaseName}\`
+            **Namespace:** \`${namespace}\`
+            **Status:** ✅ Successfully deployed
+
+            The infinity-grid application has been deployed to the Kubernetes cluster.
+
+            **Commands to check the deployment:**
+            \`\`\`bash
+            kubectl get pods -n ${namespace} -l app.kubernetes.io/instance=${releaseName}
+            kubectl logs -n ${namespace} -l app.kubernetes.io/instance=${releaseName}
+            \`\`\`
+
+            The deployment will be automatically cleaned up when this PR is closed.`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

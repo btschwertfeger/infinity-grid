@@ -29,6 +29,7 @@ class BotConfigDTO(BaseModel):
     max_investment: float
 
     skip_price_timeout: bool = False
+    skip_permission_check: bool = False
 
     # We expect these values to be set by the user via CLI or environment
     # variables. Cloup is handling the validation of these values.

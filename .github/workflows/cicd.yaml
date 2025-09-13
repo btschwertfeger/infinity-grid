@@ -13,7 +13,7 @@ on:
   push:
     branches: [master]
   schedule:
-    - cron: "20 16 */7 * *"
+    - cron: "0 6 * * FRI"
   release:
     types: [created]
   pull_request:
@@ -84,6 +84,36 @@ jobs:
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
+
+  ## ===========================================================================
+  ##    Validate the Helm Chart (only on pull requests)
+  ##
+  Validate-Chart-PR:
+    if: |
+      success()
+      && github.actor == 'btschwertfeger'
+      && github.event_name == 'pull_request'
+    needs: [Pre-Commit]
+    uses: ./.github/workflows/_helm_test.yaml
+    secrets:
+      KUBECONFIG: ${{ secrets.KUBECONFIG }}
+
+  ## ===========================================================================
+  ##    Deploy to Kubernetes (only on pull requests)
+  ##
+  Deploy-PR:
+    if: |
+      success()
+      && github.actor == 'btschwertfeger'
+      && github.event_name == 'pull_request'
+    needs: [Validate-Chart-PR]
+    uses: ./.github/workflows/_helm_deploy.yaml
+    secrets:
+      KUBECONFIG: ${{ secrets.KUBECONFIG }}
+      INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
+      INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
+      INFINITY_GRID_RUN_DB_PASSWORD: ${{ secrets.INFINITY_GRID_RUN_DB_PASSWORD }}
+      INFINITY_GRID_RUN_DB_USER: ${{ secrets.INFINITY_GRID_RUN_DB_USER }}
 
   ## ===========================================================================
   ##    Generates and uploads the coverage statistics to codecov
