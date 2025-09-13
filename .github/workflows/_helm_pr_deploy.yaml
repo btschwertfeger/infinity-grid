@@ -31,6 +31,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   Review-Deployment:
@@ -76,6 +77,7 @@ jobs:
             --values tests/deployment/values.yaml \
             --set-string infinityGrid.apiPublicKey="${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}" \
             --set-string infinityGrid.apiSecretKey="${{ secrets.INFINITY_GRID_API_SECRET_KEY }}" \
+            --set-string infinityGrid.userref="${{ inputs.pr_number }}" \
             --set-string database.password="${{ secrets.INFINITY_GRID_RUN_DB_PASSWORD }}" \
             --set-string database.username="${{ secrets.INFINITY_GRID_RUN_DB_USER }}" \
             --set image.repository="ghcr.io/btschwertfeger/infinity-grid" \
