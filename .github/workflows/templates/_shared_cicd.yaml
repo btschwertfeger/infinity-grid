@@ -130,12 +130,25 @@ jobs:
   Validate-Chart:
     if: |
       success()
-      && github.actor == 'btschwertfeger'
       && inputs.run_pull_request
+      && github.actor == 'btschwertfeger'
     needs: [Pre-Commit]
     uses: ./.github/workflows/templates/_helm_test.yaml
     secrets:
       KUBECONFIG: ${{ secrets.KUBECONFIG }}
+
+  ## ===========================================================================
+  ##    Upload PR-specific Docker image to GitHub Container Registry
+  ##
+  UploadGHCR-PR:
+    if: |
+      success()
+      && inputs.run_pull_request
+      && github.actor == 'btschwertfeger'
+    needs: [Build-Docker]
+    uses: ./.github/workflows/templates/_ghcr_pr_publish.yaml
+    with:
+      pr_number: ${{ github.event.number }}
 
   ## ===========================================================================
   ##    Deploy to Kubernetes (only when deployment is enabled)
@@ -143,10 +156,12 @@ jobs:
   Deploy:
     if: |
       success()
-      && github.actor == 'btschwertfeger'
       && inputs.run_pull_request
-    needs: [Validate-Chart]
-    uses: ./.github/workflows/templates/_helm_deploy.yaml
+      && github.actor == 'btschwertfeger'
+    needs: [Validate-Chart, UploadGHCR-PR]
+    uses: ./.github/workflows/templates/_helm_pr_deploy.yaml
+    with:
+      pr_number: ${{ github.event.number }}
     secrets:
       KUBECONFIG: ${{ secrets.KUBECONFIG }}
       INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
@@ -161,8 +176,8 @@ jobs:
   UploadTestPyPI:
     if: |
       success()
-      && github.ref == 'refs/heads/master'
       && inputs.run_default
+      && github.ref == 'refs/heads/master'
       && (inputs.trigger_context == 'push' || inputs.trigger_context == 'release')
     needs:
       - Build
@@ -181,8 +196,8 @@ jobs:
   UploadPyPI:
     if: |
       success()
-      && github.actor == 'btschwertfeger'
       && inputs.run_default
+      && github.actor == 'btschwertfeger'
       && inputs.trigger_context == 'release'
     needs:
       - Build
@@ -196,9 +211,9 @@ jobs:
       API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
 
   ## ===========================================================================
-  ##    Upload the package GitHub's Docker registry
+  ##    Upload the Docker image to Docker Hub
   ##
-  UploadDockerImage:
+  UploadDockerHub:
     if: |
       success()
       && github.actor == 'btschwertfeger'
@@ -214,7 +229,28 @@ jobs:
       - CodeCov
       - CodeQL
       - Test
-    uses: ./.github/workflows/templates/_docker_publish.yaml
+    uses: ./.github/workflows/templates/_dockerhub_publish.yaml
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  ## ===========================================================================
+  ##    Upload the Docker image to GitHub Container Registry
+  ##
+  UploadGHCR:
+    if: |
+      success()
+      && github.actor == 'btschwertfeger'
+      && inputs.run_default
+      && (
+        (inputs.trigger_context == 'push' && github.ref == 'refs/heads/master')
+        || inputs.trigger_context == 'release'
+      )
+    needs:
+      - Build
+      - Build-Doc
+      - Build-Docker
+      - CodeCov
+      - CodeQL
+      - Test
+    uses: ./.github/workflows/templates/_ghcr_publish.yaml

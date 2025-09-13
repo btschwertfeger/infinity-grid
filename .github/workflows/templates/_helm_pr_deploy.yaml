@@ -12,6 +12,11 @@ name: Helm Review Deployment
 
 on:
   workflow_call:
+    inputs:
+      pr_number:
+        description: "Pull request number for tagging"
+        required: true
+        type: string
     secrets:
       KUBECONFIG:
         required: true
@@ -59,12 +64,8 @@ jobs:
       - name: Generate release name
         id: release-name
         run: |
-          # Extract branch name and sanitize it for Kubernetes naming
-          BRANCH_NAME="${{ github.head_ref }}"
-          # Replace invalid characters with hyphens and convert to lowercase
-          RELEASE_NAME=$(echo "ig-${BRANCH_NAME}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
-          # Ensure it doesn't exceed 53 characters (Kubernetes DNS-1123 subdomain limit)
-          RELEASE_NAME=$(echo "$RELEASE_NAME" | cut -c1-53 | sed 's/-$//')
+          # Use simple naming: infinity-grid-pr-{number}
+          RELEASE_NAME="infinity-grid-pr-${{ inputs.pr_number }}"
           echo "name=$RELEASE_NAME" >> $GITHUB_OUTPUT
           echo "Release name: $RELEASE_NAME"
 
@@ -77,7 +78,8 @@ jobs:
             --set-string infinityGrid.apiSecretKey="${{ secrets.INFINITY_GRID_API_SECRET_KEY }}" \
             --set-string database.password="${{ secrets.INFINITY_GRID_RUN_DB_PASSWORD }}" \
             --set-string database.username="${{ secrets.INFINITY_GRID_RUN_DB_USER }}" \
-            --set image.tag="dev" \
+            --set image.repository="ghcr.io/btschwertfeger/infinity-grid" \
+            --set image.tag="pr-${{ inputs.pr_number }}" \
             --timeout 5m \
             --atomic
 
@@ -98,19 +100,22 @@ jobs:
           script: |
             const releaseName = '${{ steps.release-name.outputs.name }}';
             const namespace = 'infinity-grid';
+            const prNumber = '${{ inputs.pr_number }}';
 
             const comment = `## 🚀 Deployment Status
 
             **Release Name:** \`${releaseName}\`
             **Namespace:** \`${namespace}\`
+            **Docker Image:** \`ghcr.io/btschwertfeger/infinity-grid:pr-${prNumber}\`
             **Status:** ✅ Successfully deployed
 
-            The infinity-grid application has been deployed to the Kubernetes cluster.
+            The infinity-grid application has been deployed to the Kubernetes cluster using the PR-specific Docker image.
 
             **Commands to check the deployment:**
             \`\`\`bash
             kubectl get pods -n ${namespace} -l app.kubernetes.io/instance=${releaseName}
             kubectl logs -n ${namespace} -l app.kubernetes.io/instance=${releaseName}
+            kubectl describe deployment -n ${namespace} -l app.kubernetes.io/instance=${releaseName}
             \`\`\`
 
             The deployment will be automatically cleaned up when this PR is closed.`;

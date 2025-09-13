@@ -30,10 +30,26 @@ jobs:
         with:
           fetch-depth: 0 # IMPORTANT: otherwise the current tag does not get fetched and the build version gets worse
 
-      - name: Build and push Docker image
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
         uses: docker/build-push-action@v6.18.0
         with:
           context: .
           file: Dockerfile
           push: false
-          tags: btschwertfeger/infinity-grid:dev
+          load: true
+          tags: btschwertfeger/infinity-grid:build-artifact
+          outputs: type=docker,dest=${{ runner.temp }}/infinity-grid-image.tar
+
+      - name: Test Docker image
+        run: |
+          docker run --rm btschwertfeger/infinity-grid:build-artifact --help
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: ${{ runner.temp }}/infinity-grid-image.tar
+          retention-days: 1

@@ -1,0 +1,91 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright (C) 2025 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+# Workflow to build and publish PR-specific Docker images to GitHub Container Registry.
+
+name: Publish PR Docker image to GHCR
+
+on:
+  workflow_call:
+    inputs:
+      pr_number:
+        description: "Pull request number for tagging"
+        required: true
+        type: string
+    outputs:
+      image_tag:
+        description: "The Docker image tag that was published"
+        value: ${{ jobs.Publish-GHCR-PR.outputs.image_tag }}
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  Publish-GHCR-PR:
+    name: Publish PR Docker image to GitHub Container Registry
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    outputs:
+      image_tag: ${{ steps.push.outputs.tag }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          disable-sudo: true
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0 # IMPORTANT: otherwise the current tag does not get fetched and the build version gets worse
+
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+          path: ${{ runner.temp }}
+
+      - name: Load Docker image
+        run: docker load --input ${{ runner.temp }}/infinity-grid-image.tar
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=pr-${{ inputs.pr_number }}
+
+      - name: Tag and push to GHCR
+        id: push
+        run: |
+          echo "=== Tagging and pushing PR image ==="
+
+          # Create the simple tag
+          TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pr-${{ inputs.pr_number }}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+          echo "Tagging and pushing: $TAG"
+          docker tag btschwertfeger/infinity-grid:build-artifact $TAG
+          docker push $TAG
+
+      - name: Output image information
+        run: |
+          echo "=== Published Docker Image ==="
+          echo "Registry: ${{ env.REGISTRY }}"
+          echo "Repository: ${{ env.IMAGE_NAME }}"
+          echo "PR Number: ${{ inputs.pr_number }}"
+          echo "Tag: ${{ steps.push.outputs.tag }}"

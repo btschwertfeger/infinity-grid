@@ -28,6 +28,9 @@ jobs:
       && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     environment: kubernetes
+    permissions:
+      packages: write
+      contents: read
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
@@ -51,12 +54,8 @@ jobs:
       - name: Generate release name
         id: release-name
         run: |
-          # Extract branch name and sanitize it for Kubernetes naming
-          BRANCH_NAME="${{ github.head_ref }}"
-          # Replace invalid characters with hyphens and convert to lowercase
-          RELEASE_NAME=$(echo "ig-${BRANCH_NAME}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
-          # Ensure it doesn't exceed 53 characters (Kubernetes DNS-1123 subdomain limit)
-          RELEASE_NAME=$(echo "$RELEASE_NAME" | cut -c1-53 | sed 's/-$//')
+          # Use simple naming: infinity-grid-pr-{number}
+          RELEASE_NAME="infinity-grid-pr-${{ github.event.number }}"
           echo "name=$RELEASE_NAME" >> $GITHUB_OUTPUT
           echo "Release name to cleanup: $RELEASE_NAME"
 
@@ -83,26 +82,41 @@ jobs:
           echo "=== Checking remaining resources ==="
           kubectl get all -n infinity-grid -l app.kubernetes.io/instance="${{ steps.release-name.outputs.name }}" || echo "No resources found (expected)"
 
+      - uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          delete-tags: "pr-${{ github.event.number }}"
+
       - name: Comment on PR with cleanup status
         uses: actions/github-script@v7
         with:
           script: |
             const releaseName = '${{ steps.release-name.outputs.name }}';
             const releaseExists = '${{ steps.check-release.outputs.exists }}' === 'true';
+            const prNumber = '${{ github.event.number }}';
 
             let comment;
             if (releaseExists) {
               comment = `## 🧹 Cleanup Complete
 
               **Release Name:** \`${releaseName}\`
-              **Status:** ✅ Successfully uninstalled
+              **PR Number:** \`${prNumber}\`
+              **Status:** ✅ Successfully cleaned up
 
-              The infinity-grid deployment has been cleaned up from the Kubernetes cluster.`;
+              The following resources have been cleaned up:
+              - ✅ Kubernetes deployment uninstalled
+              - ✅ PR-specific Docker image cleanup attempted (\`ghcr.io/${{ github.repository }}:pr-${prNumber}\`)
+
+              The infrastructure for this PR has been fully cleaned up.`;
             } else {
               comment = `## 🧹 Cleanup Status
 
               **Release Name:** \`${releaseName}\`
-              **Status:** ℹ️ No deployment found to clean up
+              **PR Number:** \`${prNumber}\`
+              **Status:** ℹ️ Partial cleanup
+
+              The following actions were taken:
+              - ℹ️ No Kubernetes deployment found to clean up
+              - ✅ PR-specific Docker image cleanup attempted (\`ghcr.io/${{ github.repository }}:pr-${prNumber}\`)
 
               No active deployment was found for this branch.`;
             }
