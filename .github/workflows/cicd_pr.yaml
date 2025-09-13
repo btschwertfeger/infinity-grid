@@ -1,0 +1,37 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright (C) 2023 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+# Workflow to apply pre-commit, build, test and deploy the infinity-grid during
+# pull requests.
+
+name: PR CI/CD
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: ["**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ## ===========================================================================
+  ##    Call shared CI/CD workflow with deployment enabled for PRs
+  ##
+  shared-cicd:
+    uses: ./.github/workflows/templates/_shared_cicd.yaml
+    with:
+      run_pull_request: true
+      run_default: false
+      trigger_context: ${{ github.event_name }}
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      KUBECONFIG: ${{ secrets.KUBECONFIG }}
+      INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
+      INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
+      INFINITY_GRID_RUN_DB_PASSWORD: ${{ secrets.INFINITY_GRID_RUN_DB_PASSWORD }}
+      INFINITY_GRID_RUN_DB_USER: ${{ secrets.INFINITY_GRID_RUN_DB_USER }}
