@@ -52,13 +52,13 @@ jobs:
   ##    Checks the code logic, style and more
   ##
   Pre-Commit:
-    uses: ./.github/workflows/templates/_pre_commit.yaml
+    uses: ./.github/workflows/_pre_commit.yaml
 
   ## ===========================================================================
   ##  Discover vulnerabilities
   ##
   CodeQL:
-    uses: ./.github/workflows/templates/_codeql.yaml
+    uses: ./.github/workflows/_codeql.yaml
 
   ## ===========================================================================
   ##    Builds the package on multiple OS for multiple
@@ -66,7 +66,7 @@ jobs:
   ##
   Build:
     needs: [Pre-Commit]
-    uses: ./.github/workflows/templates/_build.yaml
+    uses: ./.github/workflows/_build.yaml
     strategy:
       fail-fast: true
       matrix:
@@ -81,14 +81,14 @@ jobs:
   ##
   Build-Docker:
     needs: [Pre-Commit]
-    uses: ./.github/workflows/templates/_build_docker.yaml
+    uses: ./.github/workflows/_build_docker.yaml
 
   ## ===========================================================================
   ##    Build the documentation
   ##
   Build-Doc:
     needs: [Pre-Commit]
-    uses: ./.github/workflows/templates/_build_doc.yaml
+    uses: ./.github/workflows/_build_doc.yaml
     with:
       os: "ubuntu-latest"
       python-version: "3.11"
@@ -98,7 +98,7 @@ jobs:
   ##
   Test:
     needs: [Pre-Commit]
-    uses: ./.github/workflows/templates/_test.yaml
+    uses: ./.github/workflows/_test.yaml
     strategy:
       fail-fast: true
       matrix:
@@ -117,7 +117,7 @@ jobs:
       && github.actor == 'btschwertfeger'
       && inputs.trigger_context != 'schedule'
     needs: [Pre-Commit]
-    uses: ./.github/workflows/templates/_codecov.yaml
+    uses: ./.github/workflows/_codecov.yaml
     with:
       os: "ubuntu-latest"
       python-version: "3.11"
@@ -133,7 +133,7 @@ jobs:
       && inputs.run_pull_request
       && github.actor == 'btschwertfeger'
     needs: [Pre-Commit]
-    uses: ./.github/workflows/templates/_helm_test.yaml
+    uses: ./.github/workflows/_helm_test.yaml
     secrets:
       KUBECONFIG: ${{ secrets.KUBECONFIG }}
 
@@ -146,7 +146,7 @@ jobs:
       && inputs.run_pull_request
       && github.actor == 'btschwertfeger'
     needs: [Build-Docker]
-    uses: ./.github/workflows/templates/_ghcr_pr_publish.yaml
+    uses: ./.github/workflows/_ghcr_pr_publish.yaml
     with:
       pr_number: ${{ github.event.number }}
 
@@ -159,7 +159,7 @@ jobs:
       && inputs.run_pull_request
       && github.actor == 'btschwertfeger'
     needs: [Validate-Chart, UploadGHCR-PR]
-    uses: ./.github/workflows/templates/_helm_pr_deploy.yaml
+    uses: ./.github/workflows/_helm_pr_deploy.yaml
     with:
       pr_number: ${{ github.event.number }}
     secrets:
@@ -186,7 +186,7 @@ jobs:
       - CodeCov
       - CodeQL
       - Test
-    uses: ./.github/workflows/templates/_pypi_test_publish.yaml
+    uses: ./.github/workflows/_pypi_test_publish.yaml
     secrets:
       API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
 
@@ -206,7 +206,7 @@ jobs:
       - CodeCov
       - CodeQL
       - Test
-    uses: ./.github/workflows/templates/_pypi_publish.yaml
+    uses: ./.github/workflows/_pypi_publish.yaml
     secrets:
       API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
 
@@ -229,7 +229,7 @@ jobs:
       - CodeCov
       - CodeQL
       - Test
-    uses: ./.github/workflows/templates/_dockerhub_publish.yaml
+    uses: ./.github/workflows/_dockerhub_publish.yaml
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -253,4 +253,4 @@ jobs:
       - CodeCov
       - CodeQL
       - Test
-    uses: ./.github/workflows/templates/_ghcr_publish.yaml
+    uses: ./.github/workflows/_ghcr_publish.yaml

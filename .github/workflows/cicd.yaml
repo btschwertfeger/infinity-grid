@@ -26,7 +26,7 @@ jobs:
   ##    Call shared CI/CD workflow with publishing enabled
   ##
   shared-cicd:
-    uses: ./.github/workflows/templates/_shared_cicd.yaml
+    uses: ./.github/workflows/_shared_cicd.yaml
     with:
       run_pull_request: false
       run_default: true

@@ -23,7 +23,7 @@ jobs:
   ##    Call shared CI/CD workflow with deployment enabled for PRs
   ##
   shared-cicd:
-    uses: ./.github/workflows/templates/_shared_cicd.yaml
+    uses: ./.github/workflows/_shared_cicd.yaml
     with:
       run_pull_request: true
       run_default: false
