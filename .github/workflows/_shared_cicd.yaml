@@ -132,7 +132,7 @@ jobs:
       success()
       && inputs.run_pull_request
       && github.actor == 'btschwertfeger'
-    needs: [Pre-Commit]
+    # needs: [Pre-Commit]
     uses: ./.github/workflows/_helm_test.yaml
     secrets:
       KUBECONFIG: ${{ secrets.KUBECONFIG }}
