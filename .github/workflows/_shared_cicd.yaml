@@ -81,7 +81,7 @@ jobs:
   ##
   Build-Docker:
     needs: [Pre-Commit]
-    uses: ./.github/workflows/_build_docker.yaml
+    uses: ./.github/workflows/_build_image.yaml
 
   ## ===========================================================================
   ##    Build the documentation

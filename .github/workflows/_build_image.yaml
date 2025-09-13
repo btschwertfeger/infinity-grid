@@ -41,11 +41,13 @@ jobs:
           push: false
           load: true
           tags: btschwertfeger/infinity-grid:build-artifact
-          outputs: type=docker,dest=${{ runner.temp }}/infinity-grid-image.tar
 
       - name: Test Docker image
+        run: docker run --rm btschwertfeger/infinity-grid:build-artifact --help
+
+      - name: Export Docker image to tar
         run: |
-          docker run --rm btschwertfeger/infinity-grid:build-artifact --help
+          docker save btschwertfeger/infinity-grid:build-artifact -o ${{ runner.temp }}/infinity-grid-image.tar
 
       - name: Upload Docker image artifact
         uses: actions/upload-artifact@v4
