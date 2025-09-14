@@ -28,7 +28,7 @@
 # ```
 
 global:
-  storageClass: "local-path"
+  storageClass: "local-path" # Rancher local-path-provisioner
   postgresql:
     auth:
       postgresPassword: ""

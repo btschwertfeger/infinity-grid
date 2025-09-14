@@ -74,8 +74,8 @@ Note: This project is the successor of the
 
 | Exchange                                 | Status  |
 | ---------------------------------------- | ------- |
-| [Coinbase](https://binance.com)          | Planned |
 | [Binance](https://binance.com)           | Planned |
+| [Coinbase](https://binance.com)          | Planned |
 | [Kraken](https://pro.kraken.com)         | ✅      |
 | Other ideas? Issues and PRs are welcome! | 💡      |
 
@@ -297,7 +297,7 @@ using Docker Compose. This file also provides a default configuration for the
 PostgreSQL database. To run the algorithm, ensure the required environment
 variables are set and start the containers using:
 
-```console
+```bash
 docker compose up -d
 ```
 
