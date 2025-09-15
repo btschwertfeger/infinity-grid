@@ -23,11 +23,10 @@ license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
   "aiohttp~=3.12",
-  "asyncio~=3.4",
   "click~=8.1",
   "cloup~=3.0",
   "requests~=2.32",
-  "psycopg2-binary~=2.9",
+  "psycopg2-binary~=3.2",
   "sqlalchemy~=2.0",
   "pydantic~=2.11"
 ]
@@ -256,16 +255,6 @@ task-tags = ["todo", "TODO", "fixme", "FIXME"]
   "N999",   # Invalid module name
   "PLR0915", # Too many statements
   "PLC0415", # Import outside top-level
-]
-"tools/*.py" = [
-  "T201", # `print` found
-  "E501", # Line too long
-]
-"tools/generate_ws_messages.py" = [
-  "S311", # pseudo-random-generator
-]
-"tools/backtesting/Backtesting.ipynb" = [
-  "CPY001", # Copyright
 ]
 
 [tool.ruff.lint.flake8-copyright]
