@@ -5,27 +5,9 @@
 # https://github.com/btschwertfeger
 #
 
-FROM python:3.13-slim-bookworm AS builder
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-WORKDIR /apps
-COPY . /apps
-
-# hadolint ignore=DL3013,DL3008
-RUN --mount=type=cache,target=/var/lib/apt/,sharing=locked \
---mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=tmpfs,target=/var/log/apt/ \
-    apt-get update \
-    && apt-get install --no-install-recommends -y git
-
-# hadolint ignore=DL3013
-RUN python -m pip install --no-cache-dir --compile --upgrade pip build \
-    && python -m build .
-
-# ------------------------------------------------------------------------------
-
 FROM python:3.13-slim-bookworm
+
+ARG EXTRAS="kraken"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -55,9 +37,10 @@ RUN --mount=type=cache,target=/var/lib/apt/,sharing=locked \
     && locale-gen en_US.UTF-8 \
     && rm -rf /var/lib/apt/lists/*
 
-# hadolint ignore=SC2102,DL3013
-RUN --mount=type=bind,target=/context,from=builder,source=/apps \
-    python -m pip install --compile --no-cache-dir $(find /context/dist -name "*.whl")[kraken]
+# hadolint ignore=SC2046,DL3013,DL3042
+RUN --mount=type=bind,target=/context,source=/dist \
+    --mount=type=cache,target=/root/.cache/pip,sharing=locked \
+    python -m pip install --compile $(find /context -name "*.whl")["${EXTRAS}"]
 
 USER infinity-grid
 
@@ -68,3 +51,4 @@ LABEL maintainer="Benjamin Thomas Schwertfeger contact@b-schwertfeger.de"
 LABEL description="The Infinity Grid Trading Algorithm."
 LABEL documentation="https://infinity-grid.readthedocs.io/en/stable"
 LABEL image.url="https://github.com/btschwerfeger/infinity-grid"
+LABEL org.opencontainers.image.source="https://github.com/btschwerfeger/infinity-grid"

@@ -6,7 +6,7 @@
 #
 # pylint: disable=arguments-differ
 
-""" Helper data structures used for integration testing. """
+"""Helper data structures used for integration testing."""
 
 import uuid
 from copy import deepcopy
@@ -239,8 +239,6 @@ async def get_kraken_instance(
         KrakenExchangeRESTServiceAdapter,
         KrakenExchangeWebsocketServiceAdapter,
     )
-
-    from .helper import KrakenAPI
 
     # ==========================================================================
     # Initialize the mocked REST API client

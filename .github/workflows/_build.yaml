@@ -103,7 +103,7 @@ jobs:
               exit 1
           }
 
-      - name: Store the distribution packages
+      - name: Store the distribution package
         uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         # upload artifacts with the oldest supported version
         if: runner.os == 'linux' && inputs.python-version == '3.11'

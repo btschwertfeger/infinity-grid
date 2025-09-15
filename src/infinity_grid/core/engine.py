@@ -155,7 +155,7 @@ class BotEngine:
             await self.terminate(f"The algorithm was interrupted: {exc}")
         except (
             BotStateError,
-            Exception,
+            Exception,  # noqa: BLE001
         ) as exc:  # pylint: disable=broad-exception-caught
             self.__state_machine.transition_to(States.ERROR)
             await asyncio.sleep(5)

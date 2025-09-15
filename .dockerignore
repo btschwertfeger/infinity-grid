@@ -2,7 +2,4 @@
 *
 
 # Except:
-!src
-!pyproject.toml
-!.git
-!LICENSE
+!dist

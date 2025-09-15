@@ -87,7 +87,7 @@ jobs:
             --set-string database.username="${{ secrets.INFINITY_GRID_RUN_DB_USER }}" \
             --set image.repository="ghcr.io/btschwertfeger/infinity-grid" \
             --set image.tag="pr-${{ inputs.pr_number }}" \
-            --timeout 5m \
+            --timeout 10m \
             --atomic
 
       - name: Verify deployment
