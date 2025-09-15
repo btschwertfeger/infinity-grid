@@ -244,15 +244,15 @@ infinityGrid:
 
   # Amount to invest per grid level (in quote currency) - REQUIRED
   # This determines the size of each buy order
-  amountPerGrid: "" # REQUIRED
+  amountPerGrid: null # REQUIRED
 
   # Percentage interval between grid levels - REQUIRED
   # 0.02 = 2% price difference between buy orders
-  interval: "" # REQUIRED
+  interval: null # REQUIRED
 
   # Number of open buy orders to maintain simultaneously - REQUIRED
   # Higher values create a denser grid but require more capital
-  nOpenBuyOrders: "" # REQUIRED
+  nOpenBuyOrders: null # REQUIRED
 
   # Maximum total investment amount (in quote currency) - OPTIONAL
   # Acts as a safety limit to prevent overinvestment
@@ -261,7 +261,7 @@ infinityGrid:
   # Unique user reference ID for order tracking - REQUIRED
   # IMPORTANT: Change this value for different bot instances
   # to avoid conflicts in order management
-  userref: "" # REQUIRED
+  userref: null # REQUIRED
 
   # OPTIONAL: Custom trading fee percentage (optional)
   # Leave as null to use exchange's default fee structure

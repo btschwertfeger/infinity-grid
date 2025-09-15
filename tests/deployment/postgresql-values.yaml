@@ -12,7 +12,7 @@
 #
 # ```console
 # helm repo add bitnami https://charts.bitnami.com/bitnami
-# help repo update
+# helm repo update
 # ```
 #
 # Use:
