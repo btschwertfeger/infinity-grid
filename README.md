@@ -278,7 +278,6 @@ the following, the steps for use with the Kraken Crypto Asset Exchange is shown:
    the current state of the algorithm. We need two, one for the notifications
    about the algorithm's state and trades and one for notifications about
    errors.
-
    - Create two bots, name as you wish via: https://telegram.me/BotFather.
    - Start the chat with both new Telegram bots and write any message to ensure
      that the chat ID is available in the next step.

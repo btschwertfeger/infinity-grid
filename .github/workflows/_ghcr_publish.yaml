@@ -15,6 +15,12 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+permissions:
+  packages: write
+  contents: read
+  attestations: write
+  id-token: write
+
 jobs:
   Publish-GHCR:
     name: Publish Docker image to GitHub Container Registry
@@ -22,11 +28,6 @@ jobs:
     environment:
       name: GitHub Container Registry
       url: https://github.com/btschwertfeger/infinity-grid/pkgs/container/infinity-grid
-    permissions:
-      packages: write
-      contents: read
-      attestations: write
-      id-token: write
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0

@@ -24,13 +24,14 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   Publish-GHCR-PR:
     name: Publish PR Docker image to GitHub Container Registry
     runs-on: ubuntu-latest
-    permissions:
-      packages: write
-      contents: read
     outputs:
       image_tag: ${{ steps.push.outputs.tag }}
     steps:

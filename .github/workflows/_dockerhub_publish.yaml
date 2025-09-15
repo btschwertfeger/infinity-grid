@@ -19,6 +19,9 @@ on:
 env:
   IMAGE_NAME: ${{ github.repository }}
 
+permissions:
+  contents: read
+
 jobs:
   Publish-DockerHub:
     name: Publish Docker image to Docker Hub

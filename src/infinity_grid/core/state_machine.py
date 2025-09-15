@@ -5,7 +5,7 @@
 # https://github.com/btschwertfeger
 #
 
-""" State machine for the Infinity Grid trading bot. """
+"""State machine for the Infinity Grid trading bot."""
 
 import asyncio
 from enum import Enum, auto
