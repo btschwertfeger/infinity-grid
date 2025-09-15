@@ -1,0 +1,124 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright (C) 2025 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+# Workflow to clean up Helm deployments when pull requests are closed
+#
+
+name: PR Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+    branches: ["**"]
+
+concurrency:
+  group: cleanup-${{ github.head_ref }}
+  cancel-in-progress: false
+
+jobs:
+  ## ===========================================================================
+  ##    Clean up Helm deployment when PR is closed
+  ##
+  Cleanup-Deployment:
+    if: |
+      github.actor == 'btschwertfeger'
+      && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment: Kubernetes and GHCR Cleanup
+    permissions:
+      packages: write
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          egress-policy: audit
+          disable-sudo: false
+
+      - name: Set up Kubernetes config
+        env:
+          KUBECONFIG: ${{ secrets.KUBECONFIG }}
+        run: |
+          mkdir -p ~/.kube
+          chmod go-rwx ~/.kube
+          echo "$KUBECONFIG" > ~/.kube/config
+
+      - name: Set up Helm
+        uses: azure/setup-helm@fe7b79cd5ee1e45176fcad797de68ecaf3ca4814 # v4.2.0
+        with:
+          version: "latest"
+
+      - name: Generate release name
+        id: release-name
+        run: |
+          # Use simple naming: infinity-grid-pr-{number}
+          RELEASE_NAME="infinity-grid-pr-${{ github.event.number }}"
+          echo "name=$RELEASE_NAME" >> $GITHUB_OUTPUT
+          echo "Release name to cleanup: $RELEASE_NAME"
+
+      - name: Check if release exists
+        id: check-release
+        run: |
+          if helm list -n infinity-grid | grep -q "${{ steps.release-name.outputs.name }}"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Release ${{ steps.release-name.outputs.name }} found in namespace infinity-grid"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Release ${{ steps.release-name.outputs.name }} not found in namespace infinity-grid"
+          fi
+
+      - name: Uninstall Helm release
+        if: steps.check-release.outputs.exists == 'true'
+        run: |
+          echo "Uninstalling Helm release: ${{ steps.release-name.outputs.name }}"
+          helm uninstall "${{ steps.release-name.outputs.name }}" --namespace infinity-grid --timeout 5m
+
+      - uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          delete-tags: "pr-${{ github.event.number }}"
+
+      - name: Comment on PR with cleanup status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const releaseName = '${{ steps.release-name.outputs.name }}';
+            const releaseExists = '${{ steps.check-release.outputs.exists }}' === 'true';
+            const prNumber = '${{ github.event.number }}';
+
+            let comment;
+            if (releaseExists) {
+              comment = `## 🧹 Cleanup Complete
+
+              **Release Name:** \`${releaseName}\`
+              **PR Number:** \`${prNumber}\`
+              **Status:** ✅ Successfully cleaned up
+
+              The following resources have been cleaned up:
+              - ✅ Kubernetes deployment uninstalled
+              - ✅ PR-specific Docker image cleanup attempted (\`ghcr.io/${{ github.repository }}:pr-${prNumber}\`)
+
+              The infrastructure for this PR has been fully cleaned up.`;
+            } else {
+              comment = `## 🧹 Cleanup Status
+
+              **Release Name:** \`${releaseName}\`
+              **PR Number:** \`${prNumber}\`
+              **Status:** ℹ️ Partial cleanup
+
+              The following actions were taken:
+              - ℹ️ No Kubernetes deployment found to clean up
+              - ✅ PR-specific Docker image cleanup attempted (\`ghcr.io/${{ github.repository }}:pr-${prNumber}\`)
+
+              No active deployment was found for this branch.`;
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

@@ -1,0 +1,159 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "infinity-grid.fullname" . }}
+  labels:
+    {{- include "infinity-grid.labels" . | nindent 4 }}
+spec:
+  # Infinity Grid trading bot must always run as a single instance
+  replicas: 1
+  strategy:
+    type: {{ .Values.strategy.type }}
+  selector:
+    matchLabels:
+      {{- include "infinity-grid.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "infinity-grid.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["infinity-grid", "run"]
+          env:
+            # API Configuration
+            - name: INFINITY_GRID_API_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "infinity-grid.fullname" . }}-secrets
+                  key: api-public-key
+            - name: INFINITY_GRID_API_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "infinity-grid.fullname" . }}-secrets
+                  key: api-secret-key
+
+            # Strategy Configuration
+            - name: INFINITY_GRID_RUN_STRATEGY
+              value: {{ .Values.infinityGrid.strategy | quote }}
+            - name: INFINITY_GRID_RUN_NAME
+              value: {{ .Values.infinityGrid.name | quote }}
+            - name: INFINITY_GRID_RUN_EXCHANGE
+              value: {{ .Values.infinityGrid.exchange | quote }}
+            - name: INFINITY_GRID_RUN_BASE_CURRENCY
+              value: {{ .Values.infinityGrid.baseCurrency | quote }}
+            - name: INFINITY_GRID_RUN_QUOTE_CURRENCY
+              value: {{ .Values.infinityGrid.quoteCurrency | quote }}
+            - name: INFINITY_GRID_RUN_AMOUNT_PER_GRID
+              value: {{ .Values.infinityGrid.amountPerGrid | quote }}
+            - name: INFINITY_GRID_RUN_INTERVAL
+              value: {{ .Values.infinityGrid.interval | quote }}
+            - name: INFINITY_GRID_RUN_N_OPEN_BUY_ORDERS
+              value: {{ .Values.infinityGrid.nOpenBuyOrders | quote }}
+            - name: INFINITY_GRID_RUN_MAX_INVESTMENT
+              value: {{ .Values.infinityGrid.maxInvestment | quote }}
+            - name: INFINITY_GRID_RUN_USERREF
+              value: {{ .Values.infinityGrid.userref | quote }}
+            {{- if .Values.infinityGrid.fee }}
+            - name: INFINITY_GRID_RUN_FEE
+              value: {{ .Values.infinityGrid.fee | quote }}
+            {{- end }}
+
+            # Additional Options
+            - name: INFINITY_GRID_RUN_DRY_RUN
+              value: {{ .Values.infinityGrid.dryRun | quote }}
+            - name: INFINITY_GRID_RUN_SKIP_PRICE_TIMEOUT
+              value: {{ .Values.infinityGrid.skipPriceTimeout | quote }}
+
+            # Metrics Configuration (always enabled for health checks)
+            - name: INFINITY_GRID_RUN_METRICS_ENABLED
+              value: "true"
+            - name: INFINITY_GRID_RUN_METRICS_HOST
+              value: {{ .Values.infinityGrid.metricsHost | quote }}
+            - name: INFINITY_GRID_RUN_METRICS_PORT
+              value: {{ .Values.infinityGrid.metricsPort | quote }}
+
+            # Database Configuration
+            - name: INFINITY_GRID_RUN_DB_HOST
+              value: {{ include "infinity-grid.database.host" . | quote }}
+            - name: INFINITY_GRID_RUN_DB_PORT
+              value: {{ include "infinity-grid.database.port" . | quote }}
+            - name: INFINITY_GRID_RUN_DB_NAME
+              value: {{ include "infinity-grid.database.database" . | quote }}
+            - name: INFINITY_GRID_RUN_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "infinity-grid.databaseSecretName" . }}
+                  key: {{ include "infinity-grid.databaseUsernameKey" . }}
+            - name: INFINITY_GRID_RUN_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "infinity-grid.databaseSecretName" . }}
+                  key: {{ include "infinity-grid.databasePasswordKey" . }}
+
+            # Notification Configuration (optional)
+            {{- if .Values.infinityGrid.telegram.token }}
+            - name: INFINITY_GRID_RUN_TELEGRAM_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "infinity-grid.fullname" . }}-secrets
+                  key: telegram-token
+            {{- end }}
+            {{- if .Values.infinityGrid.telegram.chatId }}
+            - name: INFINITY_GRID_RUN_TELEGRAM_CHAT_ID
+              value: {{ .Values.infinityGrid.telegram.chatId | quote }}
+            {{- end }}
+            {{- if .Values.infinityGrid.telegram.threadId }}
+            - name: INFINITY_GRID_RUN_TELEGRAM_THREAD_ID
+              value: {{ .Values.infinityGrid.telegram.threadId | quote }}
+            {{- end }}
+
+            # Custom Environment Variables
+            {{- range $key, $value := .Values.environment }}
+            - name: {{ $key | quote }}
+              value: {{ $value | quote }}
+            {{- end }}
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.metrics.port }}
+              protocol: TCP
+          {{- if .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

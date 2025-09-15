@@ -1,0 +1,65 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright (C) 2023 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+# Workflow to build the docker image.
+
+name: Build Docker Image
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  Build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ec9f2d5744a09debf3a187a3f4f675c53b671911 # v2.13.0
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            auth.docker.io:443
+            deb.debian.org:80
+            files.pythonhosted.org:443
+            github.com:443
+            production.cloudflare.docker.com:443
+            pypi.org:443
+            registry-1.docker.io:443
+
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0 # IMPORTANT: otherwise the current tag does not get fetched and the build version gets worse
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6.18.0
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          load: true
+          tags: btschwertfeger/infinity-grid:build-artifact
+
+      - name: Test Docker image
+        run: docker run --rm --entrypoint=infinity-grid btschwertfeger/infinity-grid:build-artifact --help
+
+      - name: Export Docker image to tar
+        run: |
+          docker save btschwertfeger/infinity-grid:build-artifact -o ${{ runner.temp }}/infinity-grid-image.tar
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: ${{ runner.temp }}/infinity-grid-image.tar
+          retention-days: 1

@@ -1,0 +1,256 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright (C) 2023 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+# Shared reusable workflow for common CI/CD jobs
+
+name: Shared CI/CD
+
+on:
+  workflow_call:
+    inputs:
+      run_pull_request:
+        description: "Whether to run as pull request workflow."
+        required: true
+        type: boolean
+        default: false
+      run_default:
+        description: "Whether to run as default workflow (default branch or release)."
+        required: true
+        type: boolean
+        default: false
+      trigger_context:
+        description: "Context of the trigger (push, pull_request, release, schedule)"
+        required: true
+        type: string
+    secrets:
+      CODECOV_TOKEN:
+        required: true
+      KUBECONFIG: # Only in PR runs
+        required: false
+      INFINITY_GRID_API_PUBLIC_KEY: # Only in PR runs
+        required: false
+      INFINITY_GRID_API_SECRET_KEY: # Only in PR runs
+        required: false
+      INFINITY_GRID_RUN_DB_PASSWORD: # Only in PR runs
+        required: false
+      INFINITY_GRID_RUN_DB_USER: # Only in PR runs
+        required: false
+      TEST_PYPI_API_TOKEN: # Only on branch master
+        required: false
+      PYPI_API_TOKEN: # Only in tag runs
+        required: false
+      DOCKERHUB_USERNAME: # Only for master and tag runs
+        required: false
+      DOCKERHUB_TOKEN: # Only for master and tag runs
+        required: false
+
+jobs:
+  ## ===========================================================================
+  ##    Checks the code logic, style and more
+  ##
+  Pre-Commit:
+    uses: ./.github/workflows/_pre_commit.yaml
+
+  ## ===========================================================================
+  ##  Discover vulnerabilities
+  ##
+  CodeQL:
+    uses: ./.github/workflows/_codeql.yaml
+
+  ## ===========================================================================
+  ##    Builds the package on multiple OS for multiple
+  ##    Python versions
+  ##
+  Build:
+    needs: [Pre-Commit]
+    uses: ./.github/workflows/_build.yaml
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+    with:
+      os: ${{ matrix.os }}
+      python-version: ${{ matrix.python-version }}
+
+  ## ===========================================================================
+  ##    Build the Docker image
+  ##
+  Build-Docker:
+    needs: [Pre-Commit]
+    uses: ./.github/workflows/_build_image.yaml
+
+  ## ===========================================================================
+  ##    Build the documentation
+  ##
+  Build-Doc:
+    needs: [Pre-Commit]
+    uses: ./.github/workflows/_build_doc.yaml
+    with:
+      os: "ubuntu-latest"
+      python-version: "3.11"
+
+  ## ===========================================================================
+  ##    Run the unit and integration tests
+  ##
+  Test:
+    needs: [Pre-Commit]
+    uses: ./.github/workflows/_test.yaml
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+    with:
+      os: ${{ matrix.os }}
+      python-version: ${{ matrix.python-version }}
+
+  ## ===========================================================================
+  ##    Generates and uploads the coverage statistics to codecov
+  ##
+  CodeCov:
+    if: |
+      success()
+      && github.actor == 'btschwertfeger'
+      && inputs.trigger_context != 'schedule'
+    needs: [Pre-Commit]
+    uses: ./.github/workflows/_codecov.yaml
+    with:
+      os: "ubuntu-latest"
+      python-version: "3.11"
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  ## ===========================================================================
+  ##    Validate the Helm Chart (only in PR runs)
+  ##
+  Validate-Chart:
+    if: |
+      success()
+      && inputs.run_pull_request
+      && github.actor == 'btschwertfeger'
+    needs: [Pre-Commit]
+    uses: ./.github/workflows/_helm_test.yaml
+    secrets:
+      KUBECONFIG: ${{ secrets.KUBECONFIG }}
+
+  ## ===========================================================================
+  ##    Upload PR-specific Docker image to GitHub Container Registry (PR runs)
+  ##
+  UploadGHCR-PR:
+    if: |
+      success()
+      && inputs.run_pull_request
+      && github.actor == 'btschwertfeger'
+    needs: [Validate-Chart, Build-Docker]
+    uses: ./.github/workflows/_ghcr_pr_publish.yaml
+    with:
+      pr_number: ${{ github.event.number }}
+
+  ## ===========================================================================
+  ##    Deploy to Kubernetes (only in PR runs)
+  ##
+  Deploy:
+    if: |
+      success()
+      && inputs.run_pull_request
+      && github.actor == 'btschwertfeger'
+    needs: [UploadGHCR-PR]
+    uses: ./.github/workflows/_helm_pr_deploy.yaml
+    with:
+      pr_number: ${{ github.event.number }}
+    secrets:
+      KUBECONFIG: ${{ secrets.KUBECONFIG }}
+      INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
+      INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
+      INFINITY_GRID_RUN_DB_PASSWORD: ${{ secrets.INFINITY_GRID_RUN_DB_PASSWORD }}
+      INFINITY_GRID_RUN_DB_USER: ${{ secrets.INFINITY_GRID_RUN_DB_USER }}
+
+  ## ===========================================================================
+  ##    Uploads the package to test.pypi.org on master if triggered by
+  ##    a regular commit/push.
+  ##
+  UploadTestPyPI:
+    if: |
+      success()
+      && inputs.run_default
+      && github.ref == 'refs/heads/master'
+      && (inputs.trigger_context == 'push' || inputs.trigger_context == 'release')
+    needs:
+      - Build
+      - Build-Doc
+      - Build-Docker
+      - CodeCov
+      - CodeQL
+      - Test
+    uses: ./.github/workflows/_pypi_test_publish.yaml
+    secrets:
+      API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
+
+  ## ===========================================================================
+  ##    Upload the package to PyPI
+  ##
+  UploadPyPI:
+    if: |
+      success()
+      && inputs.run_default
+      && github.actor == 'btschwertfeger'
+      && inputs.trigger_context == 'release'
+    needs:
+      - Build
+      - Build-Doc
+      - Build-Docker
+      - CodeCov
+      - CodeQL
+      - Test
+    uses: ./.github/workflows/_pypi_publish.yaml
+    secrets:
+      API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+
+  ## ===========================================================================
+  ##    Upload the Docker image to Docker Hub
+  ##
+  UploadDockerHub:
+    if: |
+      success()
+      && github.actor == 'btschwertfeger'
+      && inputs.run_default
+      && (
+        (inputs.trigger_context == 'push' && github.ref == 'refs/heads/master')
+        || inputs.trigger_context == 'release'
+      )
+    needs:
+      - Build
+      - Build-Doc
+      - Build-Docker
+      - CodeCov
+      - CodeQL
+      - Test
+    uses: ./.github/workflows/_dockerhub_publish.yaml
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  ## ===========================================================================
+  ##    Upload the Docker image to GitHub Container Registry
+  ##
+  UploadGHCR:
+    if: |
+      success()
+      && github.actor == 'btschwertfeger'
+      && inputs.run_default
+      && (
+        (inputs.trigger_context == 'push' && github.ref == 'refs/heads/master')
+        || inputs.trigger_context == 'release'
+      )
+    needs:
+      - Build
+      - Build-Doc
+      - Build-Docker
+      - CodeCov
+      - CodeQL
+      - Test
+    uses: ./.github/workflows/_ghcr_publish.yaml

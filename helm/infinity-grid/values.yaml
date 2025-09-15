@@ -1,0 +1,363 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright (C) 2025 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+#
+# Default values for infinity-grid
+#
+# This is a YAML-formatted file used to configure the infinity-grid trading bot
+# deployment. Declare variables to be passed into your templates.
+
+# Deployment Configuration
+# ======================
+
+# IMPORTANT: Infinity Grid trading bot cannot be scaled horizontally.
+# Multiple instances would conflict with each other and cause trading issues.
+# This value is hard-coded to 1 in the deployment template for safety.
+replicaCount: 1
+
+# Terminate an existing instance before starting a new one.
+strategy:
+  type: Recreate
+
+# Container Image Configuration
+# ============================
+
+image:
+  # Docker image repository for the infinity-grid trading bot
+  repository: btschwertfeger/infinity-grid
+
+  # Image pull policy
+  # - Always: Always pull the latest image from registry
+  # - IfNotPresent: Only pull if image doesn't exist locally (recommended)
+  # - Never: Never pull, use local image only
+  pullPolicy: IfNotPresent
+
+  # Override the image tag (defaults to chart appVersion if empty)
+  tag: "v1.1.0"
+
+# Image pull secrets for private Docker registries
+# Uncomment and add secret names if using private registries
+imagePullSecrets: []
+
+# Override the name of the Kubernetes resources
+# Leave empty to use the chart name
+nameOverride: ""
+
+# Override the full name of the Kubernetes resources
+# Leave empty to use a combination of release name and chart name
+fullnameOverride: ""
+
+# Pod Configuration
+# ================
+
+# Additional annotations to add to pods
+podAnnotations: {}
+
+# Additional labels to add to pods
+podLabels: {}
+
+# Security context for the entire pod
+# Configured following security best practices
+podSecurityContext:
+  # File system group ID for volume permissions
+  fsGroup: 1000
+
+  # Primary group ID for the container
+  runAsGroup: 1000
+
+  # Ensure the container runs as non-root user
+  runAsNonRoot: true
+
+  # User ID to run the container processes
+  runAsUser: 1000
+
+# Security context for the container
+# Follows the principle of least privilege
+securityContext:
+  # Prevent privilege escalation
+  allowPrivilegeEscalation: false
+
+  # Drop all Linux capabilities for enhanced security
+  capabilities:
+    drop:
+      - ALL
+
+  # Enable read-only root filesystem to prevent tampering
+  readOnlyRootFilesystem: true
+
+  # Run as non-root user
+  runAsNonRoot: true
+
+  # Specific user ID (matches podSecurityContext.runAsUser)
+  runAsUser: 1000
+
+# Service Configuration
+# ====================
+
+service:
+  # Service type - ClusterIP exposes the service only within the cluster
+  # This is appropriate for metrics and health check endpoints
+  type: ClusterIP
+
+  # Port where the service will be accessible within the cluster
+  port: 8080
+
+  # Target port on the container where the application listens
+  targetPort: 8080
+
+# Monitoring and Health Checks
+# ============================
+
+# Metrics configuration for monitoring and health checks
+# Metrics are always enabled as they're required for Kubernetes health probes
+metrics:
+  # Port where metrics and health endpoints are exposed
+  port: 8080
+
+  # Health check endpoint path
+  path: /status
+
+  # ServiceMonitor configuration for Prometheus Operator
+  serviceMonitor:
+    # Enable ServiceMonitor creation for Prometheus scraping
+    enabled: false
+
+    # Scraping interval
+    interval: 30s
+
+    # Timeout for scraping
+    scrapeTimeout: 10s
+
+    # Additional labels for the ServiceMonitor
+    labels: {}
+
+# Resource Management
+# ==================
+
+# CPU and memory resource limits and requests
+# Adjust based on your trading strategy's requirements
+resources:
+  # Maximum resource limits (hard limits)
+  limits:
+    # Maximum memory usage
+    memory: 250Mi
+
+  # Minimum resource requests (guaranteed resources)
+  requests:
+    # Minimum CPU allocation
+    cpu: 200m
+
+    # Minimum memory allocation
+    memory: 150Mi
+
+# Health Probes
+# =============
+
+# Liveness probe checks if the container is running properly
+# If this fails, Kubernetes will restart the container
+livenessProbe:
+  httpGet:
+    path: /status
+    port: http
+
+  # Wait 15 seconds before starting health checks
+  initialDelaySeconds: 15
+
+  # Check every 30 seconds
+  periodSeconds: 30
+
+  # Timeout for each probe attempt
+  timeoutSeconds: 10
+
+  # Number of consecutive failures before restarting
+  failureThreshold: 3
+
+# Readiness probe checks if the container is ready to serve traffic
+# If this fails, the pod is removed from service endpoints
+readinessProbe:
+  httpGet:
+    path: /status
+    port: http
+
+  # Start checking readiness after 15 seconds
+  initialDelaySeconds: 15
+
+  # Check every 10 seconds
+  periodSeconds: 10
+
+  # Timeout for each probe attempt
+  timeoutSeconds: 5
+
+  # Number of consecutive failures before marking as not ready
+  failureThreshold: 3
+
+# Scheduling Configuration
+# =======================
+
+# Node selector for pod placement
+# Example: nodeSelector: { "kubernetes.io/arch": "amd64" }
+nodeSelector: {}
+
+# Tolerations for scheduling on tainted nodes
+# Example: tolerations: [{ "key": "node-role", "operator": "Equal", "value": "worker" }]
+tolerations: []
+
+# Affinity rules for advanced pod placement
+# Example: affinity: { "nodeAffinity": { ... } }
+affinity: {}
+
+# Trading Bot Configuration
+# ========================
+
+# Core infinity-grid trading bot configuration
+infinityGrid:
+  # Trading Strategy Configuration
+  # -----------------------------
+
+  # Trading strategy to use (REQUIRED - must be specified during deployment)
+  # Options: cDCA, GridHODL, GridSell, SWING
+  # - cDCA: Continuous Dollar Cost Averaging with grid characteristics
+  # - GridHODL: Accumulate base currency over time, selling slightly less than bought
+  # - GridSell: Liquidate entire bought amount each cycle for immediate profits
+  # - SWING: Extends GridHODL with swing selling on significant upward movements
+  strategy: "" # REQUIRED
+
+  # Human-readable name for this trading bot instance (REQUIRED)
+  name: "" # REQUIRED
+
+  # Exchange to trade on (REQUIRED - currently only "Kraken" is supported)
+  exchange: "" # REQUIRED
+
+  # Base currency (the asset you want to accumulate) - REQUIRED
+  # Examples: BTC, ETH, ADA, DOT
+  baseCurrency: "" # REQUIRED
+
+  # Quote currency (the currency used to buy the base currency) - REQUIRED
+  # Examples: USD, EUR, GBP
+  quoteCurrency: "" # REQUIRED
+
+  # Grid Trading Parameters
+  # ----------------------
+
+  # Amount to invest per grid level (in quote currency) - REQUIRED
+  # This determines the size of each buy order
+  amountPerGrid: null # REQUIRED
+
+  # Percentage interval between grid levels - REQUIRED
+  # 0.02 = 2% price difference between buy orders
+  interval: null # REQUIRED
+
+  # Number of open buy orders to maintain simultaneously - REQUIRED
+  # Higher values create a denser grid but require more capital
+  nOpenBuyOrders: null # REQUIRED
+
+  # Maximum total investment amount (in quote currency) - OPTIONAL
+  # Acts as a safety limit to prevent overinvestment
+  maxInvestment: null
+
+  # Unique user reference ID for order tracking - REQUIRED
+  # IMPORTANT: Change this value for different bot instances
+  # to avoid conflicts in order management
+  userref: null # REQUIRED
+
+  # OPTIONAL: Custom trading fee percentage (optional)
+  # Leave as null to use exchange's default fee structure
+  fee: null
+
+  # API Authentication
+  # -----------------
+
+  # Exchange API public key - REQUIRED
+  # Should be set via environment variables or Helm secrets
+  # Environment variable: INFINITY_GRID_API_PUBLIC_KEY
+  apiPublicKey: "" # REQUIRED
+
+  # Exchange API secret key - REQUIRED
+  # Should be set via environment variables or Helm secrets
+  # Environment variable: INFINITY_GRID_API_SECRET_KEY
+  apiSecretKey: "" # REQUIRED
+
+  # Bot Behavior Options
+  # -------------------
+
+  # OPTIONAL: Enable dry-run mode (no real trades, simulation only)
+  # Useful for testing strategies without risking capital
+  dryRun: false
+
+  # OPTIONAL: Skip price timeout checks
+  # Advanced option, leave false unless you understand the implications
+  skipPriceTimeout: false
+
+  # Metrics and Monitoring
+  # ---------------------
+
+  # Host address for metrics endpoint (always enabled for health checks)
+  # "0.0.0.0" allows access from any interface within the pod
+  metricsHost: "0.0.0.0"
+
+  # Port for metrics and health check endpoints
+  # Must match the service.port and service.targetPort values
+  metricsPort: 8080
+
+  # Notification Configuration
+  # -------------------------
+
+  # Telegram bot notifications (optional)
+  telegram:
+    # OPTIONAL: Telegram bot token (required if using notifications)
+    # Obtain from @BotFather on Telegram
+    # Environment variable: INFINITY_GRID_RUN_TELEGRAM_TOKEN
+    token: ""
+
+    # OPTIONAL: Telegram chat ID where notifications will be sent
+    # Can be a user ID, group ID, or channel ID
+    # Environment variable: INFINITY_GRID_RUN_TELEGRAM_CHAT_ID
+    chatId: ""
+
+    # OPTIONAL: Telegram thread ID for forum groups (optional)
+    # Leave empty for regular chats
+    # Environment variable: INFINITY_GRID_RUN_TELEGRAM_THREAD_ID
+    threadId: ""
+
+# External Database Configuration
+# ==============================
+
+# PostgreSQL database configuration (required)
+# You must provide your own PostgreSQL database instance
+# The bot does not include a database as part of this chart
+database:
+  # PostgreSQL server hostname or IP address - REQUIRED
+  # Example: "postgres.example.com" or "10.0.0.1"
+  host: "" # REQUIRED
+
+  # PostgreSQL server port
+  # Default PostgreSQL port is 5432
+  port: 5432
+
+  # Database username for authentication - REQUIRED
+  # This user must have CREATE, INSERT, UPDATE, DELETE permissions
+  username: "" # REQUIRED
+
+  # Database password for authentication - REQUIRED
+  # Should be set via environment variables or Helm secrets
+  password: "" # REQUIRED
+
+  # Database name to use - REQUIRED
+  # The database should exist and be accessible by the specified user
+  database: "" # REQUIRED
+
+# Custom Environment Variables
+# ============================
+
+# Additional environment variables to set in the container.
+#
+# Examples:
+# environment:
+#   TZ: "UTC"
+#
+# Note: For sensitive values, consider using Kubernetes secrets instead
+# and reference them using secretKeyRef in the deployment template
+environment: {}

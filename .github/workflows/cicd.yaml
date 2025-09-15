@@ -13,12 +13,9 @@ on:
   push:
     branches: [master]
   schedule:
-    - cron: "20 16 */7 * *"
+    - cron: "0 6 * * FRI"
   release:
     types: [created]
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches: ["**"]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -26,139 +23,17 @@ concurrency:
 
 jobs:
   ## ===========================================================================
-  ##    Checks the code logic, style and more
+  ##    Call shared CI/CD workflow with publishing enabled
   ##
-  Pre-Commit:
-    uses: ./.github/workflows/_pre_commit.yaml
-
-  ## ===========================================================================
-  ##  Discover vulnerabilities
-  ##
-  CodeQL:
-    uses: ./.github/workflows/_codeql.yaml
-
-  ## ===========================================================================
-  ##    Builds the package on multiple OS for multiple
-  ##    Python versions
-  ##
-  Build:
-    needs: [Pre-Commit]
-    uses: ./.github/workflows/_build.yaml
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.11", "3.12", "3.13"]
+  shared-cicd:
+    uses: ./.github/workflows/_shared_cicd.yaml
     with:
-      os: ${{ matrix.os }}
-      python-version: ${{ matrix.python-version }}
-
-  ## ===========================================================================
-  ##    Build the Docker image
-  ##
-  Build-Docker:
-    needs: [Pre-Commit]
-    uses: ./.github/workflows/_build_docker.yaml
-
-  ## ===========================================================================
-  ##    Build the documentation
-  ##
-  Build-Doc:
-    needs: [Pre-Commit]
-    uses: ./.github/workflows/_build_doc.yaml
-    with:
-      os: "ubuntu-latest"
-      python-version: "3.11"
-
-  ## ===========================================================================
-  ##    Run the unit and integration tests
-  ##
-  Test:
-    needs: [Pre-Commit]
-    uses: ./.github/workflows/_test.yaml
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.11", "3.12", "3.13"]
-    with:
-      os: ${{ matrix.os }}
-      python-version: ${{ matrix.python-version }}
-
-  ## ===========================================================================
-  ##    Generates and uploads the coverage statistics to codecov
-  ##
-  CodeCov:
-    if: |
-      success()
-      && github.actor == 'btschwertfeger'
-      && github.event_name != 'schedule'
-    needs: [Pre-Commit]
-    uses: ./.github/workflows/_codecov.yaml
-    with:
-      os: "ubuntu-latest"
-      python-version: "3.11"
+      run_pull_request: false
+      run_default: true
+      trigger_context: ${{ github.event_name }}
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-  ## ===========================================================================
-  ##    Uploads the package to test.pypi.org on master if triggered by
-  ##    a regular commit/push.
-  ##
-  UploadTestPyPI:
-    if: |
-      success()
-      && github.ref == 'refs/heads/master'
-      && (github.event_name == 'push' || github.event_name == 'release')
-    needs:
-      - Build
-      - Build-Doc
-      - Build-Docker
-      - CodeCov
-      - CodeQL
-      - Test
-    uses: ./.github/workflows/_pypi_test_publish.yaml
-    secrets:
-      API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
-
-  ## ===========================================================================
-  ##    Upload the package to PyPI
-  ##
-  UploadPyPI:
-    if: |
-      success()
-      && github.actor == 'btschwertfeger'
-      && github.event_name == 'release'
-    needs:
-      - Build
-      - Build-Doc
-      - Build-Docker
-      - CodeCov
-      - CodeQL
-      - Test
-    uses: ./.github/workflows/_pypi_publish.yaml
-    secrets:
-      API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-
-  ## ===========================================================================
-  ##    Upload the package GitHub's Docker registry
-  ##
-  UploadDockerImage:
-    if: |
-      success()
-      && github.actor == 'btschwertfeger'
-      && (
-        (github.event_name == 'push' && github.ref == 'refs/heads/master')
-        || github.event_name == 'release'
-      )
-    needs:
-      - Build
-      - Build-Doc
-      - Build-Docker
-      - CodeCov
-      - CodeQL
-      - Test
-    uses: ./.github/workflows/_docker_publish.yaml
-    secrets:
+      TEST_PYPI_API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
+      PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}

@@ -1,0 +1,28 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright (C) 2025 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+
+apiVersion: v2
+name: infinity-grid
+description: A Helm chart for the Infinity Grid Trading Algorithm
+type: application
+version: v1.0.0
+appVersion: "v1.1.0"
+home: https://github.com/btschwertfeger/infinity-grid
+sources:
+  - https://github.com/btschwertfeger/infinity-grid
+maintainers:
+  - name: Benjamin Thomas Schwertfeger
+    email: contact@b-schwertfeger.de
+    url: https://github.com/btschwertfeger
+keywords:
+  - trading
+  - crypto
+  - grid-trading
+  - algorithm
+  - finance
+annotations:
+  category: Finance

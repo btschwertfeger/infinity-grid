@@ -1,0 +1,48 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright (C) 2025 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+# values.yaml to deploy a PostgreSQL instance to Kubernetes.
+# This instance is required when testing the infinity-grid chart and must be
+# deployed once in the namespace infinity-grid!
+#
+# Prerequisites:
+#
+# ```console
+# helm repo add bitnami https://charts.bitnami.com/bitnami
+# helm repo update
+# ```
+#
+# Use:
+#
+# ```console
+# helm -n infinity-grid \
+#   upgrade --install --atomic \
+#   --version 16.7.27 \
+#   --values <path to this file> \
+#   infinity-grid-postgresql bitnami/postgresql \
+#   --set-string global.postgresql.auth.username=<username> \
+#   --set-string global.postgresql.auth.password=<password>
+# ```
+
+global:
+  storageClass: "local-path" # Rancher local-path-provisioner
+  postgresql:
+    auth:
+      postgresPassword: ""
+      username: ""
+      password: ""
+      database: "infinity_grid"
+image:
+  registry: docker.io
+  repository: bitnami/postgresql
+  tag: 17.6.0-debian-12-r4
+  pullPolicy: IfNotPresent
+auth:
+  enablePostgresUser: false # not needed
+architecture: standalone
+primary:
+  persistence:
+    size: 2Gi

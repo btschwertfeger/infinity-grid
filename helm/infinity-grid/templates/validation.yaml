@@ -1,0 +1,70 @@
+{{/*
+This template validates required values and fails deployment if they're missing.
+It doesn't create any Kubernetes resources - it's purely for validation.
+*/}}
+
+{{- if not .Values.infinityGrid.strategy }}
+{{- fail "infinityGrid.strategy is required. Please specify one of: cDCA, GridHODL, GridSell, SWING" }}
+{{- end }}
+
+{{- if not .Values.infinityGrid.name }}
+{{- fail "infinityGrid.name is required. Please provide a human-readable name for this bot instance" }}
+{{- end }}
+
+{{- if not .Values.infinityGrid.exchange }}
+{{- fail "infinityGrid.exchange is required. Please specify the exchange (currently only 'Kraken' is supported)" }}
+{{- end }}
+
+{{- if not .Values.infinityGrid.baseCurrency }}
+{{- fail "infinityGrid.baseCurrency is required. Please specify the base currency (e.g., BTC, ETH)" }}
+{{- end }}
+
+{{- if not .Values.infinityGrid.quoteCurrency }}
+{{- fail "infinityGrid.quoteCurrency is required. Please specify the quote currency (e.g., USD, EUR)" }}
+{{- end }}
+
+{{- if not .Values.infinityGrid.amountPerGrid }}
+{{- fail "infinityGrid.amountPerGrid is required. Please specify the amount to invest per grid level" }}
+{{- end }}
+
+{{- if not .Values.infinityGrid.interval }}
+{{- fail "infinityGrid.interval is required. Please specify the percentage interval between grid levels (e.g., 0.02 for 2%)" }}
+{{- end }}
+
+{{- if not .Values.infinityGrid.nOpenBuyOrders }}
+{{- fail "infinityGrid.nOpenBuyOrders is required. Please specify the number of open buy orders to maintain" }}
+{{- end }}
+
+{{- if not .Values.infinityGrid.userref }}
+{{- fail "infinityGrid.userref is required. Please provide a unique user reference ID for order tracking" }}
+{{- end }}
+
+{{- if not .Values.infinityGrid.apiPublicKey }}
+{{- fail "infinityGrid.apiPublicKey is required. Please provide the exchange API public key" }}
+{{- end }}
+
+{{- if not .Values.infinityGrid.apiSecretKey }}
+{{- fail "infinityGrid.apiSecretKey is required. Please provide the exchange API secret key" }}
+{{- end }}
+
+{{- if not .Values.database.host }}
+{{- fail "database.host is required. Please specify the PostgreSQL server hostname" }}
+{{- end }}
+
+{{- if not .Values.database.username }}
+{{- fail "database.username is required. Please specify the database username" }}
+{{- end }}
+
+{{- if not .Values.database.password }}
+{{- fail "database.password is required. Please provide the database password" }}
+{{- end }}
+
+{{- if not .Values.database.database }}
+{{- fail "database.database is required. Please specify the database name" }}
+{{- end }}
+
+{{/*
+This template produces no output - it's validation only.
+Helm will process this file during template rendering and fail
+if any required values are missing.
+*/}}

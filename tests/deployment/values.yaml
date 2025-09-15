@@ -1,0 +1,52 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright (C) 2025 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+#
+# This values.yaml file is used for deploying the infinity-grid trading bot
+# to Kubernetes for testing and validating the chart.
+#
+# Use:
+#
+# ```console
+# helm -n infinity-grid \
+#   upgrade --install --atomic \
+#   --values <path to this file> \
+#   infinity-grid \
+#   <path to chart> \
+#   --set-string infinityGrid.apiPublicKey=<the public key> \
+#   --set-string infinityGrid.apiSecretKey=<the secret key> \
+#   --set-string database.password=<the DB password>
+# ````
+
+image:
+  # repository and tag might be overridden during CI
+  repository: btschwertfeger/infinity-grid
+  tag: dev
+  pullPolicy: Always
+infinityGrid:
+  strategy: "GridHODL"
+  name: "Infinity Grid Kubernetes Test Instance"
+  exchange: "Kraken"
+  baseCurrency: "BTC"
+  quoteCurrency: "USD"
+  amountPerGrid: 20
+  interval: 0.02
+  nOpenBuyOrders: 3
+  maxInvestment: 100
+  userref: 1
+  # Use API keys without permissions to trade, cancel, access funds, withdraw,
+  # transfer, staking, etc!
+  apiPublicKey: "" # set via --set-string
+  apiSecretKey: "" # set via --set-string
+  dryRun: true # important!
+environment:
+  INFINITY_GRID_RUN_SKIP_PERMISSION_CHECK: true
+database:
+  host: "infinity-grid-postgresql"
+  port: 5432
+  username: "infinity_grid"
+  password: "" # set via --set-string
+  database: "infinity_grid"
