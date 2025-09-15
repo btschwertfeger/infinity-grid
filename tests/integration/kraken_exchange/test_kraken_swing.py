@@ -5,7 +5,7 @@
 # https://github.com/btschwertfeger
 #
 
-""" Integration tests for the SWING strategy on Kraken exchange."""
+"""Integration tests for the SWING strategy on Kraken exchange."""
 
 import logging
 from unittest import mock

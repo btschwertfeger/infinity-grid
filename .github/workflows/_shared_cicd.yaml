@@ -116,7 +116,7 @@ jobs:
       success()
       && github.actor == 'btschwertfeger'
       && inputs.trigger_context != 'schedule'
-    needs: [Pre-Commit]
+    needs: [Build]
     uses: ./.github/workflows/_codecov.yaml
     with:
       os: "ubuntu-latest"

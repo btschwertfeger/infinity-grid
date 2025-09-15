@@ -5,7 +5,7 @@
 # https://github.com/btschwertfeger
 #
 
-""" Integration tests for the GridHODL strategy on Kraken exchange.
+"""Integration tests for the GridHODL strategy on Kraken exchange.
 
 FIXME: Add a check for removing buy orders that are placed to close to each
 other.
