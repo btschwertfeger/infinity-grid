@@ -46,15 +46,16 @@ with Path("links.rst").open(encoding="utf-8") as f:
 
 
 extensions = [
+    "IPython.sphinxext.ipython_console_highlighting",
     "nbsphinx",
     "sphinx_click",
+    "sphinx_lfs_content",
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosectionlabel",
     "sphinx.ext.coverage",
     "sphinx.ext.doctest",
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
-    "sphinx.ext.autosectionlabel",
-    "IPython.sphinxext.ipython_console_highlighting",
 ]
 
 templates_path = ["_templates"]
