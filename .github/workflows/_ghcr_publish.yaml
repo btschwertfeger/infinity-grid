@@ -64,13 +64,17 @@ jobs:
       - name: Tag and push to GHCR
         id: push
         run: |
+          DIGEST=""
           for tag in ${{ steps.meta.outputs.tags }}; do
             docker tag btschwertfeger/infinity-grid:build-artifact $tag
             docker push $tag
+
+            # Get digest from the first pushed tag
+            if [ -z "$DIGEST" ]; then
+              DIGEST=$(docker image inspect $tag --format='{{index .RepoDigests 0}}' | cut -d'@' -f2)
+            fi
           done
 
-          # Get digest for attestation
-          DIGEST=$(docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} --format='{{index .RepoDigests 0}}' | cut -d'@' -f2)
           echo "digest=$DIGEST" >> $GITHUB_OUTPUT
 
       - name: Generate artifact attestation
