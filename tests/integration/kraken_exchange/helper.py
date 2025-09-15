@@ -240,8 +240,6 @@ async def get_kraken_instance(
         KrakenExchangeWebsocketServiceAdapter,
     )
 
-    from .helper import KrakenAPI
-
     # ==========================================================================
     # Initialize the mocked REST API client
     engine._BotEngine__strategy._rest_api = KrakenExchangeRESTServiceAdapter(

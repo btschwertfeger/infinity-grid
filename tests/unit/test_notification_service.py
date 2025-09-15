@@ -46,7 +46,7 @@ class TestNotificationService:
         config = NotificationConfigDTO(
             telegram=TelegramConfigDTO(token=TOKEN, chat_id=CHAT_ID),
         )
-        service = NotificationService(config)
+        _ = NotificationService(config)
 
         # Should create telegram adapter when enabled
         mock_telegram_adapter.assert_called_once_with(TOKEN, CHAT_ID, None)
