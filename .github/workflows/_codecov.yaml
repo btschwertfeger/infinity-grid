@@ -64,6 +64,12 @@ jobs:
         with:
           python-version: ${{ inputs.python-version }}
 
+      - name: Download the built wheel
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: python-package-distributions
+          path: dist/
+
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
@@ -72,7 +78,7 @@ jobs:
           uv venv
           source .venv/bin/activate
           echo ${GITHUB_WORKSPACE}/.venv/bin >> $GITHUB_PATH
-          uv pip install ".[test,dev]"
+          uv pip install dist/*.whl[test]
 
       - name: Generate coverage report
         run: pytest -vv --cov=infinity_grid --cov-report=xml:coverage.xml tests

@@ -34,12 +34,18 @@ jobs:
           egress-policy: audit
 
       - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - name: Set up Python ${{ inputs.python-version }}
         uses: actions/setup-python@3fddbee7870211eda9047db10474808be43c71ec # v5.3.0
         with:
           python-version: ${{ inputs.python-version }}
+
+      - name: Download the built wheel
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: python-package-distributions
+          path: dist/
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -50,7 +56,7 @@ jobs:
           uv venv
           source .venv/bin/activate
           echo ${GITHUB_WORKSPACE}/.venv/bin >> $GITHUB_PATH
-          uv pip install ".[test]"
+          uv pip install dist/*.whl[test]
 
       - name: Install package (Windows)
         if: runner.os == 'Windows'
@@ -58,7 +64,7 @@ jobs:
           uv venv
           .venv\Scripts\activate.ps1
           echo "$env:GITHUB_WORKSPACE\.venv\Scripts" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          uv pip install ".[test]"
+          uv pip install dist/*.whl[test]
 
       - name: Run the tests
         run: pytest -vv tests
