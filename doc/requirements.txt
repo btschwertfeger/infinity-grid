@@ -12,5 +12,4 @@ requests~=2.32
 setuptools_scm
 sphinx<8.2.0 # doesn't work with nbsphinx
 sphinx-click
-sphinx_lfs_content~=1.1
 sqlalchemy~=2.0
