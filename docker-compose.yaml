@@ -1,19 +1,25 @@
 # -*- mode: yaml; coding: utf-8 -*-
 #
-# Copyright (C) 2023 Benjamin Thomas Schwertfeger All rights reserved.
+# Copyright (C) 2023 Benjamin Thomas Schwertfeger
+# All rights reserved.
 # https://github.com/btschwertfeger
 #
 # ------------------------------------------------------------------------------
-# This Docker Compose file creates a PostgreSQL and infinity-grid container.
+# This Docker Compose file creates an infinity-grid and PostgreSQL container.
 #
-# In order to use this file to run the trading algorithm, a few environment
-# variables must be set, see https://infinity-grid.readthedocs.io/en/latest/ for
-# more information.
+# To run the trading algorithm with this file, configure the environment
+# variables accordingly. See https://infinity-grid.readthedocs.io/en/stable/ for
+# complete documentation.
 #
 # Note: For running multiple instances of the infinity-grid in parallel, you can
 #       simply duplicate and configure the service, as it supports sharing the
 #       same database. BUT: Keep in mind to use different API keys as well as
 #       different userref's! Otherwise you will encounter errors.
+# Note: Before increasing the version number of the infinity-grid, please check
+#       the release notes for breaking changes.
+# Note: Do not update the PostgreSQL version that serves a running infinity-grid
+#       instance unless absolutely necessary. Here again, read the release
+#       notes. and always create a backup before making changes.
 # ------------------------------------------------------------------------------
 
 name: infinity-grid

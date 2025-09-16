@@ -5,19 +5,19 @@ updates:
     schedule:
       interval: monthly
     groups:
-      all:
+      github-actions:
         dependency-type: production
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: monthly
     groups:
-      all:
+      docker:
         dependency-type: production
   - package-ecosystem: docker-compose
     directory: /
     schedule:
       interval: monthly
     groups:
-      all:
+      docker-compose:
         dependency-type: production

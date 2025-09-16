@@ -38,7 +38,10 @@ doc:
 ## image	Build the Docker image
 ##
 image:
-	docker build -t btschwertfeger/infinity-grid:dev .
+	docker build \
+	--build-arg VERSION=dev \
+	--build-arg CREATE_TIME=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ") \
+	-t btschwertfeger/infinity-grid:dev .
 
 ## ======= I N S T A L L A T I O N =============================================
 ## install	Install the package

@@ -47,6 +47,22 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Get current date
+        id: date
+        run: echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+
+      - name: Get version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            # Extract version from the built wheel filename
+            wheel_file=$(ls dist/*.whl | head -1)
+            version=$(basename "$wheel_file" | sed 's/infinity_grid-\([^-]*\)-.*/\1/')
+            echo "version=${version}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build Docker image
         uses: docker/build-push-action@v6.18.0
         with:
@@ -55,6 +71,9 @@ jobs:
           push: false
           load: true
           tags: btschwertfeger/infinity-grid:build-artifact
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            CREATE_TIME=${{ steps.date.outputs.date }}
 
       - name: Test Docker image
         run: docker run --rm --entrypoint=infinity-grid btschwertfeger/infinity-grid:build-artifact --help
