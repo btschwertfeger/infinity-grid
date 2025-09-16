@@ -8,6 +8,8 @@
 FROM python:3.13-slim-bookworm
 
 ARG EXTRAS="kraken"
+ARG VERSION
+ARG CREATE_TIME
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -46,9 +48,11 @@ USER infinity-grid
 
 ENTRYPOINT ["infinity-grid", "run"]
 
-LABEL title="Infinity Grid"
-LABEL maintainer="Benjamin Thomas Schwertfeger contact@b-schwertfeger.de"
-LABEL description="The Infinity Grid Trading Algorithm."
-LABEL documentation="https://infinity-grid.readthedocs.io/en/stable"
-LABEL image.url="https://github.com/btschwerfeger/infinity-grid"
+LABEL org.opencontainers.description="The Infinity Grid Trading Algorithm."
+LABEL org.opencontainers.documentation="https://infinity-grid.readthedocs.io/en/stable"
+LABEL org.opencontainers.image.authors="Benjamin Thomas Schwertfeger contact@b-schwertfeger.de"
 LABEL org.opencontainers.image.source="https://github.com/btschwerfeger/infinity-grid"
+LABEL org.opencontainers.license="LicenseRef-Infinity-Grid-2.0"
+LABEL org.opencontainers.title="Infinity Grid"
+LABEL org.opencontainers.version=${VERSION}
+LABEL org.opencontainers.created=${CREATE_TIME}

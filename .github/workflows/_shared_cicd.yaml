@@ -131,7 +131,7 @@ jobs:
     if: |
       success()
       && inputs.run_pull_request
-      && github.actor == 'btschwertfeger'
+      && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
     needs: [Pre-Commit]
     uses: ./.github/workflows/_helm_test.yaml
     secrets:
@@ -144,7 +144,7 @@ jobs:
     if: |
       success()
       && inputs.run_pull_request
-      && github.actor == 'btschwertfeger'
+      && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
     needs: [Validate-Chart, Build-Docker]
     uses: ./.github/workflows/_ghcr_pr_publish.yaml
     with:
@@ -157,7 +157,7 @@ jobs:
     if: |
       success()
       && inputs.run_pull_request
-      && github.actor == 'btschwertfeger'
+      && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
     needs: [UploadGHCR-PR]
     uses: ./.github/workflows/_helm_pr_deploy.yaml
     with:
