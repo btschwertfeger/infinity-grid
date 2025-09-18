@@ -80,7 +80,7 @@ jobs:
   ##    Build the Docker image
   ##
   Build-Docker:
-    needs: [Build]
+    needs: [Build, Test]
     uses: ./.github/workflows/_build_image.yaml
 
   ## ===========================================================================

@@ -54,7 +54,7 @@ install: check-uv
 ##
 .PHONY: dev
 dev: check-uv
-	$(UV) pip install --compile -e ".[dev,test]" -r doc/requirements.txt
+	$(UV) pip install --compile -r requirements-dev.txt -r doc/requirements.txt
 
 ## ======= T E S T I N G =======================================================
 ## test		Run the unit tests
