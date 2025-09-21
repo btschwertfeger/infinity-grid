@@ -31,14 +31,24 @@ class KrakenAPI(Market, Trade, User):
     orders and trades used during tests.
     """
 
-    def __init__(self: Self) -> None:
+    def __init__(
+        self: Self,
+        base_currency: str = "XXBT",
+        quote_currency: str = "ZUSD",
+        pair: str = "XBTUSD",
+        ws_symbol: str = "BTC/USD",
+    ) -> None:
         super().__init__()  # DONT PASS SECRETS!
         self.__orders = {}
         self.__balances = {
-            "XXBT": {"balance": "100.0", "hold_trade": "0.0"},
-            "ZUSD": {"balance": "1_000_000.0", "hold_trade": "0.0"},
+            base_currency: {"balance": "100.0", "hold_trade": "0.0"},
+            quote_currency: {"balance": "1_000_000.0", "hold_trade": "0.0"},
         }
         self.__fee = 0.0025
+        self.__base_currency = base_currency
+        self.__quote_currency = quote_currency
+        self.__pair = pair
+        self.__ws_symbol = ws_symbol
 
     def create_order(self: Self, **kwargs) -> dict:  # noqa: ANN003
         """Create a new order and update balances if needed."""
@@ -46,7 +56,7 @@ class KrakenAPI(Market, Trade, User):
         order = {
             "userref": kwargs["userref"],
             "descr": {
-                "pair": "XBTUSD",
+                "pair": self.__pair,
                 "type": kwargs["side"],
                 "ordertype": kwargs["ordertype"],
                 "price": kwargs["price"],
@@ -60,22 +70,31 @@ class KrakenAPI(Market, Trade, User):
 
         if kwargs["side"] == "buy":
             required_balance = float(kwargs["price"]) * float(kwargs["volume"])
-            if float(self.__balances["ZUSD"]["balance"]) < required_balance:
+            if (
+                float(self.__balances[self.__quote_currency]["balance"])
+                < required_balance
+            ):
                 raise ValueError("Insufficient balance to create buy order")
-            self.__balances["ZUSD"]["balance"] = str(
-                float(self.__balances["ZUSD"]["balance"]) - required_balance,
+            self.__balances[self.__quote_currency]["balance"] = str(
+                float(self.__balances[self.__quote_currency]["balance"])
+                - required_balance,
             )
-            self.__balances["ZUSD"]["hold_trade"] = str(
-                float(self.__balances["ZUSD"]["hold_trade"]) + required_balance,
+            self.__balances[self.__quote_currency]["hold_trade"] = str(
+                float(self.__balances[self.__quote_currency]["hold_trade"])
+                + required_balance,
             )
         elif kwargs["side"] == "sell":
-            if float(self.__balances["XXBT"]["balance"]) < float(kwargs["volume"]):
+            if float(self.__balances[self.__base_currency]["balance"]) < float(
+                kwargs["volume"],
+            ):
                 raise ValueError("Insufficient balance to create sell order")
-            self.__balances["XXBT"]["balance"] = str(
-                float(self.__balances["XXBT"]["balance"]) - float(kwargs["volume"]),
+            self.__balances[self.__base_currency]["balance"] = str(
+                float(self.__balances[self.__base_currency]["balance"])
+                - float(kwargs["volume"]),
             )
-            self.__balances["XXBT"]["hold_trade"] = str(
-                float(self.__balances["XXBT"]["hold_trade"]) + float(kwargs["volume"]),
+            self.__balances[self.__base_currency]["hold_trade"] = str(
+                float(self.__balances[self.__base_currency]["hold_trade"])
+                + float(kwargs["volume"]),
             )
 
         self.__orders[txid] = order
@@ -112,24 +131,27 @@ class KrakenAPI(Market, Trade, User):
         self.__orders[txid] = order
 
         if order["descr"]["type"] == "buy":
-            self.__balances["XXBT"]["balance"] = str(
-                float(self.__balances["XXBT"]["balance"]) + volume,
+            self.__balances[self.__base_currency]["balance"] = str(
+                float(self.__balances[self.__base_currency]["balance"]) + volume,
             )
-            self.__balances["ZUSD"]["balance"] = str(
-                float(self.__balances["ZUSD"]["balance"]) - float(order["cost"]),
+            self.__balances[self.__quote_currency]["balance"] = str(
+                float(self.__balances[self.__quote_currency]["balance"])
+                - float(order["cost"]),
             )
-            self.__balances["ZUSD"]["hold_trade"] = str(
-                float(self.__balances["ZUSD"]["hold_trade"]) - float(order["cost"]),
+            self.__balances[self.__quote_currency]["hold_trade"] = str(
+                float(self.__balances[self.__quote_currency]["hold_trade"])
+                - float(order["cost"]),
             )
         elif order["descr"]["type"] == "sell":
-            self.__balances["XXBT"]["balance"] = str(
-                float(self.__balances["XXBT"]["balance"]) - volume,
+            self.__balances[self.__base_currency]["balance"] = str(
+                float(self.__balances[self.__base_currency]["balance"]) - volume,
             )
-            self.__balances["XXBT"]["hold_trade"] = str(
-                float(self.__balances["XXBT"]["hold_trade"]) - volume,
+            self.__balances[self.__base_currency]["hold_trade"] = str(
+                float(self.__balances[self.__base_currency]["hold_trade"]) - volume,
             )
-            self.__balances["ZUSD"]["balance"] = str(
-                float(self.__balances["ZUSD"]["balance"]) + float(order["cost"]),
+            self.__balances[self.__quote_currency]["balance"] = str(
+                float(self.__balances[self.__quote_currency]["balance"])
+                + float(order["cost"]),
             )
 
     async def on_ticker_update(self: Self, callback: Callable, last: float) -> None:
@@ -137,7 +159,7 @@ class KrakenAPI(Market, Trade, User):
         await callback(
             {
                 "channel": "ticker",
-                "data": [{"symbol": "BTC/USD", "last": last}],
+                "data": [{"symbol": self.__ws_symbol, "last": last}],
             },
         )
 
@@ -175,25 +197,31 @@ class KrakenAPI(Market, Trade, User):
             remaining_cost = (
                 float(order["vol"]) * float(order["descr"]["price"]) - executed_cost
             )
-            self.__balances["ZUSD"]["balance"] = str(
-                float(self.__balances["ZUSD"]["balance"]) + remaining_cost,
+            self.__balances[self.__quote_currency]["balance"] = str(
+                float(self.__balances[self.__quote_currency]["balance"])
+                + remaining_cost,
             )
-            self.__balances["ZUSD"]["hold_trade"] = str(
-                float(self.__balances["ZUSD"]["hold_trade"]) - remaining_cost,
+            self.__balances[self.__quote_currency]["hold_trade"] = str(
+                float(self.__balances[self.__quote_currency]["hold_trade"])
+                - remaining_cost,
             )
-            self.__balances["XXBT"]["balance"] = str(
-                float(self.__balances["XXBT"]["balance"]) - float(order["vol_exec"]),
+            self.__balances[self.__base_currency]["balance"] = str(
+                float(self.__balances[self.__base_currency]["balance"])
+                - float(order["vol_exec"]),
             )
         elif order["descr"]["type"] == "sell":
             remaining_volume = float(order["vol"]) - float(order["vol_exec"])
-            self.__balances["XXBT"]["balance"] = str(
-                float(self.__balances["XXBT"]["balance"]) + remaining_volume,
+            self.__balances[self.__base_currency]["balance"] = str(
+                float(self.__balances[self.__base_currency]["balance"])
+                + remaining_volume,
             )
-            self.__balances["XXBT"]["hold_trade"] = str(
-                float(self.__balances["XXBT"]["hold_trade"]) - remaining_volume,
+            self.__balances[self.__base_currency]["hold_trade"] = str(
+                float(self.__balances[self.__base_currency]["hold_trade"])
+                - remaining_volume,
             )
-            self.__balances["ZUSD"]["balance"] = str(
-                float(self.__balances["ZUSD"]["balance"]) - float(order["cost"]),
+            self.__balances[self.__quote_currency]["balance"] = str(
+                float(self.__balances[self.__quote_currency]["balance"])
+                - float(order["cost"]),
             )
 
     def cancel_all_orders(self: Self, **kwargs: Any) -> None:  # noqa: ARG002
@@ -222,6 +250,10 @@ async def get_kraken_instance(
     bot_config: BotConfigDTO,
     db_config: DBConfigDTO,
     notification_config: NotificationConfigDTO,
+    base_currency: str,
+    quote_currency: str,
+    pair: str,
+    ws_symbol: str,
 ) -> BotEngine:
     """
     Initialize the Bot Engine using the passed config strategy and Kraken backend
@@ -250,7 +282,12 @@ async def get_kraken_instance(
         quote_currency=bot_config.quote_currency,
     )
 
-    api = KrakenAPI()
+    api = KrakenAPI(
+        base_currency=base_currency,
+        quote_currency=quote_currency,
+        pair=pair,
+        ws_symbol=ws_symbol,
+    )
     engine._BotEngine__strategy._rest_api._KrakenExchangeRESTServiceAdapter__user_service = (
         api
     )

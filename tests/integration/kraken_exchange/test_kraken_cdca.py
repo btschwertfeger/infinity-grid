@@ -29,7 +29,7 @@ def kraken_cdca_bot_config() -> BotConfigDTO:
         api_secret_key="",
         name="Local Tests Bot cDCA",
         userref=0,
-        base_currency="BTC",
+        base_currency="BTC",  # AAPLx
         quote_currency="USD",
         max_investment=10000.0,
         amount_per_grid=100.0,
@@ -61,6 +61,10 @@ async def test_kraken_cdca(
         bot_config=kraken_cdca_bot_config,
         notification_config=notification_config,
         db_config=db_config,
+        base_currency="XBT",
+        quote_currency="ZUSD",
+        pair="XBTUSD",
+        ws_symbol="BTC/USD",
     )
     state_machine = engine._BotEngine__state_machine
     strategy = engine._BotEngine__strategy
