@@ -5,6 +5,7 @@
 # https://github.com/btschwertfeger
 #
 
+import os
 from logging import DEBUG, INFO, WARNING, basicConfig, getLogger
 from typing import Any
 
@@ -19,6 +20,8 @@ from infinity_grid.models.configuration import (
     NotificationConfigDTO,
     TelegramConfigDTO,
 )
+
+LOG = getLogger(__name__)
 
 
 def print_version(ctx: Context, param: Any, value: Any) -> None:  # noqa: ANN401, ARG001
@@ -122,6 +125,14 @@ def cli(ctx: Context, **kwargs: dict) -> None:
         getLogger("websockets").setLevel(WARNING)
         getLogger("kraken").setLevel(WARNING)
 
+    if collected_ffs := filter(
+        lambda item: item[0].startswith("INFINITY_GRID_FF"),
+        ((key, value) for key, value in os.environ.items()),
+    ):
+        LOG.info("Using the following feature flags:")
+    for key, value in collected_ffs:
+        LOG.info(" - %s: %s", key, value)
+
 
 @cli.command(
     context_settings={
@@ -208,7 +219,10 @@ def cli(ctx: Context, **kwargs: dict) -> None:
         "--base-currency",
         required=True,
         type=STRING,
-        help="The base currency.",
+        help="""
+        The base currency. Can also be a tokenized asset like 'AAPLx' in case of
+        xStocks on Kraken.
+        """,
     ),
     option(
         "--quote-currency",

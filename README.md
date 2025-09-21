@@ -72,12 +72,12 @@ Note: This project is the successor of the
 
 **Product Support Matrix:**
 
-| Exchange                                 | Status  |
-| ---------------------------------------- | ------- |
-| [Binance](https://binance.com)           | Planned |
-| [Coinbase](https://binance.com)          | Planned |
-| [Kraken](https://pro.kraken.com)         | ✅      |
-| Other ideas? Issues and PRs are welcome! | 💡      |
+| Exchange                                              | Status  |
+| ----------------------------------------------------- | ------- |
+| [Binance](https://binance.com)                        | Planned |
+| [Coinbase](https://binance.com)                       | Planned |
+| [Kraken](https://pro.kraken.com) (Crypto and xStocks) | ✅      |
+| Other ideas? Issues and PRs are welcome!              | 💡      |
 
 ## 📚 Fundamental concepts
 

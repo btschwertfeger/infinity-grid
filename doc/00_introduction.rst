@@ -63,7 +63,7 @@ Note: This project is the successor of the `kraken-infinity-grid`_.
 
   * - Exchange
     - Status
-  * - `Kraken <https://pro.kraken.com>`_
+  * - `Kraken <https://pro.kraken.com>`_ (Crypto and xStocks)
     - ✅
   * - `Coinbase <https://coinbase.com>`_
     - Planned

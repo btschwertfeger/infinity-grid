@@ -28,6 +28,7 @@ Dependencies:
 
 """
 
+import os
 from contextlib import suppress
 from decimal import Decimal
 from functools import cached_property, lru_cache
@@ -71,6 +72,11 @@ from infinity_grid.models.exchange import (
 
 LOG = getLogger(__name__)
 
+# Feature flags to override the default URLs
+FF_REST_URL = os.getenv("INFINITY_GRID_FF_KRAKEN_REST_URL")
+FF_WS_URL = os.getenv("INFINITY_GRID_FF_KRAKEN_WS_URL")
+FF_AUTH_WS_URL = os.getenv("INFINITY_GRID_FF_KRAKEN_AUTH_WS_URL")
+
 
 class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
     """Adapter for the Kraken exchange user service implementation."""
@@ -85,10 +91,22 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
     ) -> None:
         self.__base_currency = base_currency
         self.__quote_currency = quote_currency
-        self.__user_service: User = User(key=api_public_key, secret=api_secret_key)
-        self.__trade_service: Trade = Trade(key=api_public_key, secret=api_secret_key)
-        self.__market_service: Market = Market()
+        self.__user_service: User = User(
+            key=api_public_key,
+            secret=api_secret_key,
+            url=FF_REST_URL,
+        )
+        self.__trade_service: Trade = Trade(
+            key=api_public_key,
+            secret=api_secret_key,
+            url=FF_REST_URL,
+        )
+        self.__market_service: Market = Market(url=FF_REST_URL)
         self.__state_machine: StateMachine = state_machine
+
+        self.__asset_class: str = (
+            "tokenized_asset" if self.__base_currency.endswith("x") else "currency"
+        )
 
     # == Implemented abstract methods from IExchangeRESTService ================
 
@@ -325,9 +343,15 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
     @cached_property
     def rest_symbol(self: Self) -> str:
         """Returns the symbol for the given base and quote currency."""
-        asset_response = self.__market_service.get_assets(
-            assets=[self.__base_currency, self.__quote_currency],
-        )
+        if self.__asset_class == "tokenized_asset":
+            asset_response = self.__market_service.get_assets(
+                assets=[self.__base_currency],
+                extra_params={"aclass": self.__asset_class},
+            ) | self.__market_service.get_assets(assets=[self.__quote_currency])
+        else:
+            asset_response = self.__market_service.get_assets(
+                assets=[self.__base_currency, self.__quote_currency],
+            )
 
         base_currency = quote_currency = None
         assets = {self.__base_currency, self.__quote_currency}
@@ -380,6 +404,7 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
                 userref=userref,
                 validate=validate,
                 oflags=oflags,
+                extra_params={"asset_class": self.__asset_class},
             )["txid"][0],
         )
 
@@ -400,6 +425,7 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
             amount=amount,
             amount_type=amount_type,
             pair=self.rest_altname,
+            asset_class=self.__asset_class,
         )
 
     def get_system_status(self: Self) -> str:
@@ -414,7 +440,10 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
         # which is the actual self.rest_symbol, so we need to use self.ws_symbol
         # here. Ticket Nr.: 18252552
         if (
-            pair_info := self.__market_service.get_asset_pairs(pair=self.ws_symbol)
+            pair_info := self.__market_service.get_asset_pairs(
+                pair=self.ws_symbol,
+                extra_params={"aclass_base": self.__asset_class},
+            )
         ) == {}:
             self.__state_machine.transition_to(States.ERROR)
             raise BotStateError(
@@ -465,6 +494,9 @@ class KrakenExchangeWebsocketServiceAdapter(IExchangeWebSocketService):
             key=api_public_key,
             secret=api_secret_key,
             callback=self.on_message,
+            rest_url=FF_REST_URL,
+            ws_url=FF_WS_URL,
+            auth_ws_url=FF_AUTH_WS_URL,
         )
         self.__state_machine: StateMachine = state_machine
         self.__event_bus: EventBus = event_bus
