@@ -1,4 +1,4 @@
 pytest
 pytest-asyncio
 pytest-cov
-python-kraken-sdk~=3.2
+python-kraken-sdk>=3.2.6,<4.0.0
