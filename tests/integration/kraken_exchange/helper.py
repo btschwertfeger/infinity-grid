@@ -4,256 +4,28 @@
 # All rights reserved.
 # https://github.com/btschwertfeger
 #
-# pylint: disable=arguments-differ
 
-"""Helper data structures used for integration testing."""
-
-import uuid
-from copy import deepcopy
-from typing import Any, Callable, Self
-
-from kraken.spot import Market, Trade, User
+import logging
+from typing import Self
 
 from infinity_grid.core.engine import BotEngine
+from infinity_grid.core.state_machine import States
 from infinity_grid.models.configuration import (
     BotConfigDTO,
     DBConfigDTO,
     NotificationConfigDTO,
 )
 
+from .kraken_exchange_api import KrakenAPI, KrakenExchangeAPIConfig
 
-class KrakenAPI(Market, Trade, User):
-    """
-    Class extending the Market, Trade, and User client of the python-kraken-sdk
-    to use its methods for non-authenticated requests.
-
-    This class tries to simulate the backend of the Kraken Exchange, handling
-    orders and trades used during tests.
-    """
-
-    def __init__(
-        self: Self,
-        base_currency: str = "XXBT",
-        quote_currency: str = "ZUSD",
-        pair: str = "XBTUSD",
-        ws_symbol: str = "BTC/USD",
-    ) -> None:
-        super().__init__()  # DONT PASS SECRETS!
-        self.__orders = {}
-        self.__balances = {
-            base_currency: {"balance": "100.0", "hold_trade": "0.0"},
-            quote_currency: {"balance": "1_000_000.0", "hold_trade": "0.0"},
-        }
-        self.__fee = 0.0025
-        self.__base_currency = base_currency
-        self.__quote_currency = quote_currency
-        self.__pair = pair
-        self.__ws_symbol = ws_symbol
-
-    def create_order(self: Self, **kwargs) -> dict:  # noqa: ANN003
-        """Create a new order and update balances if needed."""
-        txid = str(uuid.uuid4()).upper()
-        order = {
-            "userref": kwargs["userref"],
-            "descr": {
-                "pair": self.__pair,
-                "type": kwargs["side"],
-                "ordertype": kwargs["ordertype"],
-                "price": kwargs["price"],
-            },
-            "status": "open",
-            "vol": kwargs["volume"],
-            "vol_exec": "0.0",
-            "cost": "0.0",
-            "fee": "0.0",
-        }
-
-        if kwargs["side"] == "buy":
-            required_balance = float(kwargs["price"]) * float(kwargs["volume"])
-            if (
-                float(self.__balances[self.__quote_currency]["balance"])
-                < required_balance
-            ):
-                raise ValueError("Insufficient balance to create buy order")
-            self.__balances[self.__quote_currency]["balance"] = str(
-                float(self.__balances[self.__quote_currency]["balance"])
-                - required_balance,
-            )
-            self.__balances[self.__quote_currency]["hold_trade"] = str(
-                float(self.__balances[self.__quote_currency]["hold_trade"])
-                + required_balance,
-            )
-        elif kwargs["side"] == "sell":
-            if float(self.__balances[self.__base_currency]["balance"]) < float(
-                kwargs["volume"],
-            ):
-                raise ValueError("Insufficient balance to create sell order")
-            self.__balances[self.__base_currency]["balance"] = str(
-                float(self.__balances[self.__base_currency]["balance"])
-                - float(kwargs["volume"]),
-            )
-            self.__balances[self.__base_currency]["hold_trade"] = str(
-                float(self.__balances[self.__base_currency]["hold_trade"])
-                + float(kwargs["volume"]),
-            )
-
-        self.__orders[txid] = order
-        return {"txid": [txid]}
-
-    def fill_order(self: Self, txid: str, volume: float | None = None) -> None:
-        """Fill an order and update balances."""
-        order = self.__orders.get(txid, {})
-        if not order:
-            return
-
-        if volume is None:
-            volume = float(order["vol"])
-
-        if volume > float(order["vol"]) - float(order["vol_exec"]):
-            raise ValueError(
-                "Cannot fill order with volume higher than remaining order volume",
-            )
-
-        executed_volume = float(order["vol_exec"]) + volume
-        remaining_volume = float(order["vol"]) - executed_volume
-
-        order["fee"] = str(float(order["vol_exec"]) * self.__fee)
-        order["vol_exec"] = str(executed_volume)
-        order["cost"] = str(
-            executed_volume * float(order["descr"]["price"]) + float(order["fee"]),
-        )
-
-        if remaining_volume <= 0:
-            order["status"] = "closed"
-        else:
-            order["status"] = "open"
-
-        self.__orders[txid] = order
-
-        if order["descr"]["type"] == "buy":
-            self.__balances[self.__base_currency]["balance"] = str(
-                float(self.__balances[self.__base_currency]["balance"]) + volume,
-            )
-            self.__balances[self.__quote_currency]["balance"] = str(
-                float(self.__balances[self.__quote_currency]["balance"])
-                - float(order["cost"]),
-            )
-            self.__balances[self.__quote_currency]["hold_trade"] = str(
-                float(self.__balances[self.__quote_currency]["hold_trade"])
-                - float(order["cost"]),
-            )
-        elif order["descr"]["type"] == "sell":
-            self.__balances[self.__base_currency]["balance"] = str(
-                float(self.__balances[self.__base_currency]["balance"]) - volume,
-            )
-            self.__balances[self.__base_currency]["hold_trade"] = str(
-                float(self.__balances[self.__base_currency]["hold_trade"]) - volume,
-            )
-            self.__balances[self.__quote_currency]["balance"] = str(
-                float(self.__balances[self.__quote_currency]["balance"])
-                + float(order["cost"]),
-            )
-
-    async def on_ticker_update(self: Self, callback: Callable, last: float) -> None:
-        """Update the ticker and fill orders if needed."""
-        await callback(
-            {
-                "channel": "ticker",
-                "data": [{"symbol": self.__ws_symbol, "last": last}],
-            },
-        )
-
-        async def fill_order(txid: str) -> None:
-            self.fill_order(txid)
-            await callback(
-                {
-                    "channel": "executions",
-                    "type": "update",
-                    "data": [{"exec_type": "filled", "order_id": txid}],
-                },
-            )
-
-        for txid, order in self.get_open_orders()["open"].items():
-            if (
-                order["descr"]["type"] == "buy"
-                and float(order["descr"]["price"]) >= last
-            ) or (
-                order["descr"]["type"] == "sell"
-                and float(order["descr"]["price"]) <= last
-            ):
-                await fill_order(txid=txid)
-
-    def cancel_order(self: Self, txid: str) -> None:
-        """Cancel an order and update balances if needed."""
-        order = self.__orders.get(txid, {})
-        if not order:
-            return
-
-        order.update({"status": "canceled"})
-        self.__orders[txid] = order
-
-        if order["descr"]["type"] == "buy":
-            executed_cost = float(order["vol_exec"]) * float(order["descr"]["price"])
-            remaining_cost = (
-                float(order["vol"]) * float(order["descr"]["price"]) - executed_cost
-            )
-            self.__balances[self.__quote_currency]["balance"] = str(
-                float(self.__balances[self.__quote_currency]["balance"])
-                + remaining_cost,
-            )
-            self.__balances[self.__quote_currency]["hold_trade"] = str(
-                float(self.__balances[self.__quote_currency]["hold_trade"])
-                - remaining_cost,
-            )
-            self.__balances[self.__base_currency]["balance"] = str(
-                float(self.__balances[self.__base_currency]["balance"])
-                - float(order["vol_exec"]),
-            )
-        elif order["descr"]["type"] == "sell":
-            remaining_volume = float(order["vol"]) - float(order["vol_exec"])
-            self.__balances[self.__base_currency]["balance"] = str(
-                float(self.__balances[self.__base_currency]["balance"])
-                + remaining_volume,
-            )
-            self.__balances[self.__base_currency]["hold_trade"] = str(
-                float(self.__balances[self.__base_currency]["hold_trade"])
-                - remaining_volume,
-            )
-            self.__balances[self.__quote_currency]["balance"] = str(
-                float(self.__balances[self.__quote_currency]["balance"])
-                - float(order["cost"]),
-            )
-
-    def cancel_all_orders(self: Self, **kwargs: Any) -> None:  # noqa: ARG002
-        """Cancel all open orders."""
-        for txid in self.__orders:
-            self.cancel_order(txid)
-
-    def get_open_orders(self, **kwargs: Any) -> dict:  # noqa: ARG002
-        """Get all open orders."""
-        return {
-            "open": {k: v for k, v in self.__orders.items() if v["status"] == "open"},
-        }
-
-    def get_orders_info(self: Self, txid: str) -> dict:
-        """Get information about a specific order."""
-        if order := self.__orders.get(txid, None):
-            return {txid: order}
-        return {}
-
-    def get_balances(self: Self, **kwargs: Any) -> dict:  # noqa: ARG002
-        """Get the user's current balances."""
-        return deepcopy(self.__balances)
+LOG = logging.getLogger(__name__)
 
 
 async def get_kraken_instance(
     bot_config: BotConfigDTO,
     db_config: DBConfigDTO,
     notification_config: NotificationConfigDTO,
-    base_currency: str,
-    quote_currency: str,
-    pair: str,
-    ws_symbol: str,
+    kraken_config: KrakenExchangeAPIConfig,
 ) -> BotEngine:
     """
     Initialize the Bot Engine using the passed config strategy and Kraken backend
@@ -282,12 +54,7 @@ async def get_kraken_instance(
         quote_currency=bot_config.quote_currency,
     )
 
-    api = KrakenAPI(
-        base_currency=base_currency,
-        quote_currency=quote_currency,
-        pair=pair,
-        ws_symbol=ws_symbol,
-    )
+    api = KrakenAPI(kraken_config)
     engine._BotEngine__strategy._rest_api._KrakenExchangeRESTServiceAdapter__user_service = (
         api
     )
@@ -319,4 +86,112 @@ async def get_kraken_instance(
         engine._BotEngine__strategy._rest_api.get_exchange_domain()
     )
 
-    return engine
+    return engine, api
+
+
+class KrakenTestManager:
+
+    def __init__(
+        self: Self,
+        bot_config: BotConfigDTO,
+        notification_config: NotificationConfigDTO,
+        db_config: DBConfigDTO,
+        kraken_config: KrakenExchangeAPIConfig,
+    ) -> None:
+        self.__bot_config = bot_config
+        self.__notification_config = notification_config
+        self.__db_config = db_config
+        self.__kraken_config = kraken_config
+        self.__engine = None
+        self.__state_machine = None
+        self.__strategy = None
+        self.__ws_client = None
+        self.__rest_api = None
+        self.__api = None  # the mocked KrakenAPI instance
+
+    # --------------------------------------------------------------------------
+    async def initialize_engine(self: Self) -> None:
+        self.__engine, self.__api = await get_kraken_instance(
+            bot_config=self.__bot_config,
+            notification_config=self.__notification_config,
+            db_config=self.__db_config,
+            kraken_config=self.__kraken_config,
+        )
+
+    # --------------------------------------------------------------------------
+
+    async def trigger_prepare_for_trading(self: Self) -> None:
+        LOG.info("******* Trigger prepare for trading *******")
+        await self.ws_client.on_message(
+            {
+                "channel": "executions",
+                "type": "snapshot",
+                "data": [{"exec_type": "canceled", "order_id": "txid0"}],
+            },
+        )
+        assert self.state_machine.state == States.INITIALIZING
+        assert self.strategy._ready_to_trade is False
+
+        await self.api.on_ticker_update(
+            callback=self.ws_client.on_message,
+            last=50000.0,
+        )
+        assert self.strategy._ticker == 50000.0
+        assert self.state_machine.state == States.RUNNING
+        assert self.strategy._ready_to_trade is True
+
+    async def trigger_initial_n_buy_orders(
+        self: Self,
+        prices: tuple[float],
+        volumes: tuple[float],
+        sides: tuple[str] = ("buy", "buy", "buy", "buy", "buy"),
+    ) -> None:
+        # 1. PLACEMENT OF INITIAL N BUY ORDERS
+        # After both fake-websocket channels are connected, the algorithm went
+        # through its full setup and placed orders against the fake Kraken API and
+        # finally saved those results into the local orderbook table.
+
+        # Check if the five initial buy orders are placed with the expected price
+        # and volume. Note that the interval is not exact due to the fee
+        # which is taken into account.
+        LOG.info("******* Trigger initial n buy orders *******")
+        for order, price, volume, side in zip(
+            self.strategy._orderbook_table.get_orders().all(),
+            prices,
+            volumes,
+            sides,
+            strict=True,
+        ):
+            assert order.price == price
+            assert order.volume == volume
+            assert order.side == side
+            assert order.symbol == self.__kraken_config.pair
+            assert order.userref == self.strategy._config.userref
+
+    # --------------------------------------------------------------------------
+    # Properties
+    @property
+    def engine(self: Self) -> Self:
+        if self.__engine is None:
+            raise ValueError("Engine not initialized. Call 'initialize_engine' first.")
+        return self.__engine
+
+    @property
+    def state_machine(self: Self) -> Self:
+        return self.engine._BotEngine__state_machine
+
+    @property
+    def strategy(self: Self) -> Self:
+        return self.engine._BotEngine__strategy
+
+    @property
+    def ws_client(self: Self) -> Self:
+        return self.strategy._GridHODLStrategy__ws_client
+
+    @property
+    def rest_api(self: Self) -> Self:
+        return self.strategy._rest_api
+
+    @property
+    def api(self: Self) -> Self:
+        return self.__api

@@ -19,7 +19,8 @@ from infinity_grid.models.configuration import (
     NotificationConfigDTO,
 )
 
-from .helper import get_kraken_instance
+from .helper import KrakenTestManager
+from .kraken_exchange_api import KrakenExchangeAPIConfig
 
 LOG = logging.getLogger(__name__)
 
@@ -56,6 +57,7 @@ async def test_kraken_grid_sell(
     kraken_gridsell_bot_config: BotConfigDTO,
     notification_config: NotificationConfigDTO,
     db_config: DBConfigDTO,
+    kraken_config_xbtusd: KrakenExchangeAPIConfig,
 ) -> None:
     """
     Integration test for the GridSell strategy using pre-generated websocket
@@ -88,16 +90,18 @@ async def test_kraken_grid_sell(
     LOG.info("******* Starting GridSell integration test *******")
     caplog.set_level(logging.INFO)
 
-    # Create engine using mocked Kraken API
-    engine = await get_kraken_instance(
+    tm = KrakenTestManager(
         bot_config=kraken_gridsell_bot_config,
         notification_config=notification_config,
         db_config=db_config,
+        kraken_config=kraken_config_xbtusd,
     )
-    state_machine = engine._BotEngine__state_machine
-    strategy = engine._BotEngine__strategy
-    ws_client = strategy._GridHODLStrategy__ws_client
-    api = engine._BotEngine__strategy._GridHODLStrategy__ws_client.__websocket_service
+    await tm.initialize_engine()
+
+    state_machine = tm.state_machine
+    strategy = tm.strategy
+    ws_client = tm.ws_client
+    api = tm.ws_client.__websocket_service
 
     # ==========================================================================
     # During the following processing, the following steps are done:
@@ -105,42 +109,47 @@ async def test_kraken_grid_sell(
     # 2. The order manager checks the price range
     # 3. The order manager checks for n open buy orders
     # 4. The order manager places new orders
-    await ws_client.on_message(
-        {
-            "channel": "executions",
-            "type": "snapshot",
-            "data": [{"exec_type": "canceled", "order_id": "txid0"}],
-        },
-    )
-    assert state_machine.state == States.INITIALIZING
-    assert strategy._ready_to_trade is False
+    await tm.trigger_prepare_for_trading()
+    # await ws_client.on_message(
+    #     {
+    #         "channel": "executions",
+    #         "type": "snapshot",
+    #         "data": [{"exec_type": "canceled", "order_id": "txid0"}],
+    #     },
+    # )
+    # assert state_machine.state == States.INITIALIZING
+    # assert strategy._ready_to_trade is False
 
-    await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    assert strategy._ticker == 50000.0
-    assert state_machine.state == States.RUNNING
-    assert strategy._ready_to_trade is True
+    # await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
+    # assert strategy._ticker == 50000.0
+    # assert state_machine.state == States.RUNNING
+    # assert strategy._ready_to_trade is True
 
     # ==========================================================================
     # 1. PLACEMENT OF INITIAL N BUY ORDERS
     # After both fake-websocket channels are connected, the algorithm went
     # through its full setup and placed orders against the fake Kraken API and
     # finally saved those results into the local orderbook table.
-    LOG.info("******* Check placement of initial buy orders *******")
+    # LOG.info("******* Check placement of initial buy orders *******")
 
     # Check if the five initial buy orders are placed with the expected price
     # and volume. Note that the interval is not exactly 0.01 due to the fee
     # which is taken into account.
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
-        (0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
+    await tm.trigger_initial_n_buy_orders(
+        prices=(49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
+        volumes=(0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
+    )
+    # for order, price, volume in zip(
+    #     strategy._orderbook_table.get_orders().all(),
+    #     (49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
+    #     (0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
+    #     strict=True,
+    # ):
+    #     assert order.price == price
+    #     assert order.volume == volume
+    #     assert order.side == "buy"
+    #     assert order.symbol == "XBTUSD"
+    #     assert order.userref == strategy._config.userref
 
     # ==========================================================================
     # 2. SHIFTING UP BUY ORDERS
@@ -386,6 +395,7 @@ async def test_kraken_grid_sell_unfilled_surplus(
     kraken_gridsell_bot_config: BotConfigDTO,
     notification_config: NotificationConfigDTO,
     db_config: DBConfigDTO,
+    kraken_config_xbtusd: KrakenExchangeAPIConfig,
 ) -> None:
     """
     Integration test for the GridSell strategy using pre-generated websocket
@@ -399,17 +409,19 @@ async def test_kraken_grid_sell_unfilled_surplus(
     LOG.info("******* Starting GridSell unfilled surplus integration test *******")
     caplog.set_level(logging.INFO)
 
-    # Create engine using mocked Kraken API
-    engine = await get_kraken_instance(
+    tm = KrakenTestManager(
         bot_config=kraken_gridsell_bot_config,
         notification_config=notification_config,
         db_config=db_config,
+        kraken_config=kraken_config_xbtusd,
     )
-    state_machine = engine._BotEngine__state_machine
-    strategy = engine._BotEngine__strategy
-    ws_client = strategy._GridHODLStrategy__ws_client
-    rest_api = strategy._rest_api
-    api = engine._BotEngine__strategy._GridHODLStrategy__ws_client.__websocket_service
+    await tm.initialize_engine()
+
+    state_machine = tm.state_machine
+    strategy = tm.strategy
+    ws_client = tm.ws_client
+    rest_api = tm.rest_api
+    api = tm.ws_client.__websocket_service
 
     # ==========================================================================
     # During the following processing, the following steps are done:
@@ -417,42 +429,47 @@ async def test_kraken_grid_sell_unfilled_surplus(
     # 2. The order manager checks the price range
     # 3. The order manager checks for n open buy orders
     # 4. The order manager places new orders
-    await ws_client.on_message(
-        {
-            "channel": "executions",
-            "type": "snapshot",
-            "data": [{"exec_type": "canceled", "order_id": "txid0"}],
-        },
-    )
-    assert state_machine.state == States.INITIALIZING
-    assert strategy._ready_to_trade is False
+    await tm.trigger_prepare_for_trading()
+    # await ws_client.on_message(
+    #     {
+    #         "channel": "executions",
+    #         "type": "snapshot",
+    #         "data": [{"exec_type": "canceled", "order_id": "txid0"}],
+    #     },
+    # )
+    # assert state_machine.state == States.INITIALIZING
+    # assert strategy._ready_to_trade is False
 
-    await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    assert strategy._ticker == 50000.0
-    assert state_machine.state == States.RUNNING
-    assert strategy._ready_to_trade is True
+    # await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
+    # assert strategy._ticker == 50000.0
+    # assert state_machine.state == States.RUNNING
+    # assert strategy._ready_to_trade is True
 
     # ==========================================================================
     # 1. PLACEMENT OF INITIAL N BUY ORDERS
     # After both fake-websocket channels are connected, the algorithm went
     # through its full setup and placed orders against the fake Kraken API and
     # finally saved those results into the local orderbook table.
-    LOG.info("******* Check placement of initial buy orders *******")
+    # LOG.info("******* Check placement of initial buy orders *******")
 
     # Check if the five initial buy orders are placed with the expected price
     # and volume. Note that the interval is not exactly 0.01 due to the fee
     # which is taken into account.
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
-        (0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
+    await tm.trigger_initial_n_buy_orders(
+        prices=(49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
+        volumes=(0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
+    )
+    # for order, price, volume in zip(
+    #     strategy._orderbook_table.get_orders().all(),
+    #     (49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
+    #     (0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
+    #     strict=True,
+    # ):
+    #     assert order.price == price
+    #     assert order.volume == volume
+    #     assert order.side == "buy"
+    #     assert order.symbol == "XBTUSD"
+    #     assert order.userref == strategy._config.userref
 
     # ==========================================================================
     # 2. BUYING PARTLY FILLED and ensure that the unfilled surplus is handled

@@ -17,7 +17,8 @@ from infinity_grid.models.configuration import (
     NotificationConfigDTO,
 )
 
-from .helper import get_kraken_instance
+from .helper import KrakenTestManager
+from .kraken_exchange_api import KrakenExchangeAPIConfig
 
 
 @pytest.fixture
@@ -50,27 +51,26 @@ async def test_kraken_cdca(
     kraken_cdca_bot_config: BotConfigDTO,
     notification_config: NotificationConfigDTO,
     db_config: DBConfigDTO,
+    kraken_config_xbtusd: KrakenExchangeAPIConfig,
 ) -> None:
     """
     Integration test for cDCA strategy using pre-generated websocket messages.
     """
     caplog.set_level(logging.INFO)
 
-    # Create engine using mocked Kraken API
-    engine = await get_kraken_instance(
+    tm = KrakenTestManager(
         bot_config=kraken_cdca_bot_config,
         notification_config=notification_config,
         db_config=db_config,
-        base_currency="XBT",
-        quote_currency="ZUSD",
-        pair="XBTUSD",
-        ws_symbol="BTC/USD",
+        kraken_config=kraken_config_xbtusd,
     )
-    state_machine = engine._BotEngine__state_machine
-    strategy = engine._BotEngine__strategy
-    ws_client = strategy._GridHODLStrategy__ws_client
-    rest_api = strategy._rest_api
-    api = engine._BotEngine__strategy._GridHODLStrategy__ws_client.__websocket_service
+    await tm.initialize_engine()
+
+    state_machine = tm.state_machine
+    strategy = tm.strategy
+    ws_client = tm.ws_client
+    rest_api = tm.rest_api
+    api = tm.api
 
     # ==========================================================================
     # During the following processing, the following steps are done:
@@ -78,20 +78,21 @@ async def test_kraken_cdca(
     # 2. The order manager checks the price range
     # 3. The order manager checks for n open buy orders
     # 4. The order manager places new orders
-    await ws_client.on_message(
-        {
-            "channel": "executions",
-            "type": "snapshot",
-            "data": [{"exec_type": "canceled", "order_id": "txid0"}],
-        },
-    )
-    assert state_machine.state == States.INITIALIZING
-    assert strategy._ready_to_trade is False
+    await tm.trigger_prepare_for_trading()
+    # await ws_client.on_message(
+    #     {
+    #         "channel": "executions",
+    #         "type": "snapshot",
+    #         "data": [{"exec_type": "canceled", "order_id": "txid0"}],
+    #     },
+    # )
+    # assert state_machine.state == States.INITIALIZING
+    # assert strategy._ready_to_trade is False
 
-    await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    assert strategy._ticker == 50000.0
-    assert state_machine.state == States.RUNNING
-    assert strategy._ready_to_trade is True
+    # await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
+    # assert strategy._ticker == 50000.0
+    # assert state_machine.state == States.RUNNING
+    # assert strategy._ready_to_trade is True
 
     # ==========================================================================
     # 1. PLACEMENT OF INITIAL N BUY ORDERS
@@ -102,17 +103,21 @@ async def test_kraken_cdca(
     # Check if the five initial buy orders are placed with the expected price
     # and volume. Note that the interval is not exactly 0.01 due to the fee
     # which is taken into account.
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
-        (0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
+    await tm.trigger_initial_n_buy_orders(
+        prices=(49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
+        volumes=(0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
+    )
+    # for order, price, volume in zip(
+    #     strategy._orderbook_table.get_orders().all(),
+    #     (49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
+    #     (0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
+    #     strict=True,
+    # ):
+    #     assert order.price == price
+    #     assert order.volume == volume
+    #     assert order.side == "buy"
+    #     assert order.symbol == "XBTUSD"
+    #     assert order.userref == strategy._config.userref
 
     # ==========================================================================
     # 2. SHIFTING UP BUY ORDERS
