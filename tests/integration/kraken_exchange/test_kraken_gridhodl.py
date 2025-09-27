@@ -91,154 +91,54 @@ async def test_kraken_grid_hodl(
     # 2. The order manager checks the price range
     # 3. The order manager checks for n open buy orders
     # 4. The order manager places new orders
-    await tm.trigger_prepare_for_trading()
-    # await ws_client.on_message(
-    #     {
-    #         "channel": "executions",
-    #         "type": "snapshot",
-    #         "data": [{"exec_type": "canceled", "order_id": "txid0"}],
-    #     },
-    # )
-    # assert state_machine.state == States.INITIALIZING
-    # assert strategy._ready_to_trade is False
-
-    # await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    # assert strategy._ticker == 50000.0
-    # assert state_machine.state == States.RUNNING
-    # assert strategy._ready_to_trade is True
+    await tm.trigger_prepare_for_trading(initial_ticker=50_000.0)
 
     # ==========================================================================
     # 1. PLACEMENT OF INITIAL N BUY ORDERS
-    # After both fake-websocket channels are connected, the algorithm went
-    # through its full setup and placed orders against the fake Kraken API and
-    # finally saved those results into the local orderbook table.
-    # LOG.info("******* Check placement of initial buy orders *******")
-
-    # Check if the five initial buy orders are placed with the expected price
-    # and volume. Note that the interval is not exactly 0.01 due to the fee
-    # which is taken into account.
-    await tm.trigger_initial_n_buy_orders(
+    await tm.check_initial_n_buy_orders(
         prices=(49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
         volumes=(0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
     )
 
-    # for order, price, volume in zip(
-    #     strategy._orderbook_table.get_orders().all(),
-    #     (49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
-    #     (0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
-    #     strict=True,
-    # ):
-    #     assert order.price == price
-    #     assert order.volume == volume
-    #     assert order.side == "buy"
-    #     assert order.symbol == "XBTUSD"
-    #     assert order.userref == strategy._config.userref
-
     # ==========================================================================
     # 2. SHIFTING UP BUY ORDERS
-    # Check if shifting up the buy orders works
-    LOG.info("******* Check shifting up buy orders works *******")
-    await api.on_ticker_update(callback=ws_client.on_message, last=60000.0)
-    assert strategy._ticker == 60000.0
-    assert state_machine.state == States.RUNNING
-
-    # We should now still have 5 buy orders, but at a higher price. The other
-    # orders should be canceled.
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (59405.9, 58817.7, 58235.3, 57658.7, 57087.8),
-        (0.00168333, 0.00170016, 0.00171717, 0.00173434, 0.00175168),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
+    await tm.trigger_shift_up_buy_orders(
+        new_price=60_000.0,
+        prices=(59405.9, 58817.7, 58235.3, 57658.7, 57087.8),
+        volumes=(0.00168333, 0.00170016, 0.00171717, 0.00173434, 0.00175168),
+    )
 
     # ==========================================================================
     # 3. FILLING A BUY ORDER
-    # Now lets let the price drop a bit so that a buy order gets triggered.
-    LOG.info("******* Check filling a buy order works *******")
-    await api.on_ticker_update(callback=ws_client.on_message, last=59990.0)
-    assert strategy._ticker == 59990.0
-    assert state_machine.state == States.RUNNING
-
-    # Quick re-check ... the price update should not affect any orderbook
-    # changes when dropping.
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (59405.9, 58817.7, 58235.3, 57658.7, 57087.8),
-        (0.00168333, 0.00170016, 0.00171717, 0.00173434, 0.00175168),
-        strict=False,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
-
-    # Now trigger the execution of the first buy order
-    await api.on_ticker_update(callback=ws_client.on_message, last=59000.0)
-    assert state_machine.state == States.RUNNING
-    assert strategy._orderbook_table.count() == 5
-
-    # Ensure that we have 4 buy orders and 1 sell order
-    for order, price, volume, side in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (58817.7, 58235.3, 57658.7, 57087.8, 59999.9),
-        (0.00170016, 0.00171717, 0.00173434, 0.00175168, 0.00167504),
-        ["buy"] * 4 + ["sell"],
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == side
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
+    await tm.trigger_fill_buy_order(
+        no_trigger_price=59_990.0,
+        new_price=59_000.0,
+        old_prices=(59405.9, 58817.7, 58235.3, 57658.7, 57087.8),
+        old_volumes=(0.00168333, 0.00170016, 0.00171717, 0.00173434, 0.00175168),
+        old_sides=("buy", "buy", "buy", "buy", "buy"),
+        new_prices=(58817.7, 58235.3, 57658.7, 57087.8, 59999.9),
+        new_volumes=(0.00170016, 0.00171717, 0.00173434, 0.00175168, 0.00167504),
+        new_sides=("buy", "buy", "buy", "buy", "sell"),
+    )
 
     # ==========================================================================
     # 4. ENSURING N OPEN BUY ORDERS
-    # If there is a new price event, the algorithm will place the 5th buy order.
-    LOG.info("******* Check ensuring N open buy orders *******")
-    await api.on_ticker_update(callback=ws_client.on_message, last=59100.0)
-    assert state_machine.state == States.RUNNING
-    assert strategy._orderbook_table.count() == 6
-
-    for order, price, volume, side in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (58817.7, 58235.3, 57658.7, 57087.8, 59999.9, 56522.5),
-        (0.00170016, 0.00171717, 0.00173434, 0.00175168, 0.00167504, 0.0017692),
-        ["buy"] * 4 + ["sell"] + ["buy"],
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == side
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
+    await tm.trigger_ensure_n_open_buy_orders(
+        new_price=59_100.0,
+        prices=(58817.7, 58235.3, 57658.7, 57087.8, 59999.9, 56522.5),
+        volumes=(0.00170016, 0.00171717, 0.00173434, 0.00175168, 0.00167504, 0.0017692),
+        sides=("buy", "buy", "buy", "buy", "sell", "buy"),
+    )
 
     # ==========================================================================
     # 5. FILLING A SELL ORDER
     # Now let's see if the sell order gets triggered.
-    LOG.info("******* Check filling a sell order works *******")
-    await api.on_ticker_update(callback=ws_client.on_message, last=60000.0)
-    assert state_machine.state == States.RUNNING
-    assert strategy._orderbook_table.count() == 5
-
-    for order, price, volume, side in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (58817.7, 58235.3, 57658.7, 57087.8, 56522.5),
-        (0.00170016, 0.00171717, 0.00173434, 0.00175168, 0.0017692),
-        ["buy"] * 5,
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == side
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
-
+    await tm.trigger_fill_sell_order(
+        new_price=60_000.0,
+        prices=(58817.7, 58235.3, 57658.7, 57087.8, 56522.5),
+        volumes=(0.00170016, 0.00171717, 0.00173434, 0.00175168, 0.0017692),
+        sides=("buy", "buy", "buy", "buy", "buy"),
+    )
     # ... as we can see, the sell order got removed from the orderbook.
     # ... there is no new corresponding buy order placed - this would only be
     # the case for the case, if there would be more sell orders.
@@ -246,60 +146,22 @@ async def test_kraken_grid_hodl(
 
     # ==========================================================================
     # 6. RAPID PRICE DROP - FILLING ALL BUY ORDERS
-    # Now check the behavior for a rapid price drop.
-    LOG.info("******* Check rapid price drop - filling all buy orders *******")
-    await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    assert state_machine.state == States.RUNNING
-    assert strategy._orderbook_table.count() == 5
-
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (59405.8, 58817.6, 58235.2, 57658.6, 57087.7),
-        (0.00169179, 0.00170871, 0.0017258, 0.00174306, 0.00176049),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "sell"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
+    await tm.trigger_rapid_price_drop(
+        new_price=50_000.0,
+        prices=(59405.8, 58817.6, 58235.2, 57658.6, 57087.7),
+        volumes=(0.00169179, 0.00170871, 0.0017258, 0.00174306, 0.00176049),
+        sides=("sell", "sell", "sell", "sell", "sell"),
+    )
 
     # ==========================================================================
     # 7. SELL ALL AND ENSURE N OPEN BUY ORDERS
-    #    Here we temporarily have more than 5 buy orders, since every sell order
-    #    triggers a new buy order, causing us to have 9 buy orders and a single
-    #    sell order. Which is not a problem, since the buy orders that are too
-    #    much will get canceled after the next price update.
-    LOG.info("******* Check rapid price rise and filling all sell orders *******")
-    await api.on_ticker_update(callback=ws_client.on_message, last=59100.0)
-    assert state_machine.state == States.RUNNING
-    assert strategy._orderbook_table.count() == 6
-    current_orders = strategy._orderbook_table.get_orders().all()
-    assert len(current_orders) == 6
-
-    for order, price, volume in zip(
-        (o for o in current_orders if o.side == "sell"),
-        (59405.8,),
-        (0.00169179,),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "sell"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
-
-    for order, price, volume in zip(
-        (o for o in current_orders if o.side == "buy"),
-        (58514.8, 57935.4, 57361.7, 56793.7, 56231.3),
-        (0.00170896, 0.00172606, 0.00174332, 0.00176075, 0.00177836),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
+    await tm.trigger_all_sell_orders(
+        new_price=59_100.0,
+        buy_prices=(58514.8, 57935.4, 57361.7, 56793.7, 56231.3),
+        sell_prices=(59405.8,),
+        buy_volumes=(0.00170896, 0.00172606, 0.00174332, 0.00176075, 0.00177836),
+        sell_volumes=(0.00169179,),
+    )
 
     # ==========================================================================
     # 8. Test what happens if there are not enough funds to place a sell order
@@ -311,10 +173,7 @@ async def test_kraken_grid_hodl(
 
     # Mock the instance method directly
     strategy._rest_api.get_pair_balance = mock.Mock(
-        return_value=mock.Mock(
-            base_available=0.000,
-            quote_available=1000.0,
-        ),
+        return_value=mock.Mock(base_available=0.000, quote_available=1000.0),
     )
 
     try:
@@ -419,47 +278,14 @@ async def test_kraken_grid_hodl_unfilled_surplus(
     # 2. The order manager checks the price range
     # 3. The order manager checks for n open buy orders
     # 4. The order manager places new orders
-    await tm.trigger_prepare_for_trading()
-    # await ws_client.on_message(
-    #     {
-    #         "channel": "executions",
-    #         "type": "snapshot",
-    #         "data": [{"exec_type": "canceled", "order_id": "txid0"}],
-    #     },
-    # )
-    # assert state_machine.state == States.INITIALIZING
-    # assert strategy._ready_to_trade is False
-
-    # await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    # assert strategy._ticker == 50000.0
-    # assert state_machine.state == States.RUNNING
-    # assert strategy._ready_to_trade is True
+    await tm.trigger_prepare_for_trading(initial_ticker=50_000.0)
 
     # ==========================================================================
     # 1. PLACEMENT OF INITIAL N BUY ORDERS
-    # After both fake-websocket channels are connected, the algorithm went
-    # through its full setup and placed orders against the fake Kraken API and
-    # finally saved those results into the local orderbook table.
-    # LOG.info("******* Check placement of initial buy orders *******")
-
-    # Check if the five initial buy orders are placed with the expected price
-    # and volume. Note that the interval is not exactly 0.01 due to the fee
-    # which is taken into account.
-    await tm.trigger_initial_n_buy_orders(
+    await tm.check_initial_n_buy_orders(
         prices=(49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
         volumes=(0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
     )
-    # for order, price, volume in zip(
-    #     strategy._orderbook_table.get_orders().all(),
-    #     (49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
-    #     (0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
-    #     strict=True,
-    # ):
-    #     assert order.price == price
-    #     assert order.volume == volume
-    #     assert order.side == "buy"
-    #     assert order.symbol == "XBTUSD"
-    #     assert order.userref == strategy._config.userref
 
     # ==========================================================================
     # 2. BUYING PARTLY FILLED and ensure that the unfilled surplus is handled

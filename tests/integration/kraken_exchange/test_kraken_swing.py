@@ -86,69 +86,33 @@ async def test_kraken_swing(
     # 2. The order manager checks the price range
     # 3. The order manager checks for n open buy orders
     # 4. The order manager places new orders
-    await tm.trigger_prepare_for_trading()
-    # await ws_client.on_message(
-    #     {
-    #         "channel": "executions",
-    #         "type": "snapshot",
-    #         "data": [{"exec_type": "canceled", "order_id": "txid0"}],
-    #     },
-    # )
-    # assert state_machine.state == States.INITIALIZING
-    # assert strategy._ready_to_trade is False
-
-    # await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    # assert strategy._ticker == 50000.0
-    # assert state_machine.state == States.RUNNING
-    # assert strategy._ready_to_trade is True
+    await tm.trigger_prepare_for_trading(initial_ticker=50_000.0)
 
     # ==========================================================================
     # 1. PLACEMENT OF INITIAL N BUY ORDERS
-    # After both fake-websocket channels are connected, the algorithm went
-    # through its full setup and placed orders against the fake Kraken API and
-    # finally saved those results into the local orderbook table.
-    # The SWING strategy additionally starts selling the existing base currency
-    # at defined intervals.
-    # LOG.info("******* Check placement of initial buy orders *******")
-    await tm.trigger_initial_n_buy_orders(
+    await tm.check_initial_n_buy_orders(
         prices=(49504.9, 49014.7, 48529.4, 48048.9, 47573.1, 51005.0),
         volumes=(0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202, 0.00197044),
         sides=("buy", "buy", "buy", "buy", "buy", "sell"),
     )
 
-    # for order, price, volume, side in zip(
-    #     strategy._orderbook_table.get_orders().all(),
-    #     (49504.9, 49014.7, 48529.4, 48048.9, 47573.1, 51005.0),
-    #     (0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202, 0.00197044),
-    #     ["buy"] * 5 + ["sell"],
-    #     strict=True,
-    # ):
-    #     assert order.price == price
-    #     assert order.volume == volume
-    #     assert order.side == side
-    #     assert order.symbol == "XBTUSD"
-    #     assert order.userref == strategy._config.userref
-
     # ==========================================================================
     # 2. RAPID PRICE DROP - FILLING ALL BUY ORDERS + CREATING SELL ORDERS
     # Now check the behavior for a rapid price drop.
     # It should fill the buy orders and place 6 new sell orders.
-
-    await api.on_ticker_update(callback=ws_client.on_message, last=40000.0)
-    assert strategy._ticker == 40000.0
-    assert state_machine.state == States.RUNNING
-
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (51005.0, 49999.9, 49504.8, 49014.6, 48529.3, 48048.8),
-        (0.00197044, 0.00201005, 0.00203015, 0.00205046, 0.00207096, 0.00209167),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "sell"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
+    await tm.trigger_rapid_price_drop(
+        new_price=40_000.0,
+        prices=(51005.0, 49999.9, 49504.8, 49014.6, 48529.3, 48048.8),
+        volumes=(
+            0.00197044,
+            0.00201005,
+            0.00203015,
+            0.00205046,
+            0.00207096,
+            0.00209167,
+        ),
+        sides=("sell", "sell", "sell", "sell", "sell", "sell"),
+    )
 
     # ==========================================================================
     # 3. NEW TICKER TO ENSURE N OPEN BUY ORDERS
@@ -284,50 +248,15 @@ async def test_kraken_swing_unfilled_surplus(
     # 2. The order manager checks the price range
     # 3. The order manager checks for n open buy orders
     # 4. The order manager places new orders
-    await tm.trigger_prepare_for_trading()
-    # await ws_client.on_message(
-    #     {
-    #         "channel": "executions",
-    #         "type": "snapshot",
-    #         "data": [{"exec_type": "canceled", "order_id": "txid0"}],
-    #     },
-    # )
-    # assert state_machine.state == States.INITIALIZING
-    # assert strategy._ready_to_trade is False
-
-    # await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    # assert strategy._ticker == 50000.0
-    # assert state_machine.state == States.RUNNING
-    # assert strategy._ready_to_trade is True
+    await tm.trigger_prepare_for_trading(initial_ticker=50_000.0)
 
     # ==========================================================================
     # 1. PLACEMENT OF INITIAL N BUY ORDERS
-    # After both fake-websocket channels are connected, the algorithm went
-    # through its full setup and placed orders against the fake Kraken API and
-    # finally saved those results into the local orderbook table.
-    # LOG.info("******* Check placement of initial buy orders *******")
-
-    # Check if the five initial buy orders are placed with the expected price
-    # and volume. Note that the interval is not exactly 0.01 due to the fee
-    # which is taken into account.
-    await tm.trigger_initial_n_buy_orders(
+    await tm.check_initial_n_buy_orders(
         prices=(49504.9, 49014.7, 48529.4, 48048.9, 47573.1, 51005.0),
         volumes=(0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202, 0.00197044),
         sides=("buy", "buy", "buy", "buy", "buy", "sell"),
     )
-
-    # for order, price, volume, side in zip(
-    #     strategy._orderbook_table.get_orders().all(),
-    #     (49504.9, 49014.7, 48529.4, 48048.9, 47573.1, 51005.0),
-    #     (0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202, 0.00197044),
-    #     ["buy"] * 5 + ["sell"],
-    #     strict=True,
-    # ):
-    #     assert order.price == price
-    #     assert order.volume == volume
-    #     assert order.side == side
-    #     assert order.symbol == "XBTUSD"
-    #     assert order.userref == strategy._config.userref
 
     balances = api.get_balances()
     assert float(balances["XXBT"]["balance"]) == pytest.approx(99.99802956)

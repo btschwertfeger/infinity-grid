@@ -78,153 +78,65 @@ async def test_kraken_cdca(
     # 2. The order manager checks the price range
     # 3. The order manager checks for n open buy orders
     # 4. The order manager places new orders
-    await tm.trigger_prepare_for_trading()
-    # await ws_client.on_message(
-    #     {
-    #         "channel": "executions",
-    #         "type": "snapshot",
-    #         "data": [{"exec_type": "canceled", "order_id": "txid0"}],
-    #     },
-    # )
-    # assert state_machine.state == States.INITIALIZING
-    # assert strategy._ready_to_trade is False
-
-    # await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    # assert strategy._ticker == 50000.0
-    # assert state_machine.state == States.RUNNING
-    # assert strategy._ready_to_trade is True
+    await tm.trigger_prepare_for_trading(initial_ticker=50_000.0)
 
     # ==========================================================================
     # 1. PLACEMENT OF INITIAL N BUY ORDERS
-    # After both fake-websocket channels are connected, the algorithm went
-    # through its full setup and placed orders against the fake Kraken API and
-    # finally saved those results into the local orderbook table.
-
-    # Check if the five initial buy orders are placed with the expected price
-    # and volume. Note that the interval is not exactly 0.01 due to the fee
-    # which is taken into account.
-    await tm.trigger_initial_n_buy_orders(
+    await tm.check_initial_n_buy_orders(
         prices=(49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
         volumes=(0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
     )
-    # for order, price, volume in zip(
-    #     strategy._orderbook_table.get_orders().all(),
-    #     (49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
-    #     (0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
-    #     strict=True,
-    # ):
-    #     assert order.price == price
-    #     assert order.volume == volume
-    #     assert order.side == "buy"
-    #     assert order.symbol == "XBTUSD"
-    #     assert order.userref == strategy._config.userref
 
     # ==========================================================================
     # 2. SHIFTING UP BUY ORDERS
     # Check if shifting up the buy orders works
-    await api.on_ticker_update(callback=ws_client.on_message, last=60000.0)
-    assert strategy._ticker == 60000.0
-    assert state_machine.state == States.RUNNING
-
-    # We should now still have 5 buy orders, but at a higher price. The other
-    # orders should be canceled.
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (59405.9, 58817.7, 58235.3, 57658.7, 57087.8),
-        (0.00168333, 0.00170016, 0.00171717, 0.00173434, 0.00175168),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
-
+    await tm.trigger_shift_up_buy_orders(
+        new_price=60_000.0,
+        prices=(59405.9, 58817.7, 58235.3, 57658.7, 57087.8),
+        volumes=(0.00168333, 0.00170016, 0.00171717, 0.00173434, 0.00175168),
+    )
     # ==========================================================================
     # 3. FILLING A BUY ORDER
     # Now lets let the price drop a bit so that a buy order gets triggered.
-    await api.on_ticker_update(callback=ws_client.on_message, last=59990.0)
-    assert strategy._ticker == 59990.0
-    assert state_machine.state == States.RUNNING
-
-    # Quick re-check ... the price update should not affect any orderbook
-    # changes when dropping.
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (59405.9, 58817.7, 58235.3, 57658.7, 57087.8),
-        (0.00168333, 0.00170016, 0.00171717, 0.00173434, 0.00175168),
-        strict=False,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
-
-    assert strategy._orderbook_table.count() == 5
-
-    # Now trigger the execution of the first buy order
-    await api.on_ticker_update(callback=ws_client.on_message, last=59000.0)
-    assert state_machine.state == States.RUNNING
-    assert strategy._orderbook_table.count() == 4
-
-    # Ensure that we have 4 buy orders and no sell order
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (58817.7, 58235.3, 57658.7, 57087.8),
-        (0.00170016, 0.00171717, 0.00173434, 0.00175168),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
+    await tm.trigger_fill_buy_order(
+        no_trigger_price=59_990.0,
+        new_price=59_000.0,
+        old_prices=(59405.9, 58817.7, 58235.3, 57658.7, 57087.8),
+        old_volumes=(0.00168333, 0.00170016, 0.00171717, 0.00173434, 0.00175168),
+        old_sides=("buy", "buy", "buy", "buy", "buy"),
+        new_prices=(58817.7, 58235.3, 57658.7, 57087.8),
+        new_volumes=(0.00170016, 0.00171717, 0.00173434, 0.00175168),
+        new_sides=("buy", "buy", "buy", "buy"),
+    )
 
     # ==========================================================================
     # 4. ENSURING N OPEN BUY ORDERS
-    # If there is a new price event, the algorithm will place the 5th buy order.
-    await api.on_ticker_update(callback=ws_client.on_message, last=59100.0)
-    assert state_machine.state == States.RUNNING
-    assert strategy._orderbook_table.count() == 5
-
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (58817.7, 58235.3, 57658.7, 57087.8, 56522.5),
-        (0.00170016, 0.00171717, 0.00173434, 0.00175168, 0.0017692),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
+    await tm.trigger_ensure_n_open_buy_orders(
+        new_price=59_100.0,
+        prices=(58817.7, 58235.3, 57658.7, 57087.8, 56522.5),
+        volumes=(0.00170016, 0.00171717, 0.00173434, 0.00175168, 0.0017692),
+        sides=("buy", "buy", "buy", "buy", "buy"),
+    )
 
     # ==========================================================================
     # 5. RAPID PRICE DROP - FILLING ALL BUY ORDERS
     # Now check the behavior for a rapid price drop.
-    await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    assert state_machine.state == States.RUNNING
-    assert strategy._orderbook_table.count() == 0
-    assert rest_api.get_open_orders(userref=strategy._config.userref) == []
+    await tm.trigger_rapid_price_drop(
+        new_price=50_000.0,
+        prices=(),
+        volumes=(),
+        sides=(),
+    )
 
     # ==========================================================================
-    # 6. ENSURE N OPEN BUY ORDERS
-    await api.on_ticker_update(callback=ws_client.on_message, last=50100.0)
-    assert state_machine.state == States.RUNNING
-    assert strategy._orderbook_table.count() == 5
-
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (49603.9, 49112.7, 48626.4, 48144.9, 47668.2),
-        (0.00201597, 0.00203613, 0.00205649, 0.00207706, 0.00209783),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
+    # 6. ENSURE N OPEN BUY ORDERS ... after rapid price drop has filled all buy
+    #    orders
+    await tm.trigger_ensure_n_open_buy_orders(
+        new_price=50_100.0,
+        prices=(49603.9, 49112.7, 48626.4, 48144.9, 47668.2),
+        volumes=(0.00201597, 0.00203613, 0.00205649, 0.00207706, 0.00209783),
+        sides=("buy", "buy", "buy", "buy", "buy"),
+    )
 
     # ==========================================================================
     # 7. MAX INVESTMENT REACHED
