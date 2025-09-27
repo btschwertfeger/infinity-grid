@@ -173,32 +173,12 @@ async def test_kraken_swing(
     # ==========================================================================
     # 5. Test what happens if there are not enough funds to place a sell order
     #    for some reason.
-    LOG.info("******* Check not enough funds for sell order *******")
-
-    # Save the original method to restore it later
-    original_get_pair_balance = strategy._rest_api.get_pair_balance
-
-    # Mock the instance method directly
-    strategy._rest_api.get_pair_balance = mock.Mock(
-        return_value=mock.Mock(
-            base_available=0.000,
-            quote_available=1000.0,
-        ),
+    await tm.check_not_enough_funds_for_sell(
+        sell_price=59_000.0,
+        n_orders=4,
+        n_sell_orders=0,
+        caplog=caplog,
     )
-
-    try:
-        # Now trigger the sell order
-        await api.on_ticker_update(callback=ws_client.on_message, last=59000.0)
-        assert state_machine.state == States.RUNNING
-        assert strategy._orderbook_table.count() == 4
-        assert (
-            len(strategy._orderbook_table.get_orders(filters={"side": "sell"}).all())
-            == 0
-        )
-        assert "Not enough funds" in caplog.text
-    finally:
-        # Restore the original method
-        strategy._rest_api.get_pair_balance = original_get_pair_balance
 
 
 @pytest.mark.integration

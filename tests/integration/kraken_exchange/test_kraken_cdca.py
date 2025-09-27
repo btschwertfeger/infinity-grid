@@ -69,7 +69,6 @@ async def test_kraken_cdca(
     state_machine = tm.state_machine
     strategy = tm.strategy
     ws_client = tm.ws_client
-    rest_api = tm.rest_api
     api = tm.api
 
     # ==========================================================================
@@ -85,6 +84,7 @@ async def test_kraken_cdca(
     await tm.check_initial_n_buy_orders(
         prices=(49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
         volumes=(0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
+        sides=("buy", "buy", "buy", "buy", "buy"),
     )
 
     # ==========================================================================
@@ -94,6 +94,7 @@ async def test_kraken_cdca(
         new_price=60_000.0,
         prices=(59405.9, 58817.7, 58235.3, 57658.7, 57087.8),
         volumes=(0.00168333, 0.00170016, 0.00171717, 0.00173434, 0.00175168),
+        sides=("buy", "buy", "buy", "buy", "buy"),
     )
     # ==========================================================================
     # 3. FILLING A BUY ORDER

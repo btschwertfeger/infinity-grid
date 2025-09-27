@@ -8,6 +8,9 @@
 import logging
 from collections.abc import Iterable
 from typing import Self
+from unittest import mock
+
+import pytest
 
 from infinity_grid.core.engine import BotEngine
 from infinity_grid.core.state_machine import States
@@ -144,7 +147,7 @@ class KrakenTestManager:
         self: Self,
         prices: tuple[float],
         volumes: tuple[float],
-        sides: tuple[str] = ("buy", "buy", "buy", "buy", "buy"),
+        sides: tuple[str],
     ) -> None:
         # 1. PLACEMENT OF INITIAL N BUY ORDERS
         # After both fake-websocket channels are connected, the algorithm went
@@ -162,30 +165,12 @@ class KrakenTestManager:
         new_price: float,
         prices: tuple[float],
         volumes: tuple[float],
+        sides: tuple[str],
     ) -> None:
         # 2. SHIFTING UP BUY ORDERS
         # Check if shifting up the buy orders works
         LOG.info("******* Check shifting up buy orders works *******")
-        await self.api.on_ticker_update(
-            callback=self.ws_client.on_message,
-            last=new_price,
-        )
-        assert self.strategy._ticker == new_price
-        assert self.state_machine.state == States.RUNNING
-
-        # We should now still have 5 buy orders, but at a higher price. The
-        # other orders should be canceled.
-        for order, price, volume in zip(
-            self.strategy._orderbook_table.get_orders().all(),
-            prices,
-            volumes,
-            strict=True,
-        ):
-            assert order.price == price
-            assert order.volume == volume
-            assert order.side == "buy"
-            assert order.symbol == self.__kraken_config.pair
-            assert order.userref == self.strategy._config.userref
+        await self.__price_change_order_check(new_price, prices, volumes, sides)
 
     async def trigger_fill_buy_order(
         self: Self,
@@ -231,13 +216,7 @@ class KrakenTestManager:
         sides: tuple[str],
     ) -> None:
         LOG.info("******* Check ensuring N open buy orders *******")
-        await self.api.on_ticker_update(
-            callback=self.ws_client.on_message,
-            last=new_price,
-        )
-        assert self.state_machine.state == States.RUNNING
-        assert self.strategy._ticker == new_price
-        self.__ensure_orders_correct(prices, volumes, sides)
+        await self.__price_change_order_check(new_price, prices, volumes, sides)
 
     async def trigger_rapid_price_drop(
         self: Self,
@@ -248,14 +227,7 @@ class KrakenTestManager:
     ) -> None:
         # 5. RAPID PRICE DROP - FILLING ALL BUY ORDERS
         LOG.info("******* Check rapid price drop - filling all buy orders *******")
-
-        await self.api.on_ticker_update(
-            callback=self.ws_client.on_message,
-            last=new_price,
-        )
-        assert self.state_machine.state == States.RUNNING
-        assert self.strategy._ticker == new_price
-        self.__ensure_orders_correct(prices, volumes, sides)
+        await self.__price_change_order_check(new_price, prices, volumes, sides)
 
     async def trigger_fill_sell_order(
         self: Self,
@@ -265,13 +237,7 @@ class KrakenTestManager:
         sides: tuple[str],
     ) -> None:
         LOG.info("******* Filling a sell order *******")
-        await self.api.on_ticker_update(
-            callback=self.ws_client.on_message,
-            last=new_price,
-        )
-        assert self.state_machine.state == States.RUNNING
-        assert self.strategy._ticker == new_price
-        self.__ensure_orders_correct(prices, volumes, sides)
+        await self.__price_change_order_check(new_price, prices, volumes, sides)
 
     async def trigger_all_sell_orders(
         self: Self,
@@ -314,7 +280,63 @@ class KrakenTestManager:
             (o for o in current_orders if o.side == "buy"),
         )
 
+    async def check_not_enough_funds_for_sell(
+        self: Self,
+        sell_price: float,
+        n_orders: int,
+        n_sell_orders: int,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        LOG.info("******* Check not enough funds for sell order *******")
+
+        # Save the original method to restore it later
+        original_get_pair_balance = self.strategy._rest_api.get_pair_balance
+
+        # Mock the instance method directly
+        self.rest_api.get_pair_balance = mock.Mock(
+            return_value=mock.Mock(base_available=0.000, quote_available=1000.0),
+        )
+
+        try:
+            # Now trigger the sell order
+            await self.api.on_ticker_update(
+                callback=self.ws_client.on_message,
+                last=sell_price,
+            )
+            assert self.state_machine.state == States.RUNNING
+            assert self.strategy._orderbook_table.count() == n_orders
+            assert (
+                len(
+                    self.strategy._orderbook_table.get_orders(
+                        filters={"side": "sell"},
+                    ).all(),
+                )
+                == n_sell_orders
+            )
+            assert "Not enough funds" in caplog.text
+        finally:
+            # Restore the original method
+            self.engine._BotEngine__strategy._rest_api.get_pair_balance = (
+                original_get_pair_balance
+            )
+
     # --------------------------------------------------------------------------
+
+    async def __price_change_order_check(
+        self: Self,
+        new_price: float,
+        prices: tuple[float],
+        volumes: tuple[float],
+        sides: tuple[str],
+    ) -> None:
+        await self.api.on_ticker_update(
+            callback=self.ws_client.on_message,
+            last=new_price,
+        )
+        assert self.strategy._ticker == new_price
+        assert self.state_machine.state == States.RUNNING
+        self.__ensure_orders_correct(prices, volumes, sides)
+
     def __ensure_orders_correct(
         self: Self,
         prices: tuple[float],

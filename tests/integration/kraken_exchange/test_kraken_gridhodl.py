@@ -98,6 +98,7 @@ async def test_kraken_grid_hodl(
     await tm.check_initial_n_buy_orders(
         prices=(49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
         volumes=(0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
+        sides=("buy", "buy", "buy", "buy", "buy"),
     )
 
     # ==========================================================================
@@ -106,6 +107,7 @@ async def test_kraken_grid_hodl(
         new_price=60_000.0,
         prices=(59405.9, 58817.7, 58235.3, 57658.7, 57087.8),
         volumes=(0.00168333, 0.00170016, 0.00171717, 0.00173434, 0.00175168),
+        sides=("buy", "buy", "buy", "buy", "buy"),
     )
 
     # ==========================================================================
@@ -166,29 +168,34 @@ async def test_kraken_grid_hodl(
     # ==========================================================================
     # 8. Test what happens if there are not enough funds to place a sell order
     #    for some reason.
-    LOG.info("******* Check not enough funds for sell order *******")
-
-    # Save the original method to restore it later
-    original_get_pair_balance = strategy._rest_api.get_pair_balance
-
-    # Mock the instance method directly
-    strategy._rest_api.get_pair_balance = mock.Mock(
-        return_value=mock.Mock(base_available=0.000, quote_available=1000.0),
+    await tm.check_not_enough_funds_for_sell(
+        sell_price=58_500.0,
+        n_orders=5,
+        n_sell_orders=1,
+        caplog=caplog,
     )
 
-    try:
-        # Now trigger the sell order
-        await api.on_ticker_update(callback=ws_client.on_message, last=58500.0)
-        assert state_machine.state == States.RUNNING
-        assert strategy._orderbook_table.count() == 5
-        assert (
-            len(strategy._orderbook_table.get_orders(filters={"side": "sell"}).all())
-            == 1
-        )
-        assert "Not enough funds" in caplog.text
-    finally:
-        # Restore the original method
-        strategy._rest_api.get_pair_balance = original_get_pair_balance
+    # # Save the original method to restore it later
+    # original_get_pair_balance = strategy._rest_api.get_pair_balance
+
+    # # Mock the instance method directly
+    # strategy._rest_api.get_pair_balance = mock.Mock(
+    #     return_value=mock.Mock(base_available=0.000, quote_available=1000.0),
+    # )
+
+    # try:
+    #     # Now trigger the sell order
+    #     await api.on_ticker_update(callback=ws_client.on_message, last=58500.0)
+    #     assert state_machine.state == States.RUNNING
+    #     assert strategy._orderbook_table.count() == 5
+    #     assert (
+    #         len(strategy._orderbook_table.get_orders(filters={"side": "sell"}).all())
+    #         == 1
+    #     )
+    #     assert "Not enough funds" in caplog.text
+    # finally:
+    #     # Restore the original method
+    #     strategy._rest_api.get_pair_balance = original_get_pair_balance
 
     # ==========================================================================
     # 9. Check sell of surplus
@@ -285,6 +292,7 @@ async def test_kraken_grid_hodl_unfilled_surplus(
     await tm.check_initial_n_buy_orders(
         prices=(49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
         volumes=(0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
+        sides=("buy", "buy", "buy", "buy", "buy"),
     )
 
     # ==========================================================================
