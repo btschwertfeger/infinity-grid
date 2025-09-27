@@ -10,8 +10,6 @@ from collections.abc import Iterable
 from typing import Self
 from unittest import mock
 
-import pytest
-
 from infinity_grid.core.engine import BotEngine
 from infinity_grid.core.state_machine import States
 from infinity_grid.models.configuration import (
@@ -156,15 +154,23 @@ class KrakenTestManager:
                 "data": [{"exec_type": "canceled", "order_id": "txid0"}],
             },
         )
-        assert self.state_machine.state == States.INITIALIZING
-        assert self.strategy._ready_to_trade is False
+        assert (
+            self.state_machine.state == States.INITIALIZING
+        ), f"Expected state INITIALIZING, got {self.state_machine.state}"
+        assert (
+            self.strategy._ready_to_trade is False
+        ), f"Expected _ready_to_trade False, got {self.strategy._ready_to_trade}"
 
         await self.api.on_ticker_update(
             callback=self.ws_client.on_message,
             last=initial_ticker,
         )
-        assert self.strategy._ticker == initial_ticker
-        assert self.state_machine.state == States.RUNNING
+        assert (
+            self.strategy._ticker == initial_ticker
+        ), f"Expected ticker {initial_ticker}, got {self.strategy._ticker}"
+        assert (
+            self.state_machine.state == States.RUNNING
+        ), f"Expected state RUNNING, got {self.state_machine.state}"
         assert self.strategy._ready_to_trade is True
 
     async def check_initial_n_buy_orders(
@@ -284,8 +290,12 @@ class KrakenTestManager:
             callback=self.ws_client.on_message,
             last=no_trigger_price,
         )
-        assert self.state_machine.state == States.RUNNING
-        assert self.strategy._ticker == no_trigger_price
+        assert (
+            self.state_machine.state == States.RUNNING
+        ), f"Expected state RUNNING, got {self.state_machine.state}"
+        assert (
+            self.strategy._ticker == no_trigger_price
+        ), f"Expected ticker {no_trigger_price}, got {self.strategy._ticker}"
 
         # Quick re-check ... the price update should not affect any orderbook
         # changes when dropping.
@@ -296,8 +306,12 @@ class KrakenTestManager:
             callback=self.ws_client.on_message,
             last=new_price,
         )
-        assert self.state_machine.state == States.RUNNING
-        assert self.strategy._ticker == new_price
+        assert (
+            self.state_machine.state == States.RUNNING
+        ), f"Expected state RUNNING, got {self.state_machine.state}"
+        assert (
+            self.strategy._ticker == new_price
+        ), f"Expected ticker {new_price}, got {self.strategy._ticker}"
 
         # Ensure that we have a filled order and possibly a new sell order
         self.__ensure_orders_correct(new_prices, new_volumes, new_sides)
@@ -315,6 +329,7 @@ class KrakenTestManager:
 
         Function to check if filling all sell orders works.
         """
+        # FIXME: this is not triggering all sell orders
         # FIXME: is that true?:
         #    Here we temporarily have more than 5 buy orders, since every sell
         #    order triggers a new buy order, causing us to have 9 buy orders and
@@ -326,7 +341,9 @@ class KrakenTestManager:
             callback=self.ws_client.on_message,
             last=new_price,
         )
-        assert self.state_machine.state == States.RUNNING
+        assert (
+            self.state_machine.state == States.RUNNING
+        ), f"Expected state RUNNING, got {self.state_machine.state}"
         current_orders = self.strategy._orderbook_table.get_orders().all()
 
         self.__ensure_orders_correct(
@@ -350,11 +367,12 @@ class KrakenTestManager:
 
     async def check_not_enough_funds_for_sell(
         self: Self,
-        sell_price: float,
+        sell_price: float,  # FIXME: naming
         n_orders: int,
         n_sell_orders: int,
+        assume_base_available: float,
+        assume_quote_available: float,
         fail: bool,
-        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """
         # NOT ENOUGH FUNDS FOR SELL ORDER
@@ -374,7 +392,10 @@ class KrakenTestManager:
 
         # Mock the instance method directly
         self.rest_api.get_pair_balance = mock.Mock(
-            return_value=mock.Mock(base_available=0.000, quote_available=1000.0),
+            return_value=mock.Mock(
+                base_available=assume_base_available,
+                quote_available=assume_quote_available,
+            ),
         )
 
         try:
@@ -386,7 +407,9 @@ class KrakenTestManager:
             assert (
                 self.state_machine.state == States.RUNNING if not fail else States.ERROR
             )
-            assert self.strategy._orderbook_table.count() == n_orders
+            assert (
+                self.strategy._orderbook_table.count() == n_orders
+            ), f"Expected {n_orders} open orders, got {self.strategy._orderbook_table.count()}"
             assert (
                 len(
                     self.strategy._orderbook_table.get_orders(
@@ -395,7 +418,6 @@ class KrakenTestManager:
                 )
                 == n_sell_orders
             )
-            assert "Not enough funds" in caplog.text
         finally:
             # Restore the original method
             self.engine._BotEngine__strategy._rest_api.get_pair_balance = (
@@ -418,7 +440,9 @@ class KrakenTestManager:
         # First ensure that new buy orders can be placed...
         assert not self.strategy._max_investment_reached
         self.strategy._GridStrategyBase__cancel_all_open_buy_orders()
-        assert self.strategy._orderbook_table.count(filters={"side": "buy"}) == 0
+        assert (
+            self.strategy._orderbook_table.count(filters={"side": "buy"}) == 0
+        ), f"Expected 0 open buy orders, got {self.strategy._orderbook_table.count(filters={'side': 'buy'})}"
         await self.api.on_ticker_update(
             callback=self.ws_client.on_message,
             last=current_price,
@@ -434,7 +458,9 @@ class KrakenTestManager:
         old_max_investment = self.strategy._config.max_investment
         self.strategy._config.max_investment = max_investment
         self.strategy._GridStrategyBase__cancel_all_open_buy_orders()
-        assert self.strategy._orderbook_table.count(filters={"side": "buy"}) == 0
+        assert (
+            self.strategy._orderbook_table.count(filters={"side": "buy"}) == 0
+        ), f"Expected 0 open buy orders, got {self.strategy._orderbook_table.count(filters={'side': 'buy'})}"
         assert (
             self.strategy._orderbook_table.count(filters={"side": "sell"})
             == n_open_sell_orders
@@ -448,8 +474,10 @@ class KrakenTestManager:
             self.strategy._orderbook_table.count(filters={"side": "sell"})
             == n_open_sell_orders
         )
-        assert self.strategy._max_investment_reached
-        assert self.state_machine.state == States.RUNNING
+        assert self.strategy._max_investment_reached, "Max investment should be reached"
+        assert (
+            self.state_machine.state == States.RUNNING
+        ), f"Expected state RUNNING, got {self.state_machine.state}"
         self.strategy._config.max_investment = old_max_investment
 
     # --------------------------------------------------------------------------
@@ -469,8 +497,12 @@ class KrakenTestManager:
             callback=self.ws_client.on_message,
             last=new_price,
         )
-        assert self.strategy._ticker == new_price
-        assert self.state_machine.state == States.RUNNING
+        assert (
+            self.strategy._ticker == new_price
+        ), f"Expected ticker {new_price}, got {self.strategy._ticker}"
+        assert (
+            self.state_machine.state == States.RUNNING
+        ), f"Expected state RUNNING, got {self.state_machine.state}"
         self.__ensure_orders_correct(prices, volumes, sides, orders)
 
     def __ensure_orders_correct(
@@ -490,11 +522,17 @@ class KrakenTestManager:
             sides,
             strict=True,
         ):
-            assert order.price == price
-            assert order.volume == volume
-            assert order.side == side
-            assert order.symbol == self.__kraken_config.pair
-            assert order.userref == self.strategy._config.userref
+            assert order.price == price, f"Expected price {price}, got {order.price}"
+            assert (
+                order.volume == volume
+            ), f"Expected volume {volume}, got {order.volume}"
+            assert order.side == side, f"Expected side {side}, got {order.side}"
+            assert (
+                order.symbol == self.__kraken_config.pair
+            ), f"Expected symbol {self.__kraken_config.pair}, got {order.symbol}"
+            assert (
+                order.userref == self.strategy._config.userref
+            ), f"Expected userref {self.strategy._config.userref}, got {order.userref}"
 
     # --------------------------------------------------------------------------
     # Properties

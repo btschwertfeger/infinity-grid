@@ -8,8 +8,11 @@
 
 """This module contains a mocked Kraken API used during integration tests."""
 
+import logging
 import uuid
 from copy import deepcopy
+from decimal import Decimal
+from functools import lru_cache
 from typing import Any, Callable, Self
 
 from kraken.spot import Market, Trade, User
@@ -21,6 +24,43 @@ class KrakenExchangeAPIConfig(BaseModel):
     quote_currency: str  # e.g., "ZUSD"
     pair: str  # e.g., "XBTUSD"
     ws_symbol: str  # e.g., "BTC/USD"
+
+
+LOG = logging.getLogger(__name__)
+
+
+class Balances(dict):  # noqa: FURB189
+    def __init__(
+        self: Self,
+        *args: Any,
+        base_currency: str,
+        quote_currency: str,
+        truncate_cost: Callable[[float | Decimal], str],
+        truncate_base: Callable[[float | Decimal], str],
+        **kwargs: Any,
+    ) -> None:
+        self.truncate_cost = truncate_cost
+        self.truncate_base = truncate_base
+        self.base_currency = base_currency
+        self.quote_currency = quote_currency
+        super().__init__(*args, **kwargs)
+
+    def __setitem__(self: Self, key: str, value: dict) -> None:
+        # key is currency, value is dict with 'balance' and 'hold_trade'
+        if key == self.base_currency:
+            value = {
+                "balance": f"{self.truncate_base(value['balance'])}",
+                "hold_trade": f"{self.truncate_base(value['hold_trade'])}",
+            }
+        elif key == self.quote_currency:
+            value = {
+                "balance": f"{self.truncate_cost(value['balance'])}",
+                "hold_trade": f"{self.truncate_cost(value['hold_trade'])}",
+            }
+        super().__setitem__(key, value)
+
+    def __getitem__(self: Self, key: str) -> dict:
+        return super().__getitem__(key)
 
 
 class KrakenAPI(Market, Trade, User):
@@ -38,13 +78,27 @@ class KrakenAPI(Market, Trade, User):
     ) -> None:
         super().__init__()  # DONT PASS SECRETS!
         self.__orders = {}
-        self.__balances = {
-            kraken_config.base_currency: {"balance": "100.0", "hold_trade": "0.0"},
-            kraken_config.quote_currency: {
-                "balance": "1_000_000.0",
-                "hold_trade": "0.0",
+
+        # FIXME: make customizable via kraken_config
+        self.cost_decimal_places = 5
+        self.base_decimal_places = 8
+
+        self.__balances = Balances(
+            {
+                kraken_config.base_currency: {
+                    "balance": self.truncate_base("100.0"),
+                    "hold_trade": self.truncate_base("0.0"),
+                },
+                kraken_config.quote_currency: {
+                    "balance": self.truncate_cost("1000000.00000000"),
+                    "hold_trade": self.truncate_cost("0.00000000"),
+                },
             },
-        }
+            truncate_cost=self.truncate_cost,
+            truncate_base=self.truncate_base,
+            base_currency=kraken_config.base_currency,
+            quote_currency=kraken_config.quote_currency,
+        )
         self.__fee = 0.0025
         self.__base_currency = kraken_config.base_currency
         self.__quote_currency = kraken_config.quote_currency
@@ -60,42 +114,42 @@ class KrakenAPI(Market, Trade, User):
                 "pair": self.__pair,
                 "type": kwargs["side"],
                 "ordertype": kwargs["ordertype"],
-                "price": kwargs["price"],
+                "price": self.truncate_cost(kwargs["price"]),
             },
             "status": "open",
-            "vol": kwargs["volume"],
-            "vol_exec": "0.0",
-            "cost": "0.0",
-            "fee": "0.0",
+            "vol": Decimal(kwargs["volume"]),
+            "vol_exec": self.truncate_base("0.0"),
+            "cost": self.truncate_cost("0.0"),
+            "fee": self.truncate_cost("0.0"),
         }
 
         if kwargs["side"] == "buy":
-            required_balance = float(kwargs["price"]) * float(kwargs["volume"])
+            required_balance = Decimal(kwargs["price"]) * Decimal(kwargs["volume"])
             if (
-                float(self.__balances[self.__quote_currency]["balance"])
+                Decimal(self.__balances[self.__quote_currency]["balance"])
                 < required_balance
             ):
                 raise ValueError("Insufficient balance to create buy order")
             self.__balances[self.__quote_currency]["balance"] = str(
-                float(self.__balances[self.__quote_currency]["balance"])
+                Decimal(self.__balances[self.__quote_currency]["balance"])
                 - required_balance,
             )
             self.__balances[self.__quote_currency]["hold_trade"] = str(
-                float(self.__balances[self.__quote_currency]["hold_trade"])
+                Decimal(self.__balances[self.__quote_currency]["hold_trade"])
                 + required_balance,
             )
         elif kwargs["side"] == "sell":
-            if float(self.__balances[self.__base_currency]["balance"]) < float(
+            if Decimal(self.__balances[self.__base_currency]["balance"]) < Decimal(
                 kwargs["volume"],
             ):
                 raise ValueError("Insufficient balance to create sell order")
             self.__balances[self.__base_currency]["balance"] = str(
-                float(self.__balances[self.__base_currency]["balance"])
-                - float(kwargs["volume"]),
+                Decimal(self.__balances[self.__base_currency]["balance"])
+                - Decimal(kwargs["volume"]),
             )
             self.__balances[self.__base_currency]["hold_trade"] = str(
-                float(self.__balances[self.__base_currency]["hold_trade"])
-                + float(kwargs["volume"]),
+                Decimal(self.__balances[self.__base_currency]["hold_trade"])
+                + Decimal(kwargs["volume"]),
             )
 
         self.__orders[txid] = order
@@ -108,20 +162,30 @@ class KrakenAPI(Market, Trade, User):
             return
 
         if volume is None:
-            volume = float(order["vol"])
+            volume = Decimal(self.truncate_base(Decimal(order["vol"])))
+        else:
+            volume = Decimal(self.truncate_base(Decimal(volume)))
+        LOG.debug("Filling order %s with volume %s", txid, volume)
 
-        if volume > float(order["vol"]) - float(order["vol_exec"]):
+        if volume > (
+            remaining_volume := Decimal(order["vol"]) - Decimal(order["vol_exec"])
+        ) and abs(remaining_volume) < Decimal(1).scaleb(-self.base_decimal_places):
             raise ValueError(
-                "Cannot fill order with volume higher than remaining order volume",
+                "Cannot fill order with volume higher than remaining order volume.",
+                remaining_volume,
             )
 
-        executed_volume = float(order["vol_exec"]) + volume
-        remaining_volume = float(order["vol"]) - executed_volume
+        executed_volume = Decimal(order["vol_exec"]) + Decimal(volume)
+        remaining_volume = Decimal(order["vol"]) - executed_volume
 
-        order["fee"] = str(float(order["vol_exec"]) * self.__fee)
+        if abs(remaining_volume) < Decimal(1).scaleb(-self.base_decimal_places):
+            remaining_volume = Decimal("0.0")
+            executed_volume = Decimal(order["vol"])
+
+        order["fee"] = str(Decimal(order["vol_exec"]) * Decimal(self.__fee))
         order["vol_exec"] = str(executed_volume)
         order["cost"] = str(
-            executed_volume * float(order["descr"]["price"]) + float(order["fee"]),
+            executed_volume * Decimal(order["descr"]["price"]) + Decimal(order["fee"]),
         )
 
         if remaining_volume <= 0:
@@ -133,26 +197,26 @@ class KrakenAPI(Market, Trade, User):
 
         if order["descr"]["type"] == "buy":
             self.__balances[self.__base_currency]["balance"] = str(
-                float(self.__balances[self.__base_currency]["balance"]) + volume,
+                Decimal(self.__balances[self.__base_currency]["balance"]) + volume,
             )
             self.__balances[self.__quote_currency]["balance"] = str(
-                float(self.__balances[self.__quote_currency]["balance"])
-                - float(order["cost"]),
+                Decimal(self.__balances[self.__quote_currency]["balance"])
+                - Decimal(order["cost"]),
             )
             self.__balances[self.__quote_currency]["hold_trade"] = str(
-                float(self.__balances[self.__quote_currency]["hold_trade"])
-                - float(order["cost"]),
+                Decimal(self.__balances[self.__quote_currency]["hold_trade"])
+                - Decimal(order["cost"]),
             )
         elif order["descr"]["type"] == "sell":
             self.__balances[self.__base_currency]["balance"] = str(
-                float(self.__balances[self.__base_currency]["balance"]) - volume,
+                Decimal(self.__balances[self.__base_currency]["balance"]) - volume,
             )
             self.__balances[self.__base_currency]["hold_trade"] = str(
-                float(self.__balances[self.__base_currency]["hold_trade"]) - volume,
+                Decimal(self.__balances[self.__base_currency]["hold_trade"]) - volume,
             )
             self.__balances[self.__quote_currency]["balance"] = str(
-                float(self.__balances[self.__quote_currency]["balance"])
-                + float(order["cost"]),
+                Decimal(self.__balances[self.__quote_currency]["balance"])
+                + Decimal(order["cost"]),
             )
 
     async def on_ticker_update(self: Self, callback: Callable, last: float) -> None:
@@ -177,10 +241,10 @@ class KrakenAPI(Market, Trade, User):
         for txid, order in self.get_open_orders()["open"].items():
             if (
                 order["descr"]["type"] == "buy"
-                and float(order["descr"]["price"]) >= last
+                and Decimal(order["descr"]["price"]) >= Decimal(last)
             ) or (
                 order["descr"]["type"] == "sell"
-                and float(order["descr"]["price"]) <= last
+                and Decimal(order["descr"]["price"]) <= Decimal(last)
             ):
                 await fill_order(txid=txid)
 
@@ -194,35 +258,37 @@ class KrakenAPI(Market, Trade, User):
         self.__orders[txid] = order
 
         if order["descr"]["type"] == "buy":
-            executed_cost = float(order["vol_exec"]) * float(order["descr"]["price"])
+            executed_cost = Decimal(order["vol_exec"]) * Decimal(
+                order["descr"]["price"],
+            )
             remaining_cost = (
-                float(order["vol"]) * float(order["descr"]["price"]) - executed_cost
+                Decimal(order["vol"]) * Decimal(order["descr"]["price"]) - executed_cost
             )
             self.__balances[self.__quote_currency]["balance"] = str(
-                float(self.__balances[self.__quote_currency]["balance"])
+                Decimal(self.__balances[self.__quote_currency]["balance"])
                 + remaining_cost,
             )
             self.__balances[self.__quote_currency]["hold_trade"] = str(
-                float(self.__balances[self.__quote_currency]["hold_trade"])
+                Decimal(self.__balances[self.__quote_currency]["hold_trade"])
                 - remaining_cost,
             )
             self.__balances[self.__base_currency]["balance"] = str(
-                float(self.__balances[self.__base_currency]["balance"])
-                - float(order["vol_exec"]),
+                Decimal(self.__balances[self.__base_currency]["balance"])
+                - Decimal(order["vol_exec"]),
             )
         elif order["descr"]["type"] == "sell":
-            remaining_volume = float(order["vol"]) - float(order["vol_exec"])
+            remaining_volume = Decimal(order["vol"]) - Decimal(order["vol_exec"])
             self.__balances[self.__base_currency]["balance"] = str(
-                float(self.__balances[self.__base_currency]["balance"])
+                Decimal(self.__balances[self.__base_currency]["balance"])
                 + remaining_volume,
             )
             self.__balances[self.__base_currency]["hold_trade"] = str(
-                float(self.__balances[self.__base_currency]["hold_trade"])
+                Decimal(self.__balances[self.__base_currency]["hold_trade"])
                 - remaining_volume,
             )
             self.__balances[self.__quote_currency]["balance"] = str(
-                float(self.__balances[self.__quote_currency]["balance"])
-                - float(order["cost"]),
+                Decimal(self.__balances[self.__quote_currency]["balance"])
+                - Decimal(order["cost"]),
             )
 
     def cancel_all_orders(self: Self, **kwargs: Any) -> None:  # noqa: ARG002
@@ -245,3 +311,11 @@ class KrakenAPI(Market, Trade, User):
     def get_balances(self: Self, **kwargs: Any) -> dict:  # noqa: ARG002
         """Get the user's current balances."""
         return deepcopy(self.__balances)
+
+    @lru_cache(maxsize=1024)  # noqa: B019
+    def truncate_cost(self: Self, value: float | Decimal) -> str:
+        return f"{Decimal(value):.{self.cost_decimal_places}f}"
+
+    @lru_cache(maxsize=1024)  # noqa: B019
+    def truncate_base(self: Self, value: float | Decimal) -> str:
+        return f"{Decimal(value):.{self.base_decimal_places}f}"

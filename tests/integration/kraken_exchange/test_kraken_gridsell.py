@@ -8,6 +8,7 @@
 """Integration tests for the GridSell strategy on Kraken exchange."""
 
 import logging
+from decimal import Decimal
 from unittest import mock
 
 import pytest
@@ -176,18 +177,27 @@ async def test_kraken_grid_sell(
         n_open_sell_orders=1,
         max_investment=102.0,
     )
+    # After this, we need to retrigger the placement of n buy orders, otherwise
+    # the following tests will fail.
+    await tm.trigger_ensure_n_open_buy_orders(
+        new_price=50_000.0,
+        prices=(59_405.8, 49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
+        volumes=(0.00170016, 0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
+        sides=("sell", "buy", "buy", "buy", "buy", "buy"),
+    )
 
     # ==========================================================================
     # 9. Test what happens if there are not enough funds to place a sell order
     #    for some reason. The GridSell strategy will fail in this case to trigger
     #    a restart (handled by external process manager)
     # Ensure buy orders exist
-    tm.check_not_enough_funds_for_sell(
-        sell_price=50_500.0,
+    await tm.check_not_enough_funds_for_sell(
+        sell_price=49504.8,
         n_orders=6,
         n_sell_orders=1,
+        assume_base_available=0.0,
+        assume_quote_available=1000.0,
         fail=True,
-        caplog=caplog,
     )
 
 
@@ -244,7 +254,9 @@ async def test_kraken_grid_sell_unfilled_surplus(
     assert tm.strategy._orderbook_table.count() == 5
 
     balances = api.get_balances()
-    assert balances[kraken_config_xbtusd.base_currency]["balance"] == "100.002"
+    assert Decimal(balances[kraken_config_xbtusd.base_currency]["balance"]) == Decimal(
+        "100.002",
+    )
     assert float(
         balances[kraken_config_xbtusd.quote_currency]["balance"],
     ) == pytest.approx(999_400.99)

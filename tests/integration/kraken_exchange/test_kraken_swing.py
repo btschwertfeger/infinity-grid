@@ -183,8 +183,9 @@ async def test_kraken_swing(
         sell_price=59_000.0,
         n_orders=4,
         n_sell_orders=0,
+        assume_base_available=0.0,
+        assume_quote_available=1_000.0,
         fail=False,
-        caplog=caplog,
     )
 
 
