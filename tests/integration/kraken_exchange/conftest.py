@@ -18,3 +18,13 @@ def kraken_config_xbtusd() -> KrakenExchangeAPIConfig:
         pair="XBTUSD",
         ws_symbol="BTC/USD",
     )
+
+
+@pytest.fixture(scope="session")
+def kraken_config_aaplxusd() -> KrakenExchangeAPIConfig:
+    return KrakenExchangeAPIConfig(
+        base_currency="AAPLx",
+        quote_currency="ZUSD",
+        pair="AAPLxUSD",
+        ws_symbol="AAPLx/USD",
+    )

@@ -12,7 +12,6 @@ from unittest import mock
 
 import pytest
 
-from infinity_grid.core.state_machine import States
 from infinity_grid.models.configuration import (
     BotConfigDTO,
     DBConfigDTO,
@@ -36,7 +35,7 @@ def kraken_gridsell_bot_config() -> BotConfigDTO:
         userref=0,
         base_currency="BTC",
         quote_currency="USD",
-        max_investment=10000.0,
+        max_investment=10_000.0,
         amount_per_grid=100.0,
         interval=0.01,
         n_open_buy_orders=5,
@@ -97,24 +96,12 @@ async def test_kraken_grid_sell(
         kraken_config=kraken_config_xbtusd,
     )
     await tm.initialize_engine()
-
-    state_machine = tm.state_machine
-    strategy = tm.strategy
-    ws_client = tm.ws_client
-    api = tm.ws_client.__websocket_service
-
-    # ==========================================================================
-    # During the following processing, the following steps are done:
-    # 1. The algorithm prepares for trading (see setup)
-    # 2. The order manager checks the price range
-    # 3. The order manager checks for n open buy orders
-    # 4. The order manager places new orders
     await tm.trigger_prepare_for_trading(initial_ticker=50_000.0)
 
     # ==========================================================================
     # 1. PLACEMENT OF INITIAL N BUY ORDERS
     await tm.check_initial_n_buy_orders(
-        prices=(49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
+        prices=(49_504.9, 49_014.7, 48_529.4, 48_048.9, 47_573.1),
         volumes=(0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
         sides=("buy", "buy", "buy", "buy", "buy"),
     )
@@ -123,7 +110,7 @@ async def test_kraken_grid_sell(
     # 2. SHIFTING UP BUY ORDERS
     await tm.trigger_shift_up_buy_orders(
         new_price=60_000.0,
-        prices=(59405.9, 58817.7, 58235.3, 57658.7, 57087.8),
+        prices=(59_405.9, 58_817.7, 58_235.3, 57_658.7, 57_087.8),
         volumes=(0.00168333, 0.00170016, 0.00171717, 0.00173434, 0.00175168),
         sides=("buy", "buy", "buy", "buy", "buy"),
     )
@@ -133,10 +120,10 @@ async def test_kraken_grid_sell(
     await tm.trigger_fill_buy_order(
         no_trigger_price=59_990.0,
         new_price=59_000.0,
-        old_prices=(59405.9, 58817.7, 58235.3, 57658.7, 57087.8),
+        old_prices=(59_405.9, 58_817.7, 58_235.3, 57_658.7, 57_087.8),
         old_volumes=(0.00168333, 0.00170016, 0.00171717, 0.00173434, 0.00175168),
         old_sides=("buy", "buy", "buy", "buy", "buy"),
-        new_prices=(58817.7, 58235.3, 57658.7, 57087.8, 59999.9),
+        new_prices=(58_817.7, 58_235.3, 57_658.7, 57_087.8, 59_999.9),
         new_volumes=(0.00170016, 0.00171717, 0.00173434, 0.00175168, 0.00168333),
         new_sides=("buy", "buy", "buy", "buy", "sell"),
     )
@@ -145,7 +132,7 @@ async def test_kraken_grid_sell(
     # 4. ENSURING N OPEN BUY ORDERS
     await tm.trigger_ensure_n_open_buy_orders(
         new_price=59_100.0,
-        prices=(58817.7, 58235.3, 57658.7, 57087.8, 59999.9, 56522.5),
+        prices=(58_817.7, 58_235.3, 57_658.7, 57_087.8, 59_999.9, 56_522.5),
         volumes=(0.00170016, 0.00171717, 0.00173434, 0.00175168, 0.00168333, 0.0017692),
         sides=("buy", "buy", "buy", "buy", "sell", "buy"),
     )
@@ -154,7 +141,7 @@ async def test_kraken_grid_sell(
     # 5. FILLING A SELL ORDER
     await tm.trigger_fill_sell_order(
         new_price=60_000.0,
-        prices=(58817.7, 58235.3, 57658.7, 57087.8, 56522.5),
+        prices=(58_817.7, 58_235.3, 57_658.7, 57_087.8, 56_522.5),
         volumes=(0.00170016, 0.00171717, 0.00173434, 0.00175168, 0.0017692),
         sides=("buy", "buy", "buy", "buy", "buy"),
     )
@@ -168,7 +155,7 @@ async def test_kraken_grid_sell(
     # 6. RAPID PRICE DROP - FILLING ALL BUY ORDERS
     await tm.trigger_rapid_price_drop(
         new_price=50_000.0,
-        prices=(59405.8, 58817.6, 58235.2, 57658.6, 57087.7),
+        prices=(59_405.8, 58_817.6, 58_235.2, 57_658.6, 57_087.7),
         volumes=(0.00170016, 0.00171717, 0.00173434, 0.00175168, 0.0017692),
         sides=("sell", "sell", "sell", "sell", "sell"),
     )
@@ -176,68 +163,32 @@ async def test_kraken_grid_sell(
     # 7. SELL ALL AND ENSURE N OPEN BUY ORDERS
     await tm.trigger_all_sell_orders(
         new_price=59_100.0,
-        buy_prices=(58514.8, 57935.4, 57361.7, 56793.7, 56231.3),
-        sell_prices=(59405.8,),
+        buy_prices=(58_514.8, 57_935.4, 57_361.7, 56_793.7, 56_231.3),
+        sell_prices=(59_405.8,),
         buy_volumes=(0.00170896, 0.00172606, 0.00174332, 0.00176075, 0.00177836),
         sell_volumes=(0.00170016,),
     )
 
     # ==========================================================================
     # 8. MAX INVESTMENT REACHED
-    LOG.info("******* Check max investment reached behavior *******")
-
-    # First ensure that new buy orders can be placed...
-    assert not strategy._max_investment_reached
-    strategy._GridStrategyBase__cancel_all_open_buy_orders()
-    assert strategy._orderbook_table.count() == 1
-    await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    assert strategy._orderbook_table.count() == 6
-
-    # Now with a different max investment, the max investment should be reached
-    # and no further orders be placed.
-    assert not strategy._max_investment_reached
-    old_max_investment = strategy._config.max_investment
-    strategy._config.max_investment = 202.0  # 200 USD + fee
-    strategy._GridStrategyBase__cancel_all_open_buy_orders()
-    assert strategy._orderbook_table.count() == 1
-    await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    assert strategy._orderbook_table.count() == 2
-    assert strategy._max_investment_reached
-    assert state_machine.state == States.RUNNING
-    strategy._config.max_investment = old_max_investment
+    await tm.check_max_investment_reached(
+        current_price=50_000.0,
+        n_open_sell_orders=1,
+        max_investment=102.0,
+    )
 
     # ==========================================================================
     # 9. Test what happens if there are not enough funds to place a sell order
     #    for some reason. The GridSell strategy will fail in this case to trigger
     #    a restart (handled by external process manager)
     # Ensure buy orders exist
-    await api.on_ticker_update(callback=ws_client.on_message, last=58500.0)
-    assert strategy._orderbook_table.count() == 6  # 5 buy and one sell order
-
-    # Save the original method to restore it later
-    original_get_pair_balance = strategy._rest_api.get_pair_balance
-
-    # Mock the instance method directly
-    strategy._rest_api.get_pair_balance = mock.Mock(
-        return_value=mock.Mock(
-            base_available=0.000,
-            quote_available=1000.0,
-        ),
+    tm.check_not_enough_funds_for_sell(
+        sell_price=50_500.0,
+        n_orders=6,
+        n_sell_orders=1,
+        fail=True,
+        caplog=caplog,
     )
-
-    try:
-        # Now trigger the sell order
-        await api.on_ticker_update(callback=ws_client.on_message, last=57900.0)
-        assert state_machine.state == States.ERROR
-        assert strategy._orderbook_table.count() != 5
-        assert (
-            len(strategy._orderbook_table.get_orders(filters={"side": "sell"}).all())
-            == 1
-        )
-        assert "Not enough" in caplog.text
-    finally:
-        # Restore the original method
-        strategy._rest_api.get_pair_balance = original_get_pair_balance
 
 
 @pytest.mark.integration
@@ -274,25 +225,12 @@ async def test_kraken_grid_sell_unfilled_surplus(
         kraken_config=kraken_config_xbtusd,
     )
     await tm.initialize_engine()
-
-    state_machine = tm.state_machine
-    strategy = tm.strategy
-    ws_client = tm.ws_client
-    rest_api = tm.rest_api
-    api = tm.ws_client.__websocket_service
-
-    # ==========================================================================
-    # During the following processing, the following steps are done:
-    # 1. The algorithm prepares for trading (see setup)
-    # 2. The order manager checks the price range
-    # 3. The order manager checks for n open buy orders
-    # 4. The order manager places new orders
     await tm.trigger_prepare_for_trading(initial_ticker=50_000.0)
 
     # ==========================================================================
     # 1. PLACEMENT OF INITIAL N BUY ORDERS
     await tm.check_initial_n_buy_orders(
-        prices=(49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
+        prices=(49_504.9, 49_014.7, 48_529.4, 48_048.9, 47_573.1),
         volumes=(0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
         sides=("buy", "buy", "buy", "buy", "buy"),
     )
@@ -301,21 +239,24 @@ async def test_kraken_grid_sell_unfilled_surplus(
     # 2. BUYING PARTLY FILLED and ensure that the unfilled surplus is handled
     LOG.info("******* Check partially filled orders *******")
 
-    api.fill_order(strategy._orderbook_table.get_orders().first().txid, 0.002)
-    assert strategy._orderbook_table.count() == 5
+    api = tm.ws_client.__websocket_service
+    api.fill_order(tm.strategy._orderbook_table.get_orders().first().txid, 0.002)
+    assert tm.strategy._orderbook_table.count() == 5
 
     balances = api.get_balances()
-    assert balances["XXBT"]["balance"] == "100.002"
-    assert float(balances["ZUSD"]["balance"]) == pytest.approx(999400.99)
+    assert balances[kraken_config_xbtusd.base_currency]["balance"] == "100.002"
+    assert float(
+        balances[kraken_config_xbtusd.quote_currency]["balance"],
+    ) == pytest.approx(999_400.99)
 
-    strategy._handle_cancel_order(
-        strategy._orderbook_table.get_orders().first().txid,
+    tm.strategy._handle_cancel_order(
+        tm.strategy._orderbook_table.get_orders().first().txid,
     )
 
-    assert strategy._configuration_table.get()["vol_of_unfilled_remaining"] == 0.002
+    assert tm.strategy._configuration_table.get()["vol_of_unfilled_remaining"] == 0.002
     assert (
-        strategy._configuration_table.get()["vol_of_unfilled_remaining_max_price"]
-        == 49504.9
+        tm.strategy._configuration_table.get()["vol_of_unfilled_remaining_max_price"]
+        == 49_504.9
     )
 
     # ==========================================================================
@@ -325,38 +266,46 @@ async def test_kraken_grid_sell_unfilled_surplus(
     #    partly filled order.
     LOG.info("******* Check selling the unfilled surplus *******")
 
-    strategy.new_buy_order(order_price=49504.9)
-    assert strategy._orderbook_table.count() == 5
+    tm.strategy.new_buy_order(order_price=49_504.9)
+    assert tm.strategy._orderbook_table.count() == 5
     assert (
         len(
             [
                 o
-                for o in rest_api.get_open_orders(userref=strategy._config.userref)
+                for o in tm.rest_api.get_open_orders(
+                    userref=tm.strategy._config.userref,
+                )
                 if o.status == "open"
             ],
         )
         == 5
     )
 
-    order = strategy._orderbook_table.get_orders(filters={"price": 49504.9}).all()[0]
+    order = tm.strategy._orderbook_table.get_orders(filters={"price": 49_504.9}).all()[
+        0
+    ]
     api.fill_order(order["txid"], 0.002)
-    strategy._handle_cancel_order(order["txid"])
+    tm.strategy._handle_cancel_order(order["txid"])
 
     assert (
         len(
             [
                 o
-                for o in rest_api.get_open_orders(userref=strategy._config.userref)
+                for o in tm.rest_api.get_open_orders(
+                    userref=tm.strategy._config.userref,
+                )
                 if o.status == "open"
             ],
         )
         == 5
     )
     assert (
-        strategy._configuration_table.get()["vol_of_unfilled_remaining_max_price"]
+        tm.strategy._configuration_table.get()["vol_of_unfilled_remaining_max_price"]
         == 0.0
     )
 
-    sell_orders = strategy._orderbook_table.get_orders(filters={"side": "sell"}).all()
-    assert sell_orders[0].price == 50500.0
+    sell_orders = tm.strategy._orderbook_table.get_orders(
+        filters={"side": "sell"},
+    ).all()
+    assert sell_orders[0].price == 50_500.0
     assert sell_orders[0].volume == pytest.approx(0.00199014)
