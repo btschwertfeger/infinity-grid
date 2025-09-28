@@ -13,74 +13,14 @@ other.
 
 import logging
 from decimal import Decimal
+from typing import Callable
 from unittest import mock
 
 import pytest
 
-from infinity_grid.models.configuration import (
-    BotConfigDTO,
-    DBConfigDTO,
-    NotificationConfigDTO,
-)
-
 from .helper import KrakenTestManager
-from .kraken_exchange_api import KrakenExchangeAPIConfig
 
 LOG = logging.getLogger(__name__)
-
-
-def kraken_gridhodl_bot_config_xbtusd() -> BotConfigDTO:
-    return BotConfigDTO(
-        strategy="GridHODL",
-        exchange="Kraken",
-        api_public_key="",
-        api_secret_key="",
-        name="Local Tests Bot GridHODL",
-        userref=0,
-        base_currency="BTC",
-        quote_currency="USD",
-        max_investment=10_000.0,
-        amount_per_grid=100.0,
-        interval=0.01,
-        n_open_buy_orders=5,
-        verbosity=0,
-    )
-
-
-def kraken_exchange_config_xbtusd() -> KrakenExchangeAPIConfig:
-    return KrakenExchangeAPIConfig(
-        base_currency="XXBT",
-        quote_currency="ZUSD",
-        pair="XBTUSD",
-        ws_symbol="BTC/USD",
-    )
-
-
-def kraken_gridhodl_bot_config_aaplxusd() -> BotConfigDTO:
-    return BotConfigDTO(
-        strategy="GridHODL",
-        exchange="Kraken",
-        api_public_key="",
-        api_secret_key="",
-        name="Local Tests Bot GridHODL",
-        userref=0,
-        base_currency="AAPLx",
-        quote_currency="USD",
-        max_investment=10_000.0,
-        amount_per_grid=100.0,
-        interval=0.01,
-        n_open_buy_orders=5,
-        verbosity=0,
-    )
-
-
-def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
-    return KrakenExchangeAPIConfig(
-        base_currency="AAPLx",
-        quote_currency="ZUSD",
-        pair="AAPLxUSD",
-        ws_symbol="AAPLx/USD",
-    )
 
 
 @pytest.mark.integration
@@ -89,14 +29,13 @@ def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
 @mock.patch("infinity_grid.strategies.grid_hodl.sleep", return_value=None)
 @mock.patch("infinity_grid.strategies.grid_base.sleep", return_value=None)
 @pytest.mark.parametrize(
-    ("bot_config", "kraken_config", "expectations"),
+    ("symbol", "expectations"),
     [
         (
-            kraken_gridhodl_bot_config_xbtusd(),
-            kraken_exchange_config_xbtusd(),
+            "XBTUSD",
             {
                 "initial_ticker": 50_000.0,
-                "check_initial_n_buy_orders": {
+                "1_check_initial_n_buy_orders": {
                     "prices": (
                         49_504.9,
                         49_014.7,
@@ -113,7 +52,7 @@ def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
                     ),
                     "sides": ("buy", "buy", "buy", "buy", "buy"),
                 },
-                "trigger_shift_up_buy_orders": {
+                "2_trigger_shift_up_buy_orders": {
                     "new_price": 60_000.0,
                     "prices": (
                         59_405.9,
@@ -131,7 +70,7 @@ def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
                     ),
                     "sides": ("buy", "buy", "buy", "buy", "buy"),
                 },
-                "trigger_fill_buy_order": {
+                "3_trigger_fill_buy_order": {
                     "no_trigger_price": 59_990.0,
                     "new_price": 59_000.0,
                     "old_prices": (
@@ -165,7 +104,7 @@ def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
                     ),
                     "new_sides": ("buy", "buy", "buy", "buy", "sell"),
                 },
-                "trigger_ensure_n_open_buy_orders": {
+                "4_trigger_ensure_n_open_buy_orders": {
                     "new_price": 59_100.0,
                     "prices": (
                         58_817.7,
@@ -185,7 +124,7 @@ def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
                     ),
                     "sides": ("buy", "buy", "buy", "buy", "sell", "buy"),
                 },
-                "trigger_fill_sell_order": {
+                "5_trigger_fill_sell_order": {
                     "new_price": 60_000.0,
                     "prices": (
                         58_817.7,
@@ -203,7 +142,7 @@ def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
                     ),
                     "sides": ("buy", "buy", "buy", "buy", "buy"),
                 },
-                "trigger_rapid_price_drop": {
+                "6_trigger_rapid_price_drop": {
                     "new_price": 50_000.0,
                     "prices": (
                         59_405.8,
@@ -221,7 +160,7 @@ def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
                     ),
                     "sides": ("sell", "sell", "sell", "sell", "sell"),
                 },
-                "trigger_all_sell_orders": {  # FIXME: this is not triggering all sell orders
+                "7_trigger_all_sell_orders": {  # FIXME: this is not triggering all sell orders
                     "new_price": 59_100.0,
                     "buy_prices": (
                         58_514.8,
@@ -240,20 +179,20 @@ def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
                     ),
                     "sell_volumes": (0.00169179,),
                 },
-                "check_not_enough_funds_for_sell": {
+                "8_check_not_enough_funds_for_sell": {
                     "sell_price": 58_500.0,
                     "n_orders": 5,
                     "n_sell_orders": 1,
                     "assume_base_available": 0.0,
                     "assume_quote_available": 1000.0,
                 },
-                "sell_after_not_enough_funds_for_sell": {
+                "9_sell_after_not_enough_funds_for_sell": {
                     "price": 58_500.0,
                     "n_orders": 7,
                     "sell_prices": (59_405.8, 59_099.9),
                     "sell_volumes": (0.00169179, 0.00170055),
                 },
-                "check_max_investment_reached": {
+                "10_check_max_investment_reached": {
                     "current_price": 50_000.0,
                     "n_open_sell_orders": 2,
                     "max_investment": 202.0,
@@ -261,11 +200,10 @@ def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
             },
         ),
         (
-            kraken_gridhodl_bot_config_aaplxusd(),
-            kraken_exchange_config_aaplxusd(),
+            "AAPLxUSD",
             {
                 "initial_ticker": 260.0,
-                "check_initial_n_buy_orders": {
+                "1_check_initial_n_buy_orders": {
                     "prices": (257.42, 254.87, 252.34, 249.84, 247.36),
                     "volumes": (
                         0.3884702,
@@ -276,7 +214,7 @@ def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
                     ),
                     "sides": ("buy", "buy", "buy", "buy", "buy"),
                 },
-                "trigger_shift_up_buy_orders": {
+                "2_trigger_shift_up_buy_orders": {
                     "new_price": 280.0,
                     "prices": (277.22, 274.47, 271.75, 269.05, 266.38),
                     "volumes": (
@@ -288,7 +226,7 @@ def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
                     ),
                     "sides": ("buy", "buy", "buy", "buy", "buy"),
                 },
-                "trigger_fill_buy_order": {
+                "3_trigger_fill_buy_order": {
                     "no_trigger_price": 279.0,
                     "new_price": 277.0,
                     "old_prices": (277.22, 274.47, 271.75, 269.05, 266.38),
@@ -310,7 +248,7 @@ def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
                     ),
                     "new_sides": ("buy", "buy", "buy", "buy", "sell"),
                 },
-                "trigger_ensure_n_open_buy_orders": {
+                "4_trigger_ensure_n_open_buy_orders": {
                     "new_price": 277.1,
                     "prices": (
                         274.47,
@@ -330,7 +268,7 @@ def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
                     ),
                     "sides": ("buy", "buy", "buy", "buy", "sell", "buy"),
                 },
-                "trigger_fill_sell_order": {
+                "5_trigger_fill_sell_order": {
                     "new_price": 280.0,
                     "prices": (
                         274.47,
@@ -348,7 +286,7 @@ def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
                     ),
                     "sides": ("buy", "buy", "buy", "buy", "buy"),
                 },
-                "trigger_rapid_price_drop": {
+                "6_trigger_rapid_price_drop": {
                     "new_price": 260.0,
                     "prices": (277.21, 274.46, 271.74, 269.04, 266.37),
                     "volumes": (
@@ -360,7 +298,7 @@ def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
                     ),
                     "sides": ("sell", "sell", "sell", "sell", "sell"),
                 },
-                "trigger_all_sell_orders": {
+                "7_trigger_all_sell_orders": {
                     "new_price": 275.0,
                     "buy_prices": (
                         272.27,
@@ -379,20 +317,20 @@ def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
                     ),
                     "sell_volumes": (0.3605931,),
                 },
-                "check_not_enough_funds_for_sell": {
+                "8_check_not_enough_funds_for_sell": {
                     "sell_price": 272.0,
                     "n_orders": 5,
                     "n_sell_orders": 1,
                     "assume_base_available": 0.0,
                     "assume_quote_available": 1000.0,
                 },
-                "sell_after_not_enough_funds_for_sell": {
+                "9_sell_after_not_enough_funds_for_sell": {
                     "price": 272.0,
                     "n_orders": 7,
                     "sell_prices": (277.21, 274.99),
                     "sell_volumes": (0.3605931, 0.36350418),
                 },
-                "check_max_investment_reached": {
+                "10_check_max_investment_reached": {
                     "current_price": 270.0,
                     "n_open_sell_orders": 2,
                     "max_investment": 202.0,
@@ -402,15 +340,13 @@ def kraken_exchange_config_aaplxusd() -> KrakenExchangeAPIConfig:
     ],
     ids=("BTCUSD", "AAPLxUSD"),
 )
-async def test_kraken_grid_hodl(  # noqa: PLR0913,PLR0917
+async def test_kraken_grid_hodl(
     mock_sleep1: mock.MagicMock,  # noqa: ARG001
     mock_sleep2: mock.MagicMock,  # noqa: ARG001
     mock_sleep3: mock.MagicMock,  # noqa: ARG001
     caplog: pytest.LogCaptureFixture,
-    notification_config: NotificationConfigDTO,
-    db_config: DBConfigDTO,
-    bot_config: BotConfigDTO,
-    kraken_config: KrakenExchangeAPIConfig,
+    kraken_test_manager_factory: Callable[[str, str], KrakenTestManager],
+    symbol: str,
     expectations: dict,
 ) -> None:
     """
@@ -422,62 +358,57 @@ async def test_kraken_grid_hodl(  # noqa: PLR0913,PLR0917
     LOG.info("******* Starting GridHODL integration test *******")
     caplog.set_level(logging.INFO)
 
-    tm = KrakenTestManager(
-        bot_config=bot_config,
-        notification_config=notification_config,
-        db_config=db_config,
-        kraken_config=kraken_config,
-    )
+    tm = kraken_test_manager_factory(symbol, "GridHODL")
     await tm.initialize_engine()
     await tm.trigger_prepare_for_trading(initial_ticker=expectations["initial_ticker"])
 
     # ==========================================================================
     # 1. PLACEMENT OF INITIAL N BUY ORDERS
     await tm.check_initial_n_buy_orders(
-        prices=expectations["check_initial_n_buy_orders"]["prices"],
-        volumes=expectations["check_initial_n_buy_orders"]["volumes"],
-        sides=expectations["check_initial_n_buy_orders"]["sides"],
+        prices=expectations["1_check_initial_n_buy_orders"]["prices"],
+        volumes=expectations["1_check_initial_n_buy_orders"]["volumes"],
+        sides=expectations["1_check_initial_n_buy_orders"]["sides"],
     )
 
     # ==========================================================================
     # 2. SHIFTING UP BUY ORDERS
     await tm.trigger_shift_up_buy_orders(
-        new_price=expectations["trigger_shift_up_buy_orders"]["new_price"],
-        prices=expectations["trigger_shift_up_buy_orders"]["prices"],
-        volumes=expectations["trigger_shift_up_buy_orders"]["volumes"],
-        sides=expectations["trigger_shift_up_buy_orders"]["sides"],
+        new_price=expectations["2_trigger_shift_up_buy_orders"]["new_price"],
+        prices=expectations["2_trigger_shift_up_buy_orders"]["prices"],
+        volumes=expectations["2_trigger_shift_up_buy_orders"]["volumes"],
+        sides=expectations["2_trigger_shift_up_buy_orders"]["sides"],
     )
 
     # ==========================================================================
     # 3. FILLING A BUY ORDER
     await tm.trigger_fill_buy_order(
-        no_trigger_price=expectations["trigger_fill_buy_order"]["no_trigger_price"],
-        new_price=expectations["trigger_fill_buy_order"]["new_price"],
-        old_prices=expectations["trigger_fill_buy_order"]["old_prices"],
-        old_volumes=expectations["trigger_fill_buy_order"]["old_volumes"],
-        old_sides=expectations["trigger_fill_buy_order"]["old_sides"],
-        new_prices=expectations["trigger_fill_buy_order"]["new_prices"],
-        new_volumes=expectations["trigger_fill_buy_order"]["new_volumes"],
-        new_sides=expectations["trigger_fill_buy_order"]["new_sides"],
+        no_trigger_price=expectations["3_trigger_fill_buy_order"]["no_trigger_price"],
+        new_price=expectations["3_trigger_fill_buy_order"]["new_price"],
+        old_prices=expectations["3_trigger_fill_buy_order"]["old_prices"],
+        old_volumes=expectations["3_trigger_fill_buy_order"]["old_volumes"],
+        old_sides=expectations["3_trigger_fill_buy_order"]["old_sides"],
+        new_prices=expectations["3_trigger_fill_buy_order"]["new_prices"],
+        new_volumes=expectations["3_trigger_fill_buy_order"]["new_volumes"],
+        new_sides=expectations["3_trigger_fill_buy_order"]["new_sides"],
     )
 
     # ==========================================================================
     # 4. ENSURING N OPEN BUY ORDERS
     await tm.trigger_ensure_n_open_buy_orders(
-        new_price=expectations["trigger_ensure_n_open_buy_orders"]["new_price"],
-        prices=expectations["trigger_ensure_n_open_buy_orders"]["prices"],
-        volumes=expectations["trigger_ensure_n_open_buy_orders"]["volumes"],
-        sides=expectations["trigger_ensure_n_open_buy_orders"]["sides"],
+        new_price=expectations["4_trigger_ensure_n_open_buy_orders"]["new_price"],
+        prices=expectations["4_trigger_ensure_n_open_buy_orders"]["prices"],
+        volumes=expectations["4_trigger_ensure_n_open_buy_orders"]["volumes"],
+        sides=expectations["4_trigger_ensure_n_open_buy_orders"]["sides"],
     )
 
     # ==========================================================================
     # 5. FILLING A SELL ORDER
     # Now let's see if the sell order gets triggered.
     await tm.trigger_fill_sell_order(
-        new_price=expectations["trigger_fill_sell_order"]["new_price"],
-        prices=expectations["trigger_fill_sell_order"]["prices"],
-        volumes=expectations["trigger_fill_sell_order"]["volumes"],
-        sides=expectations["trigger_fill_sell_order"]["sides"],
+        new_price=expectations["5_trigger_fill_sell_order"]["new_price"],
+        prices=expectations["5_trigger_fill_sell_order"]["prices"],
+        volumes=expectations["5_trigger_fill_sell_order"]["volumes"],
+        sides=expectations["5_trigger_fill_sell_order"]["sides"],
     )
     # ... as we can see, the sell order got removed from the orderbook.
     # ... there is no new corresponding buy order placed - this would only be
@@ -487,33 +418,35 @@ async def test_kraken_grid_hodl(  # noqa: PLR0913,PLR0917
     # ==========================================================================
     # 6. RAPID PRICE DROP - FILLING ALL BUY ORDERS
     await tm.trigger_rapid_price_drop(
-        new_price=expectations["trigger_rapid_price_drop"]["new_price"],
-        prices=expectations["trigger_rapid_price_drop"]["prices"],
-        volumes=expectations["trigger_rapid_price_drop"]["volumes"],
-        sides=expectations["trigger_rapid_price_drop"]["sides"],
+        new_price=expectations["6_trigger_rapid_price_drop"]["new_price"],
+        prices=expectations["6_trigger_rapid_price_drop"]["prices"],
+        volumes=expectations["6_trigger_rapid_price_drop"]["volumes"],
+        sides=expectations["6_trigger_rapid_price_drop"]["sides"],
     )
 
     # ==========================================================================
     # 7. SELL ALL AND ENSURE N OPEN BUY ORDERS
     await tm.trigger_all_sell_orders(
-        new_price=expectations["trigger_all_sell_orders"]["new_price"],
-        buy_prices=expectations["trigger_all_sell_orders"]["buy_prices"],
-        sell_prices=expectations["trigger_all_sell_orders"]["sell_prices"],
-        buy_volumes=expectations["trigger_all_sell_orders"]["buy_volumes"],
-        sell_volumes=expectations["trigger_all_sell_orders"]["sell_volumes"],
+        new_price=expectations["7_trigger_all_sell_orders"]["new_price"],
+        buy_prices=expectations["7_trigger_all_sell_orders"]["buy_prices"],
+        sell_prices=expectations["7_trigger_all_sell_orders"]["sell_prices"],
+        buy_volumes=expectations["7_trigger_all_sell_orders"]["buy_volumes"],
+        sell_volumes=expectations["7_trigger_all_sell_orders"]["sell_volumes"],
     )
 
     # ==========================================================================
     # 8. Test what happens if there are not enough funds to place a sell order
     #    for some reason.
     await tm.check_not_enough_funds_for_sell(
-        sell_price=expectations["check_not_enough_funds_for_sell"]["sell_price"],
-        n_orders=expectations["check_not_enough_funds_for_sell"]["n_orders"],
-        n_sell_orders=expectations["check_not_enough_funds_for_sell"]["n_sell_orders"],
-        assume_base_available=expectations["check_not_enough_funds_for_sell"][
+        sell_price=expectations["8_check_not_enough_funds_for_sell"]["sell_price"],
+        n_orders=expectations["8_check_not_enough_funds_for_sell"]["n_orders"],
+        n_sell_orders=expectations["8_check_not_enough_funds_for_sell"][
+            "n_sell_orders"
+        ],
+        assume_base_available=expectations["8_check_not_enough_funds_for_sell"][
             "assume_base_available"
         ],
-        assume_quote_available=expectations["check_not_enough_funds_for_sell"][
+        assume_quote_available=expectations["8_check_not_enough_funds_for_sell"][
             "assume_quote_available"
         ],
         fail=False,
@@ -529,29 +462,31 @@ async def test_kraken_grid_hodl(  # noqa: PLR0913,PLR0917
     # the earlier mock.
     await api.on_ticker_update(
         callback=tm.ws_client.on_message,
-        last=expectations["sell_after_not_enough_funds_for_sell"]["price"],
+        last=expectations["9_sell_after_not_enough_funds_for_sell"]["price"],
     )
     assert (
         tm.strategy._orderbook_table.count()
-        == expectations["sell_after_not_enough_funds_for_sell"]["n_orders"]
+        == expectations["9_sell_after_not_enough_funds_for_sell"]["n_orders"]
     )
     for order, price, volume in zip(
         (tm.strategy._orderbook_table.get_orders(filters={"side": "sell"}).all()),
-        expectations["sell_after_not_enough_funds_for_sell"]["sell_prices"],
-        expectations["sell_after_not_enough_funds_for_sell"]["sell_volumes"],
+        expectations["9_sell_after_not_enough_funds_for_sell"]["sell_prices"],
+        expectations["9_sell_after_not_enough_funds_for_sell"]["sell_volumes"],
         strict=True,
     ):
         assert order.price == price
         assert order.volume == volume
 
     # ==========================================================================
-    # 9. MAX INVESTMENT REACHED
+    # 10. MAX INVESTMENT REACHED
     await tm.check_max_investment_reached(
-        current_price=expectations["check_max_investment_reached"]["current_price"],
-        n_open_sell_orders=expectations["check_max_investment_reached"][
+        current_price=expectations["10_check_max_investment_reached"]["current_price"],
+        n_open_sell_orders=expectations["10_check_max_investment_reached"][
             "n_open_sell_orders"
         ],
-        max_investment=expectations["check_max_investment_reached"]["max_investment"],
+        max_investment=expectations["10_check_max_investment_reached"][
+            "max_investment"
+        ],
     )
 
 
@@ -561,14 +496,13 @@ async def test_kraken_grid_hodl(  # noqa: PLR0913,PLR0917
 @mock.patch("infinity_grid.strategies.grid_hodl.sleep", return_value=None)
 @mock.patch("infinity_grid.strategies.grid_base.sleep", return_value=None)
 @pytest.mark.parametrize(
-    ("bot_config", "kraken_config", "expectations"),
+    ("symbol", "expectations"),
     [
         (
-            kraken_gridhodl_bot_config_xbtusd(),
-            kraken_exchange_config_xbtusd(),
+            "XBTUSD",
             {
                 "initial_ticker": 50_000.0,
-                "check_initial_n_buy_orders": {
+                "1_check_initial_n_buy_orders": {
                     "prices": (
                         49_504.9,
                         49_014.7,
@@ -585,14 +519,14 @@ async def test_kraken_grid_hodl(  # noqa: PLR0913,PLR0917
                     ),
                     "sides": ("buy", "buy", "buy", "buy", "buy"),
                 },
-                "partial_fill": {
+                "2_partial_fill": {
                     "fill_volume": 0.002,
                     "n_open_orders": 5,
                     "expected_base_balance": Decimal("100.002"),
                     "expected_quote_balance": 999_400.99,
                     "vol_of_unfilled_remaining_max_price": 49_504.9,
                 },
-                "sell_partial_fill": {
+                "3_sell_partial_fill": {
                     "order_price": 49_504.9,
                     "n_open_orders": 5,
                     "expected_sell_price": 50_500.0,
@@ -601,11 +535,10 @@ async def test_kraken_grid_hodl(  # noqa: PLR0913,PLR0917
             },
         ),
         (
-            kraken_gridhodl_bot_config_aaplxusd(),
-            kraken_exchange_config_aaplxusd(),
+            "AAPLxUSD",
             {
                 "initial_ticker": 260.0,
-                "check_initial_n_buy_orders": {
+                "1_check_initial_n_buy_orders": {
                     "prices": (257.42, 254.87, 252.34, 249.84, 247.36),
                     "volumes": (
                         0.3884702,
@@ -616,14 +549,14 @@ async def test_kraken_grid_hodl(  # noqa: PLR0913,PLR0917
                     ),
                     "sides": ("buy", "buy", "buy", "buy", "buy"),
                 },
-                "partial_fill": {
+                "2_partial_fill": {
                     "fill_volume": 0.3,
                     "n_open_orders": 5,
                     "expected_base_balance": Decimal("100.3"),
                     "expected_quote_balance": 999422.77401,
                     "vol_of_unfilled_remaining_max_price": 257.42,
                 },
-                "sell_partial_fill": {
+                "3_sell_partial_fill": {
                     "order_price": 257.42,
                     "n_open_orders": 5,
                     "expected_sell_price": 262.6,
@@ -634,15 +567,13 @@ async def test_kraken_grid_hodl(  # noqa: PLR0913,PLR0917
     ],
     ids=("BTCUSD", "AAPLxUSD"),
 )
-async def test_kraken_grid_hodl_unfilled_surplus(  # noqa: PLR0913,PLR0917
+async def test_kraken_grid_hodl_unfilled_surplus(
     mock_sleep1: mock.MagicMock,  # noqa: ARG001
     mock_sleep2: mock.Mock,  # noqa: ARG001
     mock_sleep3: mock.Mock,  # noqa: ARG001
     caplog: pytest.LogCaptureFixture,
-    notification_config: NotificationConfigDTO,
-    db_config: DBConfigDTO,
-    bot_config: BotConfigDTO,
-    kraken_config: KrakenExchangeAPIConfig,
+    kraken_test_manager_factory: pytest.FixtureRequest,
+    symbol: str,
     expectations: dict,
 ) -> None:
     """
@@ -661,21 +592,16 @@ async def test_kraken_grid_hodl_unfilled_surplus(  # noqa: PLR0913,PLR0917
     LOG.info("******* Starting GridHODL unfilled surplus integration test *******")
     caplog.set_level(logging.INFO)
 
-    tm = KrakenTestManager(
-        bot_config=bot_config,
-        notification_config=notification_config,
-        db_config=db_config,
-        kraken_config=kraken_config,
-    )
+    tm = kraken_test_manager_factory(symbol, "GridHODL")
     await tm.initialize_engine()
     await tm.trigger_prepare_for_trading(initial_ticker=expectations["initial_ticker"])
 
     # ==========================================================================
     # 1. PLACEMENT OF INITIAL N BUY ORDERS
     await tm.check_initial_n_buy_orders(
-        prices=expectations["check_initial_n_buy_orders"]["prices"],
-        volumes=expectations["check_initial_n_buy_orders"]["volumes"],
-        sides=expectations["check_initial_n_buy_orders"]["sides"],
+        prices=expectations["1_check_initial_n_buy_orders"]["prices"],
+        volumes=expectations["1_check_initial_n_buy_orders"]["volumes"],
+        sides=expectations["1_check_initial_n_buy_orders"]["sides"],
     )
 
     # ==========================================================================
@@ -686,22 +612,22 @@ async def test_kraken_grid_hodl_unfilled_surplus(  # noqa: PLR0913,PLR0917
     # Fill the first buy order partly to accumulate some unfilled surplus.
     api.fill_order(
         tm.strategy._orderbook_table.get_orders().first().txid,
-        expectations["partial_fill"]["fill_volume"],
+        expectations["2_partial_fill"]["fill_volume"],
     )
     assert (
         tm.strategy._orderbook_table.count()
-        == expectations["partial_fill"]["n_open_orders"]
+        == expectations["2_partial_fill"]["n_open_orders"]
     )
 
     balances = api.get_balances()
     assert (
-        Decimal(balances[kraken_config.base_currency]["balance"])
-        == expectations["partial_fill"]["expected_base_balance"]
+        Decimal(balances[tm.exchange_config.base_currency]["balance"])
+        == expectations["2_partial_fill"]["expected_base_balance"]
     )
 
     assert float(
-        balances[kraken_config.quote_currency]["balance"],
-    ) == pytest.approx(expectations["partial_fill"]["expected_quote_balance"])
+        balances[tm.exchange_config.quote_currency]["balance"],
+    ) == pytest.approx(expectations["2_partial_fill"]["expected_quote_balance"])
 
     # Cancel the partly filled order
     tm.strategy._handle_cancel_order(
@@ -710,11 +636,11 @@ async def test_kraken_grid_hodl_unfilled_surplus(  # noqa: PLR0913,PLR0917
 
     assert (
         tm.strategy._configuration_table.get()["vol_of_unfilled_remaining"]
-        == expectations["partial_fill"]["fill_volume"]
+        == expectations["2_partial_fill"]["fill_volume"]
     )
     assert (
         tm.strategy._configuration_table.get()["vol_of_unfilled_remaining_max_price"]
-        == expectations["partial_fill"]["vol_of_unfilled_remaining_max_price"]
+        == expectations["2_partial_fill"]["vol_of_unfilled_remaining_max_price"]
     )
 
     # ==========================================================================
@@ -726,11 +652,11 @@ async def test_kraken_grid_hodl_unfilled_surplus(  # noqa: PLR0913,PLR0917
 
     # Place a new buy order to execute cancel logic again.
     tm.strategy.new_buy_order(
-        order_price=expectations["sell_partial_fill"]["order_price"],
+        order_price=expectations["3_sell_partial_fill"]["order_price"],
     )
     assert (
         tm.strategy._orderbook_table.count()
-        == expectations["sell_partial_fill"]["n_open_orders"]
+        == expectations["3_sell_partial_fill"]["n_open_orders"]
     )
     assert (
         len(
@@ -742,14 +668,14 @@ async def test_kraken_grid_hodl_unfilled_surplus(  # noqa: PLR0913,PLR0917
                 if o.status == "open"
             ],
         )
-        == expectations["sell_partial_fill"]["n_open_orders"]
+        == expectations["3_sell_partial_fill"]["n_open_orders"]
     )
 
     # Fill the next buy order partly to have enough surplus to trigger a sell
     order = tm.strategy._orderbook_table.get_orders(
-        filters={"price": expectations["sell_partial_fill"]["order_price"]},
+        filters={"price": expectations["3_sell_partial_fill"]["order_price"]},
     ).all()[0]
-    api.fill_order(order["txid"], expectations["partial_fill"]["fill_volume"])
+    api.fill_order(order["txid"], expectations["2_partial_fill"]["fill_volume"])
     tm.strategy._handle_cancel_order(order["txid"])
 
     assert (
@@ -762,7 +688,7 @@ async def test_kraken_grid_hodl_unfilled_surplus(  # noqa: PLR0913,PLR0917
                 if o.status == "open"
             ],
         )
-        == expectations["sell_partial_fill"]["n_open_orders"]
+        == expectations["3_sell_partial_fill"]["n_open_orders"]
     )
     assert (
         tm.strategy._configuration_table.get()["vol_of_unfilled_remaining_max_price"]
@@ -775,8 +701,9 @@ async def test_kraken_grid_hodl_unfilled_surplus(  # noqa: PLR0913,PLR0917
         filters={"side": "sell"},
     ).all()
     assert (
-        sell_orders[0].price == expectations["sell_partial_fill"]["expected_sell_price"]
+        sell_orders[0].price
+        == expectations["3_sell_partial_fill"]["expected_sell_price"]
     )
     assert sell_orders[0].volume == pytest.approx(
-        expectations["sell_partial_fill"]["expected_sell_volume"],
+        expectations["3_sell_partial_fill"]["expected_sell_volume"],
     )

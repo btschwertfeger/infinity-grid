@@ -113,10 +113,10 @@ class KrakenTestManager:
         db_config: DBConfigDTO,
         kraken_config: KrakenExchangeAPIConfig,
     ) -> None:
-        self.__bot_config = bot_config
+        self.bot_config = bot_config
+        self.exchange_config = kraken_config
         self.__notification_config = notification_config
         self.__db_config = db_config
-        self.__kraken_config = kraken_config
         self.__engine = None
         self.__api = None  # the mocked KrakenAPI instance
 
@@ -127,10 +127,10 @@ class KrakenTestManager:
         Initialize the BotEngine, must be called before using other methods.
         """
         self.__engine, self.__api = await get_kraken_instance(
-            bot_config=self.__bot_config,
+            bot_config=self.bot_config,
             notification_config=self.__notification_config,
             db_config=self.__db_config,
-            kraken_config=self.__kraken_config,
+            kraken_config=self.exchange_config,
         )
 
     # --------------------------------------------------------------------------
@@ -449,7 +449,7 @@ class KrakenTestManager:
         )
         assert (
             self.strategy._orderbook_table.count()
-            == n_open_sell_orders + self.__bot_config.n_open_buy_orders
+            == n_open_sell_orders + self.bot_config.n_open_buy_orders
         )
 
         # Now with a different max investment, the max investment should be
@@ -528,8 +528,8 @@ class KrakenTestManager:
             ), f"Expected volume {volume}, got {order.volume}"
             assert order.side == side, f"Expected side {side}, got {order.side}"
             assert (
-                order.symbol == self.__kraken_config.pair
-            ), f"Expected symbol {self.__kraken_config.pair}, got {order.symbol}"
+                order.symbol == self.exchange_config.pair
+            ), f"Expected symbol {self.exchange_config.pair}, got {order.symbol}"
             assert (
                 order.userref == self.strategy._config.userref
             ), f"Expected userref {self.strategy._config.userref}, got {order.userref}"
