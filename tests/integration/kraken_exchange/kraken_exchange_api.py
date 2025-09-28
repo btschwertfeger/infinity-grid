@@ -18,15 +18,14 @@ from typing import Any, Callable, Self
 from kraken.spot import Market, Trade, User
 from pydantic import BaseModel
 
+LOG = logging.getLogger(__name__)
+
 
 class KrakenExchangeAPIConfig(BaseModel):
     base_currency: str  # e.g., "XBT"
     quote_currency: str  # e.g., "ZUSD"
     pair: str  # e.g., "XBTUSD"
     ws_symbol: str  # e.g., "BTC/USD"
-
-
-LOG = logging.getLogger(__name__)
 
 
 class Balances(dict):  # noqa: FURB189
@@ -74,7 +73,7 @@ class KrakenAPI(Market, Trade, User):
 
     def __init__(
         self: Self,
-        kraken_config: KrakenExchangeAPIConfig,
+        exchange_config: KrakenExchangeAPIConfig,
     ) -> None:
         super().__init__()  # DONT PASS SECRETS!
         self.__orders = {}
@@ -85,25 +84,25 @@ class KrakenAPI(Market, Trade, User):
 
         self.__balances = Balances(
             {
-                kraken_config.base_currency: {
+                exchange_config.base_currency: {
                     "balance": self.truncate_base("100.0"),
                     "hold_trade": self.truncate_base("0.0"),
                 },
-                kraken_config.quote_currency: {
+                exchange_config.quote_currency: {
                     "balance": self.truncate_cost("1000000.00000000"),
                     "hold_trade": self.truncate_cost("0.00000000"),
                 },
             },
             truncate_cost=self.truncate_cost,
             truncate_base=self.truncate_base,
-            base_currency=kraken_config.base_currency,
-            quote_currency=kraken_config.quote_currency,
+            base_currency=exchange_config.base_currency,
+            quote_currency=exchange_config.quote_currency,
         )
         self.__fee = 0.0025
-        self.__base_currency = kraken_config.base_currency
-        self.__quote_currency = kraken_config.quote_currency
-        self.__pair = kraken_config.pair
-        self.__ws_symbol = kraken_config.ws_symbol
+        self.__base_currency = exchange_config.base_currency
+        self.__quote_currency = exchange_config.quote_currency
+        self.__pair = exchange_config.pair
+        self.__ws_symbol = exchange_config.ws_symbol
 
     def create_order(self: Self, **kwargs) -> dict:  # noqa: ANN003
         """Create a new order and update balances if needed."""

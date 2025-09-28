@@ -37,7 +37,7 @@ doc:
 
 ## image	Build the Docker image
 ##
-image:
+image: rebuild
 	docker build \
 	--build-arg VERSION=dev \
 	--build-arg CREATE_TIME=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ") \
