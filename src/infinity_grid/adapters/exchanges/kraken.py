@@ -294,17 +294,28 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
             balances.append(AssetBalanceSchema(asset=symbol, **data))
         return balances
 
-    def get_pair_balance(
-        self: Self,
-    ) -> PairBalanceSchema:
+    def get_pair_balance(self: Self) -> PairBalanceSchema:
         """
         Returns the available and overall balances of the quote and base
         currency.
 
         FIXME: Is there a way to get the balances of the asset pair directly?
         FIXME: Respect balances held by auto earn
+
+        On Kraken, crypto assets are prefixed with 'X' (e.g., 'XETH', 'XXBT'),
+        while fiat assets are prefixed with 'Z' (e.g., 'ZEUR', 'ZUSD').
+
+        Tokenized assets have a '.T' suffix
+        https://docs.kraken.com/api/docs/rest-api/get-extended-balance/.
         """
-        custom_base, custom_quote = self.__retrieve_custom_base_quote_names()
+        pair_info = self.get_asset_pair_info()
+        custom_base = pair_info.base
+        custom_quote = pair_info.quote
+
+        if pair_info.aclass_base == "tokenized_asset":
+            custom_base = pair_info.base + ".T"
+        if pair_info.aclass_quote == "tokenized_asset":
+            custom_quote = pair_info.quote + ".T"
 
         base_balance = Decimal(0)
         base_available = Decimal(0)
@@ -432,9 +443,8 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
         """Get the current system status of the exchange."""
         return self.__market_service.get_system_status()["status"]  # type: ignore[no-any-return]
 
-    def get_asset_pair_info(
-        self: Self,
-    ) -> AssetPairInfoSchema:
+    @lru_cache(maxsize=1)  # noqa: B019
+    def get_asset_pair_info(self: Self) -> AssetPairInfoSchema:
         """Get available asset pair information from the exchange."""
         # NOTE: Kraken allows "XBTUSD", "BTCUSD", "BTC/USD" but not "XBT/USD"
         # which is the actual self.rest_symbol, so we need to use self.ws_symbol
@@ -464,20 +474,6 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
             EXPIRED="expired",
             PENDING="pending",
         )
-
-    # == Custom Kraken Methods for convenience =================================
-
-    @lru_cache(maxsize=1)  # noqa: B019
-    def __retrieve_custom_base_quote_names(self: Self) -> tuple[str, str]:
-        """
-        Returns the custom base and quote name for the given currencies.
-        On Kraken, crypto assets are prefixed with 'X' (e.g., 'XETH', 'XXBT'),
-        while fiat assets are prefixed with 'Z' (e.g., 'ZEUR', 'ZUSD').
-
-        This can be cached, since the asset names do not change frequently.
-        """
-        pair_info: AssetPairInfoSchema = self.get_asset_pair_info()
-        return pair_info.base, pair_info.quote
 
 
 class KrakenExchangeWebsocketServiceAdapter(IExchangeWebSocketService):

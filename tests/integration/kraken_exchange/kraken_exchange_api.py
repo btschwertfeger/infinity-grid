@@ -82,6 +82,11 @@ class KrakenAPI(Market, Trade, User):
         self.cost_decimal_places = 5
         self.base_decimal_places = 8
 
+        # Use for balance retrieval and updates. Kraken suffixes tokenized
+        # assets with '.T'
+        if exchange_config.base_currency.endswith("x"):
+            exchange_config.base_currency += ".T"
+
         self.__balances = Balances(
             {
                 exchange_config.base_currency: {
