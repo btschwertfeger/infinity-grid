@@ -63,6 +63,8 @@ class TestAssetPairInfoSchema:
             quote="ZUSD",
             cost_decimals=5,
             fees_maker=[[0, 0.25], [10000, 0.2]],
+            aclass_base="currency",
+            aclass_quote="currency",
         )
         assert pair_info.base == "XXBT"
         assert pair_info.quote == "ZUSD"
@@ -75,6 +77,8 @@ class TestAssetPairInfoSchema:
             quote="USD",
             cost_decimals=2,
             fees_maker=[],
+            aclass_base="currency",
+            aclass_quote="currency",
         )
         assert pair_info.fees_maker == []
 

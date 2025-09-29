@@ -15,6 +15,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /home/infinity-grid
 
+EXPOSE 8080
+
 RUN groupadd -r infinity-grid \
     && useradd -r -g infinity-grid -d /home/infinity-grid -s /bin/bash -c "Infinity Grid User" infinity-grid \
     && mkdir -p /home/infinity-grid \

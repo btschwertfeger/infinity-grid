@@ -19,7 +19,8 @@ confident in the algorithm's behavior and performance!
 --------------
 
 Depending on the used exchange, different preparatory steps might be needed. In
-the following, the steps for use with the Kraken Crypto Asset Exchange is shown:
+the following, the steps for use with the Kraken Crypto Asset Exchange are
+shown:
 
 1. In order to trade at the `Kraken`_ Cryptocurrency Exchange, you need to
    generate API keys for the Kraken exchange. You can do this by following the

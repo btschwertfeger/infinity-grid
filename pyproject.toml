@@ -57,7 +57,7 @@ Changelog = "https://github.com/btschwertfeger/infinity-grid/releases"
 "Bug Tracker" = "https://github.com/btschwertfeger/infinity-grid/issues"
 
 [project.optional-dependencies]
-kraken = ["python-kraken-sdk~=3.2"]
+kraken = ["python-kraken-sdk>=3.2.6,<4.0.0"]
 
 [project.scripts]
 infinity-grid = "infinity_grid.core.cli:cli"

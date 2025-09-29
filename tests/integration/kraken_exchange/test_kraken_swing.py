@@ -8,39 +8,15 @@
 """Integration tests for the SWING strategy on Kraken exchange."""
 
 import logging
+from collections.abc import Callable
+from decimal import Decimal
 from unittest import mock
 
 import pytest
 
-from infinity_grid.core.state_machine import States
-from infinity_grid.models.configuration import (
-    BotConfigDTO,
-    DBConfigDTO,
-    NotificationConfigDTO,
-)
-
-from .helper import get_kraken_instance
+from .helper import KrakenTestManager
 
 LOG = logging.getLogger(__name__)
-
-
-@pytest.fixture
-def kraken_swing_bot_config() -> BotConfigDTO:
-    return BotConfigDTO(
-        strategy="SWING",
-        exchange="Kraken",
-        api_public_key="",
-        api_secret_key="",
-        name="Local Tests Bot Swing",
-        userref=0,
-        base_currency="BTC",
-        quote_currency="USD",
-        max_investment=10000.0,
-        amount_per_grid=100.0,
-        interval=0.01,
-        n_open_buy_orders=5,
-        verbosity=0,
-    )
 
 
 @pytest.mark.wip
@@ -49,182 +25,340 @@ def kraken_swing_bot_config() -> BotConfigDTO:
 @mock.patch("infinity_grid.adapters.exchanges.kraken.sleep", return_value=None)
 @mock.patch("infinity_grid.strategies.swing.sleep", return_value=None)
 @mock.patch("infinity_grid.strategies.grid_base.sleep", return_value=None)
+@pytest.mark.parametrize(
+    ("symbol", "expectations"),
+    [
+        (
+            "XBTUSD",
+            {
+                "initial_ticker": 50_000.0,
+                "1_check_initial_n_buy_orders": {
+                    "prices": (
+                        49_504.9,
+                        49_014.7,
+                        48_529.4,
+                        48_048.9,
+                        47_573.1,
+                        51_005.0,
+                    ),
+                    "volumes": (
+                        0.00202,
+                        0.0020402,
+                        0.0020606,
+                        0.00208121,
+                        0.00210202,
+                        0.00197044,
+                    ),
+                    "sides": ("buy", "buy", "buy", "buy", "buy", "sell"),
+                },
+                "2_trigger_rapid_price_drop": {
+                    "new_price": 40_000.0,
+                    "prices": (
+                        51_005.0,
+                        49_999.9,
+                        49_504.8,
+                        49_014.6,
+                        48_529.3,
+                        48_048.8,
+                    ),
+                    "volumes": (
+                        0.00197044,
+                        0.00201005,
+                        0.00203015,
+                        0.00205046,
+                        0.00207096,
+                        0.00209167,
+                    ),
+                    "sides": ("sell", "sell", "sell", "sell", "sell", "sell"),
+                },
+                "3_trigger_ensure_n_open_buy_orders": {
+                    "new_price": 40_000.1,
+                    "prices": (
+                        51_005.0,
+                        49_999.9,
+                        49_504.8,
+                        49_014.6,
+                        48_529.3,
+                        48_048.8,
+                        39_604.0,
+                        39_211.8,
+                        38_823.5,
+                        38_439.1,
+                        38_058.5,
+                    ),
+                    "volumes": (
+                        0.00197044,
+                        0.00201005,
+                        0.00203015,
+                        0.00205046,
+                        0.00207096,
+                        0.00209167,
+                        0.00252499,
+                        0.00255025,
+                        0.00257575,
+                        0.00260151,
+                        0.00262753,
+                    ),
+                    "sides": (
+                        "sell",
+                        "sell",
+                        "sell",
+                        "sell",
+                        "sell",
+                        "sell",
+                        "buy",
+                        "buy",
+                        "buy",
+                        "buy",
+                        "buy",
+                    ),
+                },
+                "4_trigger_shift_up_buy_orders": {
+                    "new_price": 60_000.0,
+                    "prices": (
+                        59_405.9,
+                        58_817.7,
+                        58_235.3,
+                        57_658.7,
+                        57_087.8,
+                    ),
+                    "volumes": (
+                        0.00168333,
+                        0.00170016,
+                        0.00171717,
+                        0.00173434,
+                        0.00175168,
+                    ),
+                    "sides": ("buy", "buy", "buy", "buy", "buy"),
+                },
+                "5_check_not_enough_funds_for_sell": {
+                    "sell_price": 59_000.0,
+                    "n_orders": 4,
+                    "n_sell_orders": 0,
+                    "assume_base_available": 0.0,
+                    "assume_quote_available": 1_000.0,
+                },
+            },
+        ),
+        (
+            "AAPLxUSD",
+            {
+                "initial_ticker": 260.0,
+                "1_check_initial_n_buy_orders": {
+                    "prices": (
+                        257.42,
+                        254.87,
+                        252.34,
+                        249.84,
+                        247.36,
+                        265.22,
+                    ),
+                    "volumes": (
+                        0.3884702,
+                        0.39235688,
+                        0.39629071,
+                        0.40025616,
+                        0.40426908,
+                        0.37689471,
+                    ),
+                    "sides": ("buy", "buy", "buy", "buy", "buy", "sell"),
+                },
+                "2_trigger_rapid_price_drop": {
+                    # Lets fill some of the buy orders, but not all.
+                    "new_price": 250.0,
+                    "prices": (
+                        249.84,
+                        247.36,
+                        265.22,
+                        259.99,
+                        257.41,
+                        254.86,
+                    ),
+                    "volumes": (
+                        0.40025616,
+                        0.40426908,
+                        0.37689471,
+                        0.38447638,
+                        0.38832996,
+                        0.39221539,
+                    ),
+                    "sides": ("buy", "buy", "sell", "sell", "sell", "sell"),
+                },
+                "3_trigger_ensure_n_open_buy_orders": {
+                    "new_price": 250.1,
+                    "prices": (
+                        249.84,
+                        247.36,
+                        265.22,
+                        259.99,
+                        257.41,
+                        254.86,
+                        244.91,
+                        242.48,
+                        240.07,
+                    ),
+                    "volumes": (
+                        0.40025616,
+                        0.40426908,
+                        0.37689471,
+                        0.38447638,
+                        0.38832996,
+                        0.39221539,
+                        0.40831325,
+                        0.41240514,
+                        0.41654517,
+                    ),
+                    "sides": (
+                        "buy",
+                        "buy",
+                        "sell",
+                        "sell",
+                        "sell",
+                        "sell",
+                        "buy",
+                        "buy",
+                        "buy",
+                    ),
+                },
+                "4_trigger_shift_up_buy_orders": {
+                    "new_price": 255.0,
+                    "prices": (
+                        249.84,
+                        247.36,
+                        265.22,
+                        259.99,
+                        257.41,
+                        244.91,
+                        242.48,
+                        240.07,
+                    ),
+                    "volumes": (
+                        0.40025616,
+                        0.40426908,
+                        0.37689471,
+                        0.38447638,
+                        0.38832996,
+                        0.40831325,
+                        0.41240514,
+                        0.41654517,
+                    ),
+                    "sides": (
+                        "buy",
+                        "buy",
+                        "sell",
+                        "sell",
+                        "sell",
+                        "buy",
+                        "buy",
+                        "buy",
+                    ),
+                },
+                "5_check_not_enough_funds_for_sell": {
+                    "sell_price": 257.41,
+                    "n_orders": 7,
+                    "n_sell_orders": 2,
+                    "assume_base_available": 0.0,
+                    "assume_quote_available": 1_000.0,
+                },
+            },
+        ),
+    ],
+    ids=("BTCUSD", "AAPLxUSD"),
+)
 async def test_kraken_swing(
     mock_sleep1: mock.MagicMock,  # noqa: ARG001
     mock_sleep2: mock.MagicMock,  # noqa: ARG001
     mock_sleep3: mock.MagicMock,  # noqa: ARG001
     caplog: pytest.LogCaptureFixture,
-    kraken_swing_bot_config: BotConfigDTO,
-    notification_config: NotificationConfigDTO,
-    db_config: DBConfigDTO,
+    kraken_test_manager_factory: Callable[[str, str], KrakenTestManager],
+    symbol: str,
+    expectations: dict,
 ) -> None:
     """
     Integration test for the SWING strategy using pre-generated websocket
     messages.
     """
     LOG.info("******* Starting SWING integration test *******")
-    caplog.set_level(logging.DEBUG)
+    caplog.set_level(logging.INFO)
 
-    # Create engine using mocked Kraken API
-    engine = await get_kraken_instance(
-        bot_config=kraken_swing_bot_config,
-        notification_config=notification_config,
-        db_config=db_config,
-    )
-    state_machine = engine._BotEngine__state_machine
-    strategy = engine._BotEngine__strategy
-    ws_client = strategy._GridHODLStrategy__ws_client
-    api = engine._BotEngine__strategy._GridHODLStrategy__ws_client.__websocket_service
-
-    # ==========================================================================
-    # During the following processing, the following steps are done:
-    # 1. The algorithm prepares for trading (see setup)
-    # 2. The order manager checks the price range
-    # 3. The order manager checks for n open buy orders
-    # 4. The order manager places new orders
-    await ws_client.on_message(
-        {
-            "channel": "executions",
-            "type": "snapshot",
-            "data": [{"exec_type": "canceled", "order_id": "txid0"}],
-        },
-    )
-    assert state_machine.state == States.INITIALIZING
-    assert strategy._ready_to_trade is False
-
-    await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    assert strategy._ticker == 50000.0
-    assert state_machine.state == States.RUNNING
-    assert strategy._ready_to_trade is True
+    tm = kraken_test_manager_factory(symbol, strategy="SWING")
+    await tm.initialize_engine()
+    await tm.trigger_prepare_for_trading(initial_ticker=expectations["initial_ticker"])
 
     # ==========================================================================
     # 1. PLACEMENT OF INITIAL N BUY ORDERS
-    # After both fake-websocket channels are connected, the algorithm went
-    # through its full setup and placed orders against the fake Kraken API and
-    # finally saved those results into the local orderbook table.
-    # The SWING strategy additionally starts selling the existing base currency
-    # at defined intervals.
-    LOG.info("******* Check placement of initial buy orders *******")
-
-    for order, price, volume, side in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (49504.9, 49014.7, 48529.4, 48048.9, 47573.1, 51005.0),
-        (0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202, 0.00197044),
-        ["buy"] * 5 + ["sell"],
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == side
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
+    await tm.check_initial_n_buy_orders(
+        prices=expectations["1_check_initial_n_buy_orders"]["prices"],
+        volumes=expectations["1_check_initial_n_buy_orders"]["volumes"],
+        sides=expectations["1_check_initial_n_buy_orders"]["sides"],
+    )
 
     # ==========================================================================
     # 2. RAPID PRICE DROP - FILLING ALL BUY ORDERS + CREATING SELL ORDERS
     # Now check the behavior for a rapid price drop.
     # It should fill the buy orders and place 6 new sell orders.
-
-    await api.on_ticker_update(callback=ws_client.on_message, last=40000.0)
-    assert strategy._ticker == 40000.0
-    assert state_machine.state == States.RUNNING
-
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (51005.0, 49999.9, 49504.8, 49014.6, 48529.3, 48048.8),
-        (0.00197044, 0.00201005, 0.00203015, 0.00205046, 0.00207096, 0.00209167),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "sell"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
+    await tm.trigger_rapid_price_drop(
+        new_price=expectations["2_trigger_rapid_price_drop"]["new_price"],
+        prices=expectations["2_trigger_rapid_price_drop"]["prices"],
+        volumes=expectations["2_trigger_rapid_price_drop"]["volumes"],
+        sides=expectations["2_trigger_rapid_price_drop"]["sides"],
+    )
 
     # ==========================================================================
     # 3. NEW TICKER TO ENSURE N OPEN BUY ORDERS
-    LOG.info("******* Check ensuring N open buy orders *******")
-    await api.on_ticker_update(callback=ws_client.on_message, last=40000.1)
-    assert state_machine.state == States.RUNNING
-
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders(filters={"side": "sell"}).all(),
-        (51005.0, 49999.9, 49504.8, 49014.6, 48529.3, 48048.8),
-        (0.00197044, 0.00201005, 0.00203015, 0.00205046, 0.00207096, 0.00209167),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "sell"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
-
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders(filters={"side": "buy"}).all(),
-        (39604.0, 39211.8, 38823.5, 38439.1, 38058.5),
-        (0.00252499, 0.00255025, 0.00257575, 0.00260151, 0.00262753),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
+    await tm.trigger_ensure_n_open_buy_orders(
+        new_price=expectations["3_trigger_ensure_n_open_buy_orders"]["new_price"],
+        prices=expectations["3_trigger_ensure_n_open_buy_orders"]["prices"],
+        volumes=expectations["3_trigger_ensure_n_open_buy_orders"]["volumes"],
+        sides=expectations["3_trigger_ensure_n_open_buy_orders"]["sides"],
+    )
 
     # ==========================================================================
     # 4. FILLING SELL ORDERS WHILE SHIFTING UP BUY ORDERS
-    LOG.info("******* Check filling sell orders while shifting up buy orders *******")
     # Check if shifting up the buy orders works
-    quote_balance_before = float(api.get_balances()["ZUSD"]["balance"])
-    base_balance_before = float(api.get_balances()["XXBT"]["balance"])
+    api = tm.ws_client.__websocket_service
 
-    await api.on_ticker_update(callback=ws_client.on_message, last=60000.0)
-    assert state_machine.state == States.RUNNING
+    base_balance_before = float(
+        api.get_balances()[tm.exchange_config.base_currency]["balance"],
+    )
+    quote_balance_before = float(
+        api.get_balances()[tm.exchange_config.quote_currency]["balance"],
+    )
 
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (59405.9, 58817.7, 58235.3, 57658.7, 57087.8),
-        (0.00168333, 0.00170016, 0.00171717, 0.00173434, 0.00175168),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
+    await tm.trigger_shift_up_buy_orders(
+        new_price=expectations["4_trigger_shift_up_buy_orders"]["new_price"],
+        prices=expectations["4_trigger_shift_up_buy_orders"]["prices"],
+        volumes=expectations["4_trigger_shift_up_buy_orders"]["volumes"],
+        sides=expectations["4_trigger_shift_up_buy_orders"]["sides"],
+    )
 
     # Ensure that profit has been made
-    assert float(api.get_balances()["ZUSD"]["balance"]) > quote_balance_before
-    assert float(api.get_balances()["XXBT"]["balance"]) < base_balance_before
+    assert (
+        float(api.get_balances()[tm.exchange_config.base_currency]["balance"])
+        < base_balance_before
+    )
+    assert (
+        float(api.get_balances()[tm.exchange_config.quote_currency]["balance"])
+        > quote_balance_before
+    )
 
     # ==========================================================================
     # 5. Test what happens if there are not enough funds to place a sell order
     #    for some reason.
-    LOG.info("******* Check not enough funds for sell order *******")
-
-    # Save the original method to restore it later
-    original_get_pair_balance = strategy._rest_api.get_pair_balance
-
-    # Mock the instance method directly
-    strategy._rest_api.get_pair_balance = mock.Mock(
-        return_value=mock.Mock(
-            base_available=0.000,
-            quote_available=1000.0,
-        ),
+    await tm.check_not_enough_funds_for_sell(
+        sell_price=expectations["5_check_not_enough_funds_for_sell"]["sell_price"],
+        n_orders=expectations["5_check_not_enough_funds_for_sell"]["n_orders"],
+        n_sell_orders=expectations["5_check_not_enough_funds_for_sell"][
+            "n_sell_orders"
+        ],
+        assume_base_available=expectations["5_check_not_enough_funds_for_sell"][
+            "assume_base_available"
+        ],
+        assume_quote_available=expectations["5_check_not_enough_funds_for_sell"][
+            "assume_quote_available"
+        ],
+        fail=False,
     )
-
-    try:
-        # Now trigger the sell order
-        await api.on_ticker_update(callback=ws_client.on_message, last=59000.0)
-        assert state_machine.state == States.RUNNING
-        assert strategy._orderbook_table.count() == 4
-        assert (
-            len(strategy._orderbook_table.get_orders(filters={"side": "sell"}).all())
-            == 0
-        )
-        assert "Not enough funds" in caplog.text
-    finally:
-        # Restore the original method
-        strategy._rest_api.get_pair_balance = original_get_pair_balance
 
 
 @pytest.mark.integration
@@ -232,14 +366,128 @@ async def test_kraken_swing(
 @mock.patch("infinity_grid.adapters.exchanges.kraken.sleep", return_value=None)
 @mock.patch("infinity_grid.strategies.swing.sleep", return_value=None)
 @mock.patch("infinity_grid.strategies.grid_base.sleep", return_value=None)
+@pytest.mark.parametrize(
+    ("symbol", "expectations"),
+    [
+        (
+            "XBTUSD",
+            {
+                "initial_ticker": 50_000.0,
+                "1_check_initial_n_buy_orders": {
+                    "prices": (
+                        49_504.9,
+                        49_014.7,
+                        48_529.4,
+                        48_048.9,
+                        47_573.1,
+                        51_005.0,
+                    ),
+                    "volumes": (
+                        0.00202,
+                        0.0020402,
+                        0.0020606,
+                        0.00208121,
+                        0.00210202,
+                        0.00197044,
+                    ),
+                    "sides": ("buy", "buy", "buy", "buy", "buy", "sell"),
+                },
+                "2_balance_approximately": {
+                    "base_balance": 99.99802956,
+                    "base_hold": 0.00197044,
+                    "quote_balance": 999_500.0011705891,
+                    "quote_hold": 499.99882941100003,
+                },
+                "3_partly_filled_pt1": {
+                    "fill_volume": 0.002,
+                    "n_open_orders": 6,
+                    "expected_base_balance": Decimal("100.002"),
+                    "expected_quote_balance": 999_400.99,
+                    "vol_of_unfilled_remaining_max_price": 49_504.9,
+                    "approximations": {
+                        "base_balance": 100.00002956,
+                        "base_hold": 0.00197044,
+                        "quote_balance": 999_400.9913705891,
+                        "quote_hold": 400.98902941100005,
+                    },
+                },
+                "4_partly_filled_pt2": {
+                    "order_price": 49_504.9,
+                    "n_open_orders": 6,
+                    "expected_sell_price": 50_500.0,
+                    "expected_sell_volume": 0.00199014,
+                },
+                "5_check_max_investment_reached": {
+                    "current_price": 50_000.0,
+                    "n_open_sell_orders": 2,
+                },
+            },
+        ),
+        (
+            "AAPLxUSD",
+            {
+                "initial_ticker": 260.0,
+                "1_check_initial_n_buy_orders": {
+                    "prices": (
+                        257.42,
+                        254.87,
+                        252.34,
+                        249.84,
+                        247.36,
+                        265.22,
+                    ),
+                    "volumes": (
+                        0.3884702,
+                        0.39235688,
+                        0.39629071,
+                        0.40025616,
+                        0.40426908,
+                        0.37689471,
+                    ),
+                    "sides": ("buy", "buy", "buy", "buy", "buy", "sell"),
+                },
+                "2_balance_approximately": {
+                    "base_balance": 99.62310529,
+                    "base_hold": 0.37689471,
+                    "quote_balance": 999_500.0011705891,
+                    "quote_hold": 499.99999,
+                },
+                "3_partly_filled_pt1": {
+                    "fill_volume": 0.3,
+                    "n_open_orders": 6,
+                    "expected_base_balance": Decimal("100.3"),
+                    "expected_quote_balance": 999_422.77401,
+                    "vol_of_unfilled_remaining_max_price": 257.42,
+                    "approximations": {
+                        "base_balance": 99.92310529,
+                        "base_hold": 0.37689471,
+                        "quote_balance": 999_422.77401,
+                        "quote_hold": 422.77399,
+                    },
+                },
+                "4_partly_filled_pt2": {
+                    "order_price": 257.42,
+                    "n_open_orders": 6,
+                    "expected_sell_price": 262.6,
+                    "expected_sell_volume": 0.38065504,
+                },
+                "5_check_max_investment_reached": {
+                    "current_price": 257.42,
+                    "n_open_sell_orders": 2,
+                },
+            },
+        ),
+    ],
+    ids=("BTCUSD", "AAPLxUSD"),
+)
 async def test_kraken_swing_unfilled_surplus(
     mock_sleep1: mock.MagicMock,  # noqa: ARG001
     mock_sleep2: mock.Mock,  # noqa: ARG001
     mock_sleep3: mock.Mock,  # noqa: ARG001
     caplog: pytest.LogCaptureFixture,
-    kraken_swing_bot_config: BotConfigDTO,
-    notification_config: NotificationConfigDTO,
-    db_config: DBConfigDTO,
+    kraken_test_manager_factory: Callable[[str, str], KrakenTestManager],
+    symbol: str,
+    expectations: dict,
 ) -> None:
     """
     Integration test for the SWING strategy using pre-generated websocket
@@ -253,91 +501,81 @@ async def test_kraken_swing_unfilled_surplus(
     LOG.info("******* Starting SWING unfilled surplus integration test *******")
     caplog.set_level(logging.INFO)
 
-    # Create engine using mocked Kraken API
-    engine = await get_kraken_instance(
-        bot_config=kraken_swing_bot_config,
-        notification_config=notification_config,
-        db_config=db_config,
-    )
-    state_machine = engine._BotEngine__state_machine
-    strategy = engine._BotEngine__strategy
-    ws_client = strategy._GridHODLStrategy__ws_client
-    rest_api = strategy._rest_api
-    api = engine._BotEngine__strategy._GridHODLStrategy__ws_client.__websocket_service
-
-    # ==========================================================================
-    # During the following processing, the following steps are done:
-    # 1. The algorithm prepares for trading (see setup)
-    # 2. The order manager checks the price range
-    # 3. The order manager checks for n open buy orders
-    # 4. The order manager places new orders
-    await ws_client.on_message(
-        {
-            "channel": "executions",
-            "type": "snapshot",
-            "data": [{"exec_type": "canceled", "order_id": "txid0"}],
-        },
-    )
-    assert state_machine.state == States.INITIALIZING
-    assert strategy._ready_to_trade is False
-
-    await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    assert strategy._ticker == 50000.0
-    assert state_machine.state == States.RUNNING
-    assert strategy._ready_to_trade is True
+    tm = kraken_test_manager_factory(symbol, strategy="SWING")
+    await tm.initialize_engine()
+    await tm.trigger_prepare_for_trading(initial_ticker=expectations["initial_ticker"])
 
     # ==========================================================================
     # 1. PLACEMENT OF INITIAL N BUY ORDERS
-    # After both fake-websocket channels are connected, the algorithm went
-    # through its full setup and placed orders against the fake Kraken API and
-    # finally saved those results into the local orderbook table.
-    LOG.info("******* Check placement of initial buy orders *******")
-
-    # Check if the five initial buy orders are placed with the expected price
-    # and volume. Note that the interval is not exactly 0.01 due to the fee
-    # which is taken into account.
-    for order, price, volume, side in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (49504.9, 49014.7, 48529.4, 48048.9, 47573.1, 51005.0),
-        (0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202, 0.00197044),
-        ["buy"] * 5 + ["sell"],
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == side
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
+    await tm.check_initial_n_buy_orders(
+        prices=expectations["1_check_initial_n_buy_orders"]["prices"],
+        volumes=expectations["1_check_initial_n_buy_orders"]["volumes"],
+        sides=expectations["1_check_initial_n_buy_orders"]["sides"],
+    )
+    api = tm.ws_client.__websocket_service
 
     balances = api.get_balances()
-    assert float(balances["XXBT"]["balance"]) == pytest.approx(99.99802956)
-    assert float(balances["XXBT"]["hold_trade"]) == pytest.approx(0.00197044)
-    assert float(balances["ZUSD"]["balance"]) == pytest.approx(999500.0011705891)
-    assert float(balances["ZUSD"]["hold_trade"]) == pytest.approx(499.99882941100003)
+    assert float(
+        balances[tm.exchange_config.base_currency]["balance"],
+    ) == pytest.approx(expectations["2_balance_approximately"]["base_balance"])
+    assert float(
+        balances[tm.exchange_config.base_currency]["hold_trade"],
+    ) == pytest.approx(expectations["2_balance_approximately"]["base_hold"])
+    assert float(
+        balances[tm.exchange_config.quote_currency]["balance"],
+    ) == pytest.approx(expectations["2_balance_approximately"]["quote_balance"])
+    assert float(
+        balances[tm.exchange_config.quote_currency]["hold_trade"],
+    ) == pytest.approx(expectations["2_balance_approximately"]["quote_hold"])
 
     # ==========================================================================
     # 2. BUYING PARTLY FILLED and ensure that the unfilled surplus is handled
     # correctly.
     LOG.info("******* Check handling of unfilled surplus *******")
-    api.fill_order(strategy._orderbook_table.get_orders().first().txid, 0.002)
-    assert strategy._orderbook_table.count() == 6
-
-    # We have not 100.002 here, since the GridSell is initially creating a sell
-    # order which reduces the available base balance.
-    balances = api.get_balances()
-    assert float(balances["XXBT"]["balance"]) == pytest.approx(100.00002956)
-    assert float(balances["XXBT"]["hold_trade"]) == pytest.approx(0.00197044)
-    assert float(balances["ZUSD"]["balance"]) == pytest.approx(999400.9913705891)
-    assert float(balances["ZUSD"]["hold_trade"]) == pytest.approx(400.98902941100005)
-
-    strategy._handle_cancel_order(
-        strategy._orderbook_table.get_orders().first().txid,
+    api.fill_order(
+        tm.strategy._orderbook_table.get_orders().first().txid,
+        expectations["3_partly_filled_pt1"]["fill_volume"],
+    )
+    assert (
+        tm.strategy._orderbook_table.count()
+        == expectations["3_partly_filled_pt1"]["n_open_orders"]
     )
 
-    assert strategy._configuration_table.get()["vol_of_unfilled_remaining"] == 0.002
+    # We have not 100.002 here, since the Swing is initially creating a sell
+    # order which reduces the available base balance.
+    balances = api.get_balances()
+    assert float(
+        balances[tm.exchange_config.base_currency]["balance"],
+    ) == pytest.approx(
+        expectations["3_partly_filled_pt1"]["approximations"]["base_balance"],
+    )
+    assert float(
+        balances[tm.exchange_config.base_currency]["hold_trade"],
+    ) == pytest.approx(
+        expectations["3_partly_filled_pt1"]["approximations"]["base_hold"],
+    )
+    assert float(
+        balances[tm.exchange_config.quote_currency]["balance"],
+    ) == pytest.approx(
+        expectations["3_partly_filled_pt1"]["approximations"]["quote_balance"],
+    )
+    assert float(
+        balances[tm.exchange_config.quote_currency]["hold_trade"],
+    ) == pytest.approx(
+        expectations["3_partly_filled_pt1"]["approximations"]["quote_hold"],
+    )
+
+    tm.strategy._handle_cancel_order(
+        tm.strategy._orderbook_table.get_orders().first().txid,
+    )
+
     assert (
-        strategy._configuration_table.get()["vol_of_unfilled_remaining_max_price"]
-        == 49504.9
+        tm.strategy._configuration_table.get()["vol_of_unfilled_remaining"]
+        == expectations["3_partly_filled_pt1"]["fill_volume"]
+    )
+    assert (
+        tm.strategy._configuration_table.get()["vol_of_unfilled_remaining_max_price"]
+        == expectations["3_partly_filled_pt1"]["vol_of_unfilled_remaining_max_price"]
     )
 
     # ==========================================================================
@@ -346,63 +584,65 @@ async def test_kraken_swing_unfilled_surplus(
     #    only time where this amount is touched. So we need to create another
     #    partly filled order.
     LOG.info("******* Check selling the unfilled surplus *******")
-    strategy.new_buy_order(order_price=49504.9)
-    assert strategy._orderbook_table.count() == 6
+    tm.strategy.new_buy_order(
+        order_price=expectations["4_partly_filled_pt2"]["order_price"],
+    )
+    assert (
+        tm.strategy._orderbook_table.count()
+        == expectations["4_partly_filled_pt2"]["n_open_orders"]
+    )
     assert (
         len(
             [
                 o
-                for o in rest_api.get_open_orders(userref=strategy._config.userref)
+                for o in tm.rest_api.get_open_orders(
+                    userref=tm.strategy._config.userref,
+                )
                 if o.status == "open"
             ],
         )
-        == 6
+        == expectations["4_partly_filled_pt2"]["n_open_orders"]
     )
 
-    order = strategy._orderbook_table.get_orders(filters={"price": 49504.9}).all()[0]
-    api.fill_order(order["txid"], 0.002)
-    strategy._handle_cancel_order(order["txid"])
+    order = tm.strategy._orderbook_table.get_orders(
+        filters={"price": expectations["4_partly_filled_pt2"]["order_price"]},
+    ).all()[0]
+    api.fill_order(order["txid"], expectations["3_partly_filled_pt1"]["fill_volume"])
+    tm.strategy._handle_cancel_order(order["txid"])
 
     assert (
         len(
             [
                 o
-                for o in rest_api.get_open_orders(userref=strategy._config.userref)
+                for o in tm.rest_api.get_open_orders(
+                    userref=tm.strategy._config.userref,
+                )
                 if o.status == "open"
             ],
         )
-        == 6
+        == expectations["4_partly_filled_pt2"]["n_open_orders"]
     )
     assert (
-        strategy._configuration_table.get()["vol_of_unfilled_remaining_max_price"]
+        tm.strategy._configuration_table.get()["vol_of_unfilled_remaining_max_price"]
         == 0.0
     )
 
-    sell_orders = strategy._orderbook_table.get_orders(
+    sell_orders = tm.strategy._orderbook_table.get_orders(
         filters={"side": "sell", "id": 7},
     ).all()
-    assert sell_orders[0].price == 50500.0
-    assert sell_orders[0].volume == pytest.approx(0.00199014)
+    assert (
+        sell_orders[0].price
+        == expectations["4_partly_filled_pt2"]["expected_sell_price"]
+    )
+    assert sell_orders[0].volume == pytest.approx(
+        expectations["4_partly_filled_pt2"]["expected_sell_volume"],
+    )
 
     # ==========================================================================
     # 4. MAX INVESTMENT REACHED
-    LOG.info("******* Check max investment reached behavior *******")
-
-    # First ensure that new buy orders can be placed...
-    assert not strategy._max_investment_reached
-    strategy._GridStrategyBase__cancel_all_open_buy_orders()
-    assert strategy._orderbook_table.count() == 2  # two sell orders
-    await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    assert strategy._orderbook_table.count() == 7  # 5 buy orders + 2 sell orders
-
-    # Now with a different max investment, the max investment should be reached
-    # and no further orders be placed.
-    assert not strategy._max_investment_reached
-    strategy._config.max_investment = 202.0  # 200 USD + fee
-    strategy._GridStrategyBase__cancel_all_open_buy_orders()
-    assert strategy._orderbook_table.count() == 2
-    await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    assert strategy._orderbook_table.count() == 2
-    assert strategy._max_investment_reached
-
-    assert state_machine.state == States.RUNNING
+    await tm.check_max_investment_reached(
+        current_price=expectations["5_check_max_investment_reached"]["current_price"],
+        n_open_sell_orders=expectations["5_check_max_investment_reached"][
+            "n_open_sell_orders"
+        ],
+    )
