@@ -5,6 +5,7 @@
 # https://github.com/btschwertfeger
 #
 
+import sys
 from logging import DEBUG, INFO, WARNING, basicConfig, getLogger
 from typing import Any
 
@@ -414,6 +415,9 @@ def run(ctx: Context, **kwargs: dict[str, Any]) -> None:
         port=kwargs.pop("metrics_port"),
     )
     ctx.obj |= kwargs
+
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     asyncio.run(
         BotEngine(
