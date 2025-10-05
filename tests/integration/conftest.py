@@ -5,11 +5,6 @@
 # https://github.com/btschwertfeger
 #
 
-import pytest
-
-from infinity_grid.models.configuration import NotificationConfigDTO, TelegramConfigDTO
-
-
 from typing import Callable
 
 import pytest
@@ -18,15 +13,16 @@ from infinity_grid.models.configuration import (
     BotConfigDTO,
     DBConfigDTO,
     NotificationConfigDTO,
+    TelegramConfigDTO,
 )
 
-from .framework.base_test_manager import ExchangeTestConfig, BaseIntegrationTestManager
-
+from .framework.base_test_manager import BaseIntegrationTestManager, ExchangeTestConfig
 
 
 @pytest.fixture(scope="session")
 def notification_config() -> NotificationConfigDTO:
     return NotificationConfigDTO(telegram=TelegramConfigDTO(token=None, chat_id=None))
+
 
 @pytest.fixture
 def exchange_config_factory() -> Callable:
@@ -59,7 +55,10 @@ def bot_config_factory() -> Callable:
     """Factory to create BotConfigDTO instances for different symbols."""
 
     def _make_bot_config(
-        exchange: str, strategy: str, base_currency: str, quote_currency: str,
+        exchange: str,
+        strategy: str,
+        base_currency: str,
+        quote_currency: str,
     ) -> BotConfigDTO:
         return BotConfigDTO(
             strategy=strategy,
@@ -85,7 +84,9 @@ def bot_config_factory() -> Callable:
                 return _make_bot_config(exchange, strategy, "AAPLx", "USD")
             raise ValueError(f"Unknown bot config symbol for {exchange}: {symbol}")
         raise ValueError(f"Unknown exchange for bot config: {exchange}")
+
     return _factory
+
 
 @pytest.fixture
 def test_manager_factory(
@@ -103,7 +104,9 @@ def test_manager_factory(
 
         manager = None
         if exchange == "Kraken":
-            from .kraken_exchange.kraken_test_manager import KrakenIntegrationTestManager
+            from .kraken_exchange.kraken_test_manager import (
+                KrakenIntegrationTestManager,
+            )
 
             manager = KrakenIntegrationTestManager
         else:
@@ -113,7 +116,7 @@ def test_manager_factory(
             bot_config=bot_config_factory(exchange, symbol, strategy),
             notification_config=notification_config,
             db_config=db_config,
-            exchange_config=exchange_config_factory( symbol),
+            exchange_config=exchange_config_factory(symbol),
         )
 
     return _factory

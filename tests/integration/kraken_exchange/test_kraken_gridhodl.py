@@ -18,16 +18,13 @@ from unittest import mock
 
 import pytest
 
+from ..framework.test_data import (
+    GRIDHODL_TEST_DATA,
+    GRIDHODL_UNFILLED_SURPLUS_TEST_DATA,
+    GridHODLTestData,
+    GridHODLUnfilledSurplusTestData,
+)
 from ..framework.test_scenarios import IntegrationTestScenarios
-from ..framework.test_data import GRIDHODL_TEST_DATA, GRIDHODL_UNFILLED_SURPLUS_TEST_DATA
-from ..framework.test_data import GridHODLTestExpectations, GridHODLUnfilledSurplusTestExpectations
-
-from ..framework.test_scenarios import IntegrationTestScenarios
-import logging
-from typing import Callable
-from unittest import mock
-
-import pytest
 
 LOG = logging.getLogger(__name__)
 
@@ -52,7 +49,7 @@ async def test_gridhodl(
     caplog: pytest.LogCaptureFixture,
     test_manager_factory: Callable,
     symbol: str,
-    test_data: GridHODLTestExpectations,
+    test_data: GridHODLTestData,
 ) -> None:
     """
     Test the GridHODL strategy scenarios.
@@ -61,45 +58,9 @@ async def test_gridhodl(
 
     test_manager = test_manager_factory("Kraken", symbol, strategy="GridHODL")
     await test_manager.initialize_engine()
-    scenarios = IntegrationTestScenarios(test_manager)
 
-    # Initialize and prepare for trading
-    await scenarios.scenario_prepare_for_trading(test_data.initial_ticker)
-    # Ensure that initial buy orders are placed
-    await scenarios.scenario_check_initial_buy_orders(
-        test_data.check_initial_n_buy_orders
-    )
-    # Shift buy orders up and ensure correct behavior
-    await scenarios.scenario_shift_buy_orders_up(
-        test_data.trigger_shift_up_buy_orders
-    )
-    # Fill a buy order and ensure correct behavior
-    await scenarios.scenario_fill_buy_order(test_data.trigger_fill_buy_order)
-    # Ensure that after filling a buy order, the correct number of buy orders
-    # are present
-    await scenarios.scenario_ensure_n_open_buy_orders(
-        test_data.trigger_ensure_n_open_buy_orders
-    )
-    # Fill a sell order
-    await scenarios.scenario_fill_sell_order(test_data.trigger_fill_sell_order)
-    # Check rapid price drop handling
-    await scenarios.scenario_rapid_price_drop(test_data.trigger_rapid_price_drop)
-    # After rapid price drop, execute the sell orders
-    await scenarios.scenario_trigger_all_sell_orders(
-        test_data.trigger_all_sell_orders
-    )
-    # Check handling of insufficient funds for selling
-    await scenarios.scenario_check_not_enough_funds_for_sell(
-        test_data.check_not_enough_funds_for_sell
-    )
-    # Sell all after not having enough funds
-    await scenarios.scenario_sell_after_not_enough_funds(
-        test_data.sell_after_not_enough_funds_for_sell
-    )
-    # Check max investment reached
-    await scenarios.scenario_check_max_investment_reached(
-        test_data.check_max_investment_reached
-    )
+    scenarios = IntegrationTestScenarios(test_manager)
+    await scenarios.run_gridhodl_scenarios(test_data)
 
 
 @pytest.mark.integration
@@ -107,12 +68,14 @@ async def test_gridhodl(
 @mock.patch("infinity_grid.adapters.exchanges.kraken.sleep", return_value=None)
 @mock.patch("infinity_grid.strategies.grid_hodl.sleep", return_value=None)
 @mock.patch("infinity_grid.strategies.grid_base.sleep", return_value=None)
-@pytest.mark.parametrize(    ("symbol", "test_data"),
+@pytest.mark.parametrize(
+    ("symbol", "test_data"),
     [
         ("XBTUSD", GRIDHODL_UNFILLED_SURPLUS_TEST_DATA["XBTUSD"]),
         ("AAPLxUSD", GRIDHODL_UNFILLED_SURPLUS_TEST_DATA["AAPLxUSD"]),
     ],
-    ids=("BTCUSD", "AAPLxUSD"),)
+    ids=("BTCUSD", "AAPLxUSD"),
+)
 async def test_grid_hodl_unfilled_surplus(
     mock_sleep1: mock.MagicMock,  # noqa: ARG001
     mock_sleep2: mock.Mock,  # noqa: ARG001
@@ -120,7 +83,7 @@ async def test_grid_hodl_unfilled_surplus(
     caplog: pytest.LogCaptureFixture,
     test_manager_factory: pytest.FixtureRequest,
     symbol: str,
-    test_data: GridHODLUnfilledSurplusTestExpectations,
+    test_data: GridHODLUnfilledSurplusTestData,
 ) -> None:
     """
     Integration test for the GridHODL strategy using pre-generated websocket
@@ -146,7 +109,7 @@ async def test_grid_hodl_unfilled_surplus(
     # Use scenarios for the common setup parts
     await scenarios.scenario_prepare_for_trading(test_data.initial_ticker)
     await scenarios.scenario_check_initial_buy_orders(
-        test_data.check_initial_n_buy_orders
+        test_data.check_initial_n_buy_orders,
     )
 
     # ==========================================================================
@@ -222,7 +185,8 @@ async def test_grid_hodl_unfilled_surplus(
         filters={"price": test_data.sell_partial_fill.order_price},
     ).all()[0]
     test_manager._mock_api.fill_order(
-        order["txid"], test_data.partial_fill.fill_volume
+        order["txid"],
+        test_data.partial_fill.fill_volume,
     )
     test_manager.strategy._handle_cancel_order(order["txid"])
 
@@ -250,10 +214,7 @@ async def test_grid_hodl_unfilled_surplus(
     sell_orders = test_manager.strategy._orderbook_table.get_orders(
         filters={"side": "sell"},
     ).all()
-    assert (
-        sell_orders[0].price
-        == test_data.sell_partial_fill.expected_sell_price
-    )
+    assert sell_orders[0].price == test_data.sell_partial_fill.expected_sell_price
     assert sell_orders[0].volume == pytest.approx(
         test_data.sell_partial_fill.expected_sell_volume,
     )

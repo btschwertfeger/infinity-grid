@@ -15,17 +15,22 @@ approaches and reducing code duplication.
 
 import logging
 from typing import Self
+
 from .base_test_manager import BaseIntegrationTestManager
 from .test_data import (
-    OrderExpectation,
+    CDCATestData,
     FillBuyOrderExpectation,
-    ShiftOrdersExpectation,
-    RapidPriceDropExpectation,
-    MaxInvestmentExpectation,
     FillSellOrderExpectation,
-    TriggerAllSellOrdersExpectation,
+    GridHODLTestData,
+    GridSellTestData,
+    MaxInvestmentExpectation,
     NotEnoughFundsForSellExpectation,
+    OrderExpectation,
+    RapidPriceDropExpectation,
     SellAfterNotEnoughFundsExpectation,
+    ShiftOrdersExpectation,
+    SWINGTestData,
+    TriggerAllSellOrdersExpectation,
 )
 
 LOG = logging.getLogger(__name__)
@@ -43,6 +48,200 @@ class IntegrationTestScenarios:
     def __init__(self: Self, test_manager: BaseIntegrationTestManager) -> None:
         self.manager = test_manager
 
+    # =============================================================================
+
+    async def run_cdca_scenarios(
+        self: Self,
+        test_data: CDCATestData,
+    ) -> None:
+        # Initialize the algorithm with the initial ticker price
+        await self.scenario_prepare_for_trading(test_data.initial_ticker)
+        # Ensure the initial n open buy orders were placed correctly
+        await self.scenario_check_initial_buy_orders(
+            test_data.check_initial_n_buy_orders,
+        )
+        # Shift buy orders up and verify the new state
+        await self.scenario_shift_buy_orders_up(test_data.trigger_shift_up_buy_orders)
+        # Fill a buy order and verify the resulting state
+        await self.scenario_fill_buy_order(test_data.trigger_fill_buy_order)
+        # Ensure that the correct number of open buy orders are maintained
+        await self.scenario_ensure_n_open_buy_orders(
+            test_data.trigger_ensure_n_open_buy_orders,
+        )
+        # Simulate a rapid price drop and verify the resulting state
+        await self.scenario_rapid_price_drop(test_data.trigger_rapid_price_drop)
+        # Again, ensure the correct number of open buy orders after the price drop
+        await self.scenario_ensure_n_open_buy_orders(
+            test_data.trigger_ensure_n_open_buy_orders_after_drop,
+        )
+        # Finally, check that the max investment condition is handled correctly
+        await self.scenario_check_max_investment_reached(
+            test_data.check_max_investment_reached,
+        )
+
+    async def run_gridhodl_scenarios(self: Self, test_data: GridHODLTestData) -> None:
+
+        # Initialize and prepare for trading
+        await self.scenario_prepare_for_trading(test_data.initial_ticker)
+        # Ensure that initial buy orders are placed
+        await self.scenario_check_initial_buy_orders(
+            test_data.check_initial_n_buy_orders,
+        )
+        # Shift buy orders up and ensure correct behavior
+        await self.scenario_shift_buy_orders_up(test_data.trigger_shift_up_buy_orders)
+        # Fill a buy order and ensure correct behavior
+        await self.scenario_fill_buy_order(test_data.trigger_fill_buy_order)
+        # Ensure that after filling a buy order, the correct number of buy orders
+        # are present
+        await self.scenario_ensure_n_open_buy_orders(
+            test_data.trigger_ensure_n_open_buy_orders,
+        )
+        # Fill a sell order
+        await self.scenario_fill_sell_order(test_data.trigger_fill_sell_order)
+        # Check rapid price drop handling
+        await self.scenario_rapid_price_drop(test_data.trigger_rapid_price_drop)
+        # After rapid price drop, execute the sell orders
+        await self.scenario_trigger_all_sell_orders(test_data.trigger_all_sell_orders)
+        # Check handling of insufficient funds for selling
+        await self.scenario_check_not_enough_funds_for_sell(
+            test_data.check_not_enough_funds_for_sell,
+        )
+        # Sell all after not having enough funds
+        await self.scenario_sell_after_not_enough_funds(
+            test_data.sell_after_not_enough_funds_for_sell,
+        )
+        # Check max investment reached
+        await self.scenario_check_max_investment_reached(
+            test_data.check_max_investment_reached,
+        )
+
+    async def run_gridsell_scenarios(
+        self: Self,
+        test_data: GridSellTestData,
+    ) -> None:
+
+        # ==========================================================================
+        # INITIALIZATION AND SETUP
+        await self.scenario_prepare_for_trading(test_data.initial_ticker)
+
+        # ==========================================================================
+        # 1. PLACEMENT OF INITIAL N BUY ORDERS
+        await self.scenario_check_initial_buy_orders(
+            test_data.check_initial_n_buy_orders,
+        )
+
+        # ==========================================================================
+        # 2. SHIFTING UP BUY ORDERS
+        await self.scenario_shift_buy_orders_up(test_data.trigger_shift_up_buy_orders)
+
+        # ==========================================================================
+        # 3. FILLING A BUY ORDER
+        await self.scenario_fill_buy_order(test_data.trigger_fill_buy_order)
+
+        # ==========================================================================
+        # 4. ENSURING N OPEN BUY ORDERS
+        await self.scenario_ensure_n_open_buy_orders(
+            test_data.trigger_ensure_n_open_buy_orders,
+        )
+
+        # ==========================================================================
+        # 5. FILLING A SELL ORDER
+        await self.scenario_fill_sell_order(test_data.trigger_fill_sell_order)
+
+        # ... as we can see, the sell order got removed from the orderbook.
+        # ... there is no new corresponding buy order placed - this would only be
+        # the case for the case, if there would be more sell orders.
+        # As usual, if the price would rise higher, the buy orders would shift up.
+
+        # ==========================================================================
+        # 6. RAPID PRICE DROP - FILLING ALL BUY ORDERS
+        await self.scenario_rapid_price_drop(test_data.trigger_rapid_price_drop)
+
+        # ==========================================================================
+        # 7. SELL ALL AND ENSURE N OPEN BUY ORDERS
+        await self.scenario_trigger_all_sell_orders(test_data.trigger_all_sell_orders)
+
+        # ==========================================================================
+        # 8. MAX INVESTMENT REACHED
+        await self.scenario_check_max_investment_reached(
+            test_data.check_max_investment_reached,
+        )
+
+        # After this, we need to retrigger the placement of n buy orders, otherwise
+        # the following tests will fail.
+        await self.scenario_ensure_n_open_buy_orders(
+            test_data.trigger_ensure_n_open_buy_orders_after_max_investment,
+        )
+
+        # ==========================================================================
+        # 9. Test what happens if there are not enough funds to place a sell order
+        #    for some reason. The GridSell strategy will fail in this case to trigger
+        #    a restart (handled by external process manager)
+        await self.scenario_check_not_enough_funds_for_sell(
+            test_data.check_not_enough_funds_for_sell,
+            fail=True,  # GridSell should fail in this case
+        )
+
+    async def run_swing_scenarios(
+        self: Self,
+        test_data: SWINGTestData,
+    ) -> None:
+
+        # Initialize and prepare for trading
+        await self.scenario_prepare_for_trading(test_data.initial_ticker)
+
+        # Ensure that initial buy orders (including sell orders for SWING) are placed
+        await self.scenario_check_initial_buy_orders(
+            test_data.check_initial_n_buy_orders,
+        )
+
+        # Test rapid price drop handling - fills buy orders and creates sell orders
+        await self.scenario_rapid_price_drop(test_data.trigger_rapid_price_drop)
+
+        # Ensure correct number of open buy orders after price drop
+        await self.scenario_ensure_n_open_buy_orders(
+            test_data.trigger_ensure_n_open_buy_orders,
+        )
+
+        # Test buy order shifting behavior on price increase and sell order execution
+        base_balance_before = float(
+            self.manager._mock_api.get_balances()[
+                self.manager.exchange_config.base_currency
+            ]["balance"],
+        )
+        quote_balance_before = float(
+            self.manager._mock_api.get_balances()[
+                self.manager.exchange_config.quote_currency
+            ]["balance"],
+        )
+
+        await self.scenario_shift_buy_orders_up(test_data.trigger_shift_up_buy_orders)
+
+        # Ensure that profit has been made (sell orders executed)
+        assert (
+            float(
+                self.manager._mock_api.get_balances()[
+                    self.manager.exchange_config.base_currency
+                ]["balance"],
+            )
+            < base_balance_before
+        )
+        assert (
+            float(
+                self.manager._mock_api.get_balances()[
+                    self.manager.exchange_config.quote_currency
+                ]["balance"],
+            )
+            > quote_balance_before
+        )
+
+        # Check handling of insufficient funds for selling
+        await self.scenario_check_not_enough_funds_for_sell(
+            test_data.check_not_enough_funds_for_sell,
+        )
+
+    # =============================================================================
+
     async def scenario_prepare_for_trading(self: Self, initial_ticker: float) -> None:
         """
         Scenario: Prepare the trading engine for trading operations.
@@ -53,12 +252,15 @@ class IntegrationTestScenarios:
         Args:
             initial_ticker: The initial price to use for ticker simulation
         """
-        LOG.info(f"Scenario: Preparing for trading with initial ticker: {initial_ticker}")
+        LOG.info(
+            "Scenario: Preparing for trading with initial ticker: %s",
+            initial_ticker,
+        )
         await self.manager.trigger_prepare_for_trading(initial_ticker=initial_ticker)
 
     async def scenario_check_initial_buy_orders(
         self: Self,
-        expectation: OrderExpectation
+        expectation: OrderExpectation,
     ) -> None:
         """
         Scenario: Verify initial buy order placement.
@@ -78,7 +280,7 @@ class IntegrationTestScenarios:
 
     async def scenario_shift_buy_orders_up(
         self: Self,
-        expectation: ShiftOrdersExpectation
+        expectation: ShiftOrdersExpectation,
     ) -> None:
         """
         Scenario: Test buy order shifting behavior on price increase.
@@ -99,7 +301,7 @@ class IntegrationTestScenarios:
 
     async def scenario_fill_buy_order(
         self: Self,
-        expectation: FillBuyOrderExpectation
+        expectation: FillBuyOrderExpectation,
     ) -> None:
         """
         Scenario: Test buy order filling and replacement.
@@ -124,7 +326,7 @@ class IntegrationTestScenarios:
 
     async def scenario_ensure_n_open_buy_orders(
         self: Self,
-        expectation: ShiftOrdersExpectation
+        expectation: ShiftOrdersExpectation,
     ) -> None:
         """
         Scenario: Ensure correct number of open buy orders.
@@ -135,7 +337,9 @@ class IntegrationTestScenarios:
         Args:
             expectation: Expected order configuration
         """
-        LOG.info(f"Scenario: Ensuring N open buy orders at price: {expectation.new_price}")
+        LOG.info(
+            f"Scenario: Ensuring N open buy orders at price: {expectation.new_price}",
+        )
         await self.manager.trigger_ensure_n_open_buy_orders(
             new_price=expectation.new_price,
             prices=expectation.prices,
@@ -145,7 +349,7 @@ class IntegrationTestScenarios:
 
     async def scenario_rapid_price_drop(
         self: Self,
-        expectation: RapidPriceDropExpectation
+        expectation: RapidPriceDropExpectation,
     ) -> None:
         """
         Scenario: Test behavior during rapid price drops.
@@ -166,7 +370,7 @@ class IntegrationTestScenarios:
 
     async def scenario_check_max_investment_reached(
         self: Self,
-        expectation: MaxInvestmentExpectation
+        expectation: MaxInvestmentExpectation,
     ) -> None:
         """
         Scenario: Test max investment limit behavior.
@@ -177,20 +381,18 @@ class IntegrationTestScenarios:
         Args:
             expectation: Expected max investment behavior
         """
-        LOG.info(f"Scenario: Checking max investment limit: {expectation.max_investment}")
+        LOG.info(
+            f"Scenario: Checking max investment limit: {expectation.max_investment}",
+        )
         await self.manager.check_max_investment_reached(
             current_price=expectation.current_price,
             n_open_sell_orders=expectation.n_open_sell_orders,
             max_investment=expectation.max_investment,
         )
 
-    # =========================================================================
-    # GridHOLD-specific scenarios
-    # =========================================================================
-
     async def scenario_fill_sell_order(
         self: Self,
-        expectation: FillSellOrderExpectation
+        expectation: FillSellOrderExpectation,
     ) -> None:
         """
         Scenario: Test sell order filling behavior.
@@ -211,7 +413,7 @@ class IntegrationTestScenarios:
 
     async def scenario_trigger_all_sell_orders(
         self: Self,
-        expectation: TriggerAllSellOrdersExpectation
+        expectation: TriggerAllSellOrdersExpectation,
     ) -> None:
         """
         Scenario: Test triggering all sell orders.
@@ -222,7 +424,9 @@ class IntegrationTestScenarios:
         Args:
             expectation: Expected all sell orders behavior
         """
-        LOG.info(f"Scenario: Triggering all sell orders at price: {expectation.new_price}")
+        LOG.info(
+            f"Scenario: Triggering all sell orders at price: {expectation.new_price}",
+        )
         await self.manager.trigger_all_sell_orders(
             new_price=expectation.new_price,
             buy_prices=expectation.buy_prices,
@@ -246,7 +450,9 @@ class IntegrationTestScenarios:
             expectation: Expected insufficient funds behavior
             fail: Whether the scenario should expect failure (for GridSell)
         """
-        LOG.info(f"Scenario: Checking insufficient funds for sell at price: {expectation.sell_price}")
+        LOG.info(
+            f"Scenario: Checking insufficient funds for sell at price: {expectation.sell_price}",
+        )
         await self.manager.check_not_enough_funds_for_sell(
             sell_price=expectation.sell_price,
             n_orders=expectation.n_orders,
@@ -258,7 +464,7 @@ class IntegrationTestScenarios:
 
     async def scenario_sell_after_not_enough_funds(
         self: Self,
-        expectation: SellAfterNotEnoughFundsExpectation
+        expectation: SellAfterNotEnoughFundsExpectation,
     ) -> None:
         """
         Scenario: Test sell behavior after resolving insufficient funds.
@@ -269,7 +475,9 @@ class IntegrationTestScenarios:
         Args:
             expectation: Expected behavior after resolving insufficient funds
         """
-        LOG.info(f"Scenario: Selling after insufficient funds resolved at price: {expectation.price}")
+        LOG.info(
+            f"Scenario: Selling after insufficient funds resolved at price: {expectation.price}",
+        )
 
         # Simulate ticker update that will place missed orders
         await self.manager._mock_api.simulate_ticker_update(
@@ -278,13 +486,11 @@ class IntegrationTestScenarios:
         )
 
         # Verify the expected order count
-        assert (
-            self.manager.strategy._orderbook_table.count() == expectation.n_orders
-        )
+        assert self.manager.strategy._orderbook_table.count() == expectation.n_orders
 
         # Verify sell order prices and volumes
         sell_orders = self.manager.strategy._orderbook_table.get_orders(
-            filters={"side": "sell"}
+            filters={"side": "sell"},
         ).all()
 
         for order, price, volume in zip(

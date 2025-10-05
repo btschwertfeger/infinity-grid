@@ -18,7 +18,9 @@ from typing import Any, Callable, Self
 from kraken.spot import Market, Trade, User
 
 from ..framework.base_test_manager import ExchangeTestConfig, MockExchangeAPI
+
 LOG = logging.getLogger(__name__)
+
 
 class Balances(dict):  # noqa: FURB189
     def __init__(
@@ -213,7 +215,9 @@ class KrakenMockAPI(Market, Trade, User, MockExchangeAPI):
             )
 
     async def simulate_ticker_update(
-        self: Self, callback: Callable, last: float
+        self: Self,
+        callback: Callable,
+        last: float,
     ) -> None:
         """Update the ticker and fill orders if needed."""
         await callback(

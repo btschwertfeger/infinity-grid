@@ -106,7 +106,7 @@ class SellAfterNotEnoughFundsExpectation(BaseModel):
 # =============================================================================
 
 
-class CDCATestExpectations(BaseModel):
+class CDCATestData(BaseModel):
     """Complete set of expectations for cDCA strategy testing."""
 
     initial_ticker: float
@@ -119,7 +119,7 @@ class CDCATestExpectations(BaseModel):
     check_max_investment_reached: MaxInvestmentExpectation
 
 
-CDCA_XBTUSD_EXPECTATIONS = CDCATestExpectations(
+CDCA_XBTUSD_EXPECTATIONS = CDCATestData(
     initial_ticker=50_000.0,
     check_initial_n_buy_orders=OrderExpectation(
         prices=(
@@ -231,7 +231,7 @@ CDCA_XBTUSD_EXPECTATIONS = CDCATestExpectations(
     ),
 )
 
-CDCA_AAPLXUSD_EXPECTATIONS = CDCATestExpectations(
+CDCA_AAPLXUSD_EXPECTATIONS = CDCATestData(
     initial_ticker=260.0,
     check_initial_n_buy_orders=OrderExpectation(
         prices=(257.42, 254.87, 252.34, 249.84, 247.36),
@@ -326,7 +326,7 @@ CDCA_TEST_DATA = {
 # =============================================================================
 
 
-class GridHODLTestExpectations(BaseModel):
+class GridHODLTestData(BaseModel):
     """Complete set of expectations for GridHODL strategy testing."""
 
     initial_ticker: float
@@ -342,7 +342,7 @@ class GridHODLTestExpectations(BaseModel):
     check_max_investment_reached: MaxInvestmentExpectation
 
 
-GRIDHODL_XBTUSD_EXPECTATIONS = GridHODLTestExpectations(
+GRIDHODL_XBTUSD_EXPECTATIONS = GridHODLTestData(
     initial_ticker=50_000.0,
     check_initial_n_buy_orders=OrderExpectation(
         prices=(
@@ -508,7 +508,7 @@ GRIDHODL_XBTUSD_EXPECTATIONS = GridHODLTestExpectations(
     ),
 )
 
-GRIDHODL_AAPLXUSD_EXPECTATIONS = GridHODLTestExpectations(
+GRIDHODL_AAPLXUSD_EXPECTATIONS = GridHODLTestData(
     initial_ticker=260.0,
     check_initial_n_buy_orders=OrderExpectation(
         prices=(257.42, 254.87, 252.34, 249.84, 247.36),
@@ -684,7 +684,7 @@ class SellPartialFillExpectation(BaseModel):
     expected_sell_volume: float
 
 
-class GridHODLUnfilledSurplusTestExpectations(BaseModel):
+class GridHODLUnfilledSurplusTestData(BaseModel):
     """Complete set of expectations for GridHODL unfilled surplus testing."""
 
     initial_ticker: float
@@ -693,7 +693,7 @@ class GridHODLUnfilledSurplusTestExpectations(BaseModel):
     sell_partial_fill: SellPartialFillExpectation
 
 
-GRIDHODL_UNFILLED_SURPLUS_XBTUSD_EXPECTATIONS = GridHODLUnfilledSurplusTestExpectations(
+GRIDHODL_UNFILLED_SURPLUS_XBTUSD_EXPECTATIONS = GridHODLUnfilledSurplusTestData(
     initial_ticker=50_000.0,
     check_initial_n_buy_orders=OrderExpectation(
         prices=(
@@ -727,34 +727,32 @@ GRIDHODL_UNFILLED_SURPLUS_XBTUSD_EXPECTATIONS = GridHODLUnfilledSurplusTestExpec
     ),
 )
 
-GRIDHODL_UNFILLED_SURPLUS_AAPLXUSD_EXPECTATIONS = (
-    GridHODLUnfilledSurplusTestExpectations(
-        initial_ticker=260.0,
-        check_initial_n_buy_orders=OrderExpectation(
-            prices=(257.42, 254.87, 252.34, 249.84, 247.36),
-            volumes=(
-                0.3884702,
-                0.39235688,
-                0.39629071,
-                0.40025616,
-                0.40426908,
-            ),
-            sides=("buy", "buy", "buy", "buy", "buy"),
+GRIDHODL_UNFILLED_SURPLUS_AAPLXUSD_EXPECTATIONS = GridHODLUnfilledSurplusTestData(
+    initial_ticker=260.0,
+    check_initial_n_buy_orders=OrderExpectation(
+        prices=(257.42, 254.87, 252.34, 249.84, 247.36),
+        volumes=(
+            0.3884702,
+            0.39235688,
+            0.39629071,
+            0.40025616,
+            0.40426908,
         ),
-        partial_fill=PartialFillExpectation(
-            fill_volume=0.3,
-            n_open_orders=5,
-            expected_base_balance=100.3,
-            expected_quote_balance=999422.77401,
-            vol_of_unfilled_remaining_max_price=257.42,
-        ),
-        sell_partial_fill=SellPartialFillExpectation(
-            order_price=257.42,
-            n_open_orders=5,
-            expected_sell_price=262.6,
-            expected_sell_volume=0.38065504,
-        ),
-    )
+        sides=("buy", "buy", "buy", "buy", "buy"),
+    ),
+    partial_fill=PartialFillExpectation(
+        fill_volume=0.3,
+        n_open_orders=5,
+        expected_base_balance=100.3,
+        expected_quote_balance=999422.77401,
+        vol_of_unfilled_remaining_max_price=257.42,
+    ),
+    sell_partial_fill=SellPartialFillExpectation(
+        order_price=257.42,
+        n_open_orders=5,
+        expected_sell_price=262.6,
+        expected_sell_volume=0.38065504,
+    ),
 )
 
 # Test data mapping for GridHOLD unfilled surplus strategy
@@ -769,7 +767,7 @@ GRIDHODL_UNFILLED_SURPLUS_TEST_DATA = {
 # =============================================================================
 
 
-class GridSellTestExpectations(BaseModel):
+class GridSellTestData(BaseModel):
     """Complete set of expectations for GridSell strategy testing."""
 
     initial_ticker: float
@@ -785,7 +783,7 @@ class GridSellTestExpectations(BaseModel):
     check_not_enough_funds_for_sell: NotEnoughFundsForSellExpectation
 
 
-GRIDSELL_XBTUSD_EXPECTATIONS = GridSellTestExpectations(
+GRIDSELL_XBTUSD_EXPECTATIONS = GridSellTestData(
     initial_ticker=50_000.0,
     check_initial_n_buy_orders=OrderExpectation(
         prices=(
@@ -965,7 +963,7 @@ GRIDSELL_XBTUSD_EXPECTATIONS = GridSellTestExpectations(
     ),
 )
 
-GRIDSELL_AAPLXUSD_EXPECTATIONS = GridSellTestExpectations(
+GRIDSELL_AAPLXUSD_EXPECTATIONS = GridSellTestData(
     initial_ticker=260.0,
     check_initial_n_buy_orders=OrderExpectation(
         prices=(257.42, 254.87, 252.34, 249.84, 247.36),
@@ -1114,7 +1112,7 @@ GRIDSELL_TEST_DATA = {
 # =============================================================================
 
 
-class GridSellUnfilledSurplusTestExpectations(BaseModel):
+class GridSellUnfilledSurplusTestData(BaseModel):
     """Complete set of expectations for GridSell unfilled surplus testing."""
 
     initial_ticker: float
@@ -1123,7 +1121,7 @@ class GridSellUnfilledSurplusTestExpectations(BaseModel):
     sell_partial_fill: SellPartialFillExpectation
 
 
-GRIDSELL_UNFILLED_SURPLUS_XBTUSD_EXPECTATIONS = GridSellUnfilledSurplusTestExpectations(
+GRIDSELL_UNFILLED_SURPLUS_XBTUSD_EXPECTATIONS = GridSellUnfilledSurplusTestData(
     initial_ticker=50_000.0,
     check_initial_n_buy_orders=OrderExpectation(
         prices=(
@@ -1157,34 +1155,32 @@ GRIDSELL_UNFILLED_SURPLUS_XBTUSD_EXPECTATIONS = GridSellUnfilledSurplusTestExpec
     ),
 )
 
-GRIDSELL_UNFILLED_SURPLUS_AAPLXUSD_EXPECTATIONS = (
-    GridSellUnfilledSurplusTestExpectations(
-        initial_ticker=260.0,
-        check_initial_n_buy_orders=OrderExpectation(
-            prices=(257.42, 254.87, 252.34, 249.84, 247.36),
-            volumes=(
-                0.3884702,
-                0.39235688,
-                0.39629071,
-                0.40025616,
-                0.40426908,
-            ),
-            sides=("buy", "buy", "buy", "buy", "buy"),
+GRIDSELL_UNFILLED_SURPLUS_AAPLXUSD_EXPECTATIONS = GridSellUnfilledSurplusTestData(
+    initial_ticker=260.0,
+    check_initial_n_buy_orders=OrderExpectation(
+        prices=(257.42, 254.87, 252.34, 249.84, 247.36),
+        volumes=(
+            0.3884702,
+            0.39235688,
+            0.39629071,
+            0.40025616,
+            0.40426908,
         ),
-        partial_fill=PartialFillExpectation(
-            fill_volume=0.3,
-            n_open_orders=5,
-            expected_base_balance=100.3,
-            expected_quote_balance=999422.77401,
-            vol_of_unfilled_remaining_max_price=257.42,
-        ),
-        sell_partial_fill=SellPartialFillExpectation(
-            order_price=257.42,
-            n_open_orders=5,
-            expected_sell_price=262.6,
-            expected_sell_volume=0.38065504,
-        ),
-    )
+        sides=("buy", "buy", "buy", "buy", "buy"),
+    ),
+    partial_fill=PartialFillExpectation(
+        fill_volume=0.3,
+        n_open_orders=5,
+        expected_base_balance=100.3,
+        expected_quote_balance=999422.77401,
+        vol_of_unfilled_remaining_max_price=257.42,
+    ),
+    sell_partial_fill=SellPartialFillExpectation(
+        order_price=257.42,
+        n_open_orders=5,
+        expected_sell_price=262.6,
+        expected_sell_volume=0.38065504,
+    ),
 )
 
 # Test data mapping for GridSell unfilled surplus strategy
@@ -1199,7 +1195,7 @@ GRIDSELL_UNFILLED_SURPLUS_TEST_DATA = {
 # =============================================================================
 
 
-class SWINGTestExpectations(BaseModel):
+class SWINGTestData(BaseModel):
     """Complete set of expectations for SWING strategy testing."""
 
     initial_ticker: float
@@ -1210,7 +1206,7 @@ class SWINGTestExpectations(BaseModel):
     check_not_enough_funds_for_sell: NotEnoughFundsForSellExpectation
 
 
-class SWINGUnfilledSurplusTestExpectations(BaseModel):
+class SWINGUnfilledSurplusTestData(BaseModel):
     """Complete set of expectations for SWING unfilled surplus testing."""
 
     initial_ticker: float
@@ -1222,7 +1218,7 @@ class SWINGUnfilledSurplusTestExpectations(BaseModel):
     check_max_investment_reached: MaxInvestmentExpectation
 
 
-SWING_XBTUSD_EXPECTATIONS = SWINGTestExpectations(
+SWING_XBTUSD_EXPECTATIONS = SWINGTestData(
     initial_ticker=50_000.0,
     check_initial_n_buy_orders=OrderExpectation(
         prices=(
@@ -1332,7 +1328,7 @@ SWING_XBTUSD_EXPECTATIONS = SWINGTestExpectations(
     ),
 )
 
-SWING_AAPLXUSD_EXPECTATIONS = SWINGTestExpectations(
+SWING_AAPLXUSD_EXPECTATIONS = SWINGTestData(
     initial_ticker=260.0,
     check_initial_n_buy_orders=OrderExpectation(
         prices=(
@@ -1451,7 +1447,7 @@ SWING_AAPLXUSD_EXPECTATIONS = SWINGTestExpectations(
     ),
 )
 
-SWING_UNFILLED_SURPLUS_XBTUSD_EXPECTATIONS = SWINGUnfilledSurplusTestExpectations(
+SWING_UNFILLED_SURPLUS_XBTUSD_EXPECTATIONS = SWINGUnfilledSurplusTestData(
     initial_ticker=50_000.0,
     check_initial_n_buy_orders=OrderExpectation(
         prices=(
@@ -1504,7 +1500,7 @@ SWING_UNFILLED_SURPLUS_XBTUSD_EXPECTATIONS = SWINGUnfilledSurplusTestExpectation
     ),
 )
 
-SWING_UNFILLED_SURPLUS_AAPLXUSD_EXPECTATIONS = SWINGUnfilledSurplusTestExpectations(
+SWING_UNFILLED_SURPLUS_AAPLXUSD_EXPECTATIONS = SWINGUnfilledSurplusTestData(
     initial_ticker=260.0,
     check_initial_n_buy_orders=OrderExpectation(
         prices=(

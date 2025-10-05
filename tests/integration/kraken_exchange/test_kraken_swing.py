@@ -18,12 +18,13 @@ from unittest import mock
 
 import pytest
 
-from ..framework.test_scenarios import IntegrationTestScenarios
-from ..framework.test_data import SWING_TEST_DATA, SWING_UNFILLED_SURPLUS_TEST_DATA
 from ..framework.test_data import (
-    SWINGTestExpectations,
-    SWINGUnfilledSurplusTestExpectations,
+    SWING_TEST_DATA,
+    SWING_UNFILLED_SURPLUS_TEST_DATA,
+    SWINGTestData,
+    SWINGUnfilledSurplusTestData,
 )
+from ..framework.test_scenarios import IntegrationTestScenarios
 
 LOG = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ async def test_swing(
     caplog: pytest.LogCaptureFixture,
     test_manager_factory: Callable,
     symbol: str,
-    test_data: SWINGTestExpectations,
+    test_data: SWINGTestData,
 ) -> None:
     """
     Test the SWING strategy scenarios.
@@ -57,60 +58,9 @@ async def test_swing(
 
     test_manager = test_manager_factory("Kraken", symbol, strategy="SWING")
     await test_manager.initialize_engine()
+
     scenarios = IntegrationTestScenarios(test_manager)
-
-    # Initialize and prepare for trading
-    await scenarios.scenario_prepare_for_trading(test_data.initial_ticker)
-
-    # Ensure that initial buy orders (including sell orders for SWING) are placed
-    await scenarios.scenario_check_initial_buy_orders(
-        test_data.check_initial_n_buy_orders
-    )
-
-    # Test rapid price drop handling - fills buy orders and creates sell orders
-    await scenarios.scenario_rapid_price_drop(test_data.trigger_rapid_price_drop)
-
-    # Ensure correct number of open buy orders after price drop
-    await scenarios.scenario_ensure_n_open_buy_orders(
-        test_data.trigger_ensure_n_open_buy_orders
-    )
-
-    # Test buy order shifting behavior on price increase and sell order execution
-    base_balance_before = float(
-        test_manager._mock_api.get_balances()[
-            test_manager.exchange_config.base_currency
-        ]["balance"],
-    )
-    quote_balance_before = float(
-        test_manager._mock_api.get_balances()[
-            test_manager.exchange_config.quote_currency
-        ]["balance"],
-    )
-
-    await scenarios.scenario_shift_buy_orders_up(test_data.trigger_shift_up_buy_orders)
-
-    # Ensure that profit has been made (sell orders executed)
-    assert (
-        float(
-            test_manager._mock_api.get_balances()[
-                test_manager.exchange_config.base_currency
-            ]["balance"]
-        )
-        < base_balance_before
-    )
-    assert (
-        float(
-            test_manager._mock_api.get_balances()[
-                test_manager.exchange_config.quote_currency
-            ]["balance"]
-        )
-        > quote_balance_before
-    )
-
-    # Check handling of insufficient funds for selling
-    await scenarios.scenario_check_not_enough_funds_for_sell(
-        test_data.check_not_enough_funds_for_sell
-    )
+    await scenarios.run_swing_scenarios(test_data)
 
 
 @pytest.mark.integration
@@ -133,7 +83,7 @@ async def test_swing_unfilled_surplus(
     caplog: pytest.LogCaptureFixture,
     test_manager_factory: Callable,
     symbol: str,
-    test_data: SWINGUnfilledSurplusTestExpectations,
+    test_data: SWINGUnfilledSurplusTestData,
 ) -> None:
     """
     Integration test for the SWING strategy unfilled surplus handling.
@@ -156,7 +106,7 @@ async def test_swing_unfilled_surplus(
     # ==========================================================================
     # 1. PLACEMENT OF INITIAL N BUY ORDERS
     await scenarios.scenario_check_initial_buy_orders(
-        test_data.check_initial_n_buy_orders
+        test_data.check_initial_n_buy_orders,
     )
 
     # Check initial balances (SWING creates initial sell order)
@@ -284,5 +234,5 @@ async def test_swing_unfilled_surplus(
     # ==========================================================================
     # 4. MAX INVESTMENT REACHED
     await scenarios.scenario_check_max_investment_reached(
-        test_data.check_max_investment_reached
+        test_data.check_max_investment_reached,
     )

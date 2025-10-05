@@ -14,7 +14,10 @@ should be followed for other exchanges.
 """
 
 import logging
+from typing import Self
 
+from infinity_grid.core.engine import BotEngine
+from infinity_grid.core.state_machine import States
 from infinity_grid.models.configuration import (
     BotConfigDTO,
     DBConfigDTO,
@@ -22,12 +25,10 @@ from infinity_grid.models.configuration import (
 )
 
 from ..framework.base_test_manager import BaseIntegrationTestManager
-from typing import Self
-from infinity_grid.core.state_machine import States
-from infinity_grid.core.engine import BotEngine
+
 LOG = logging.getLogger(__name__)
 
-from .kraken_api_mock import KrakenMockAPI,ExchangeTestConfig
+from .kraken_api_mock import ExchangeTestConfig, KrakenMockAPI
 
 
 async def get_kraken_instance(
@@ -153,7 +154,6 @@ class KrakenIntegrationTestManager(BaseIntegrationTestManager):
             self.state_machine.state == States.RUNNING
         ), f"Expected state RUNNING, got {self.state_machine.state}"
         assert self.strategy._ready_to_trade is True
-
 
 
 # Factory functions for easier test setup
