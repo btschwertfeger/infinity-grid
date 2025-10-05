@@ -233,7 +233,8 @@ class IntegrationTestScenarios:
 
     async def scenario_check_not_enough_funds_for_sell(
         self: Self,
-        expectation: NotEnoughFundsForSellExpectation
+        expectation: NotEnoughFundsForSellExpectation,
+        fail: bool = False,
     ) -> None:
         """
         Scenario: Test insufficient funds for sell order.
@@ -243,6 +244,7 @@ class IntegrationTestScenarios:
 
         Args:
             expectation: Expected insufficient funds behavior
+            fail: Whether the scenario should expect failure (for GridSell)
         """
         LOG.info(f"Scenario: Checking insufficient funds for sell at price: {expectation.sell_price}")
         await self.manager.check_not_enough_funds_for_sell(
@@ -251,7 +253,7 @@ class IntegrationTestScenarios:
             n_sell_orders=expectation.n_sell_orders,
             assume_base_available=expectation.assume_base_available,
             assume_quote_available=expectation.assume_quote_available,
-            fail=False,
+            fail=fail,
         )
 
     async def scenario_sell_after_not_enough_funds(
