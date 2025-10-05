@@ -16,17 +16,9 @@ from functools import lru_cache
 from typing import Any, Callable, Self
 
 from kraken.spot import Market, Trade, User
-from pydantic import BaseModel
 
+from ..framework.base_test_manager import ExchangeTestConfig, MockExchangeAPI
 LOG = logging.getLogger(__name__)
-
-
-class KrakenExchangeAPIConfig(BaseModel):
-    base_currency: str  # e.g., "XBT"
-    quote_currency: str  # e.g., "ZUSD"
-    pair: str  # e.g., "XBTUSD"
-    ws_symbol: str  # e.g., "BTC/USD"
-
 
 class Balances(dict):  # noqa: FURB189
     def __init__(
@@ -62,7 +54,7 @@ class Balances(dict):  # noqa: FURB189
         return super().__getitem__(key)
 
 
-class KrakenAPI(Market, Trade, User):
+class KrakenMockAPI(Market, Trade, User, MockExchangeAPI):
     """
     Class extending the Market, Trade, and User client of the python-kraken-sdk
     to use its methods for non-authenticated requests.
@@ -71,10 +63,7 @@ class KrakenAPI(Market, Trade, User):
     orders and trades used during tests.
     """
 
-    def __init__(
-        self: Self,
-        exchange_config: KrakenExchangeAPIConfig,
-    ) -> None:
+    def __init__(self: Self, exchange_config: ExchangeTestConfig) -> None:
         super().__init__()  # DONT PASS SECRETS!
         self.__orders = {}
 
@@ -223,7 +212,9 @@ class KrakenAPI(Market, Trade, User):
                 + Decimal(order["cost"]),
             )
 
-    async def on_ticker_update(self: Self, callback: Callable, last: float) -> None:
+    async def simulate_ticker_update(
+        self: Self, callback: Callable, last: float
+    ) -> None:
         """Update the ticker and fill orders if needed."""
         await callback(
             {

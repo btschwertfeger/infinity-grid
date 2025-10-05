@@ -14,7 +14,7 @@ from unittest import mock
 
 import pytest
 
-from .helper import KrakenTestManager
+from .kraken_test_manager import KrakenIntegrationTestManager
 
 LOG = logging.getLogger(__name__)
 
@@ -356,7 +356,7 @@ async def test_kraken_grid_sell(
     mock_sleep2: mock.MagicMock,  # noqa: ARG001
     mock_sleep3: mock.MagicMock,  # noqa: ARG001
     caplog: pytest.LogCaptureFixture,
-    kraken_test_manager_factory: Callable[[str, str], KrakenTestManager],
+    test_manager_factory: Callable[[str, str], KrakenIntegrationTestManager],
     symbol: str,
     expectations: dict,
 ) -> None:
@@ -391,7 +391,7 @@ async def test_kraken_grid_sell(
     LOG.info("******* Starting GridSell integration test *******")
     caplog.set_level(logging.INFO)
 
-    tm = kraken_test_manager_factory(symbol, strategy="GridSell")
+    tm = test_manager_factory("Kraken", symbol, strategy="GridSell")
     await tm.initialize_engine()
     await tm.trigger_prepare_for_trading(initial_ticker=expectations["initial_ticker"])
 
@@ -587,7 +587,7 @@ async def test_kraken_grid_sell_unfilled_surplus(
     mock_sleep2: mock.Mock,  # noqa: ARG001
     mock_sleep3: mock.Mock,  # noqa: ARG001
     caplog: pytest.LogCaptureFixture,
-    kraken_test_manager_factory: Callable[[str, str], KrakenTestManager],
+    test_manager_factory: Callable[[str, str], KrakenIntegrationTestManager],
     symbol: str,
     expectations: dict,
 ) -> None:
@@ -603,7 +603,7 @@ async def test_kraken_grid_sell_unfilled_surplus(
     LOG.info("******* Starting GridSell unfilled surplus integration test *******")
     caplog.set_level(logging.INFO)
 
-    tm = kraken_test_manager_factory(symbol, strategy="GridSell")
+    tm = test_manager_factory("Kraken", symbol, strategy="GridSell")
     await tm.initialize_engine()
     await tm.trigger_prepare_for_trading(initial_ticker=expectations["initial_ticker"])
 

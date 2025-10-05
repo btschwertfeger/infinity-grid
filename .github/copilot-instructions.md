@@ -172,3 +172,10 @@ self._ws_client: IExchangeWebSocketService
 - `core/state_machine.py`: Bot state management
 - `models/configuration.py`: Configuration schemas
 - `interfaces/exchange.py`: Exchange abstractions
+
+## Rules
+
+- KISS
+- Zen of Python
+- Full type hinting based on Python 3.11+
+- Use Pydantic for data validation and serialization when appropriate

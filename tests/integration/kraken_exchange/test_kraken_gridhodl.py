@@ -18,7 +18,7 @@ from unittest import mock
 
 import pytest
 
-from .helper import KrakenTestManager
+from .kraken_test_manager import KrakenIntegrationTestManager
 
 LOG = logging.getLogger(__name__)
 
@@ -345,7 +345,7 @@ async def test_kraken_grid_hodl(
     mock_sleep2: mock.MagicMock,  # noqa: ARG001
     mock_sleep3: mock.MagicMock,  # noqa: ARG001
     caplog: pytest.LogCaptureFixture,
-    kraken_test_manager_factory: Callable[[str, str], KrakenTestManager],
+    test_manager_factory: Callable[[str, str], KrakenIntegrationTestManager],
     symbol: str,
     expectations: dict,
 ) -> None:
@@ -358,7 +358,7 @@ async def test_kraken_grid_hodl(
     LOG.info("******* Starting GridHODL integration test *******")
     caplog.set_level(logging.INFO)
 
-    tm = kraken_test_manager_factory(symbol, "GridHODL")
+    tm = test_manager_factory("Kraken", symbol, strategy="GridHODL")
     await tm.initialize_engine()
     await tm.trigger_prepare_for_trading(initial_ticker=expectations["initial_ticker"])
 
@@ -460,7 +460,7 @@ async def test_kraken_grid_hodl(
     # The following ticker update will place a new buy order as well as placing
     # the missed sell order since the balance is now sufficient due to reset of
     # the earlier mock.
-    await api.on_ticker_update(
+    await api.simulate_ticker_update(
         callback=tm.ws_client.on_message,
         last=expectations["9_sell_after_not_enough_funds_for_sell"]["price"],
     )
@@ -572,7 +572,7 @@ async def test_kraken_grid_hodl_unfilled_surplus(
     mock_sleep2: mock.Mock,  # noqa: ARG001
     mock_sleep3: mock.Mock,  # noqa: ARG001
     caplog: pytest.LogCaptureFixture,
-    kraken_test_manager_factory: pytest.FixtureRequest,
+    test_manager_factory: pytest.FixtureRequest,
     symbol: str,
     expectations: dict,
 ) -> None:
@@ -592,7 +592,7 @@ async def test_kraken_grid_hodl_unfilled_surplus(
     LOG.info("******* Starting GridHODL unfilled surplus integration test *******")
     caplog.set_level(logging.INFO)
 
-    tm = kraken_test_manager_factory(symbol, "GridHODL")
+    tm = test_manager_factory("Kraken", symbol, strategy="GridHODL")
     await tm.initialize_engine()
     await tm.trigger_prepare_for_trading(initial_ticker=expectations["initial_ticker"])
 

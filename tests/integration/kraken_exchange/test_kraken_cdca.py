@@ -227,7 +227,7 @@ async def test_kraken_cdca(
     mock_sleep1: mock.MagicMock,  # noqa: ARG001
     mock_sleep2: mock.MagicMock,  # noqa: ARG001
     caplog: pytest.LogCaptureFixture,
-    kraken_test_manager_factory: Callable,
+    test_manager_factory: Callable,
     symbol: str,
     expectations: dict,
 ) -> None:
@@ -236,7 +236,7 @@ async def test_kraken_cdca(
     """
     caplog.set_level(logging.INFO)
 
-    tm = kraken_test_manager_factory(symbol, strategy="cDCA")
+    tm = test_manager_factory("Kraken", symbol, strategy="cDCA")
     await tm.initialize_engine()
     await tm.trigger_prepare_for_trading(initial_ticker=expectations["initial_ticker"])
 
