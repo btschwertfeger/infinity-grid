@@ -81,7 +81,7 @@ jobs:
           uv pip install "$(find dist -name '*.whl' | head -1)" -r requirements-dev.txt
 
       - name: Generate coverage report
-        run: pytest -vv --cov=infinity_grid --cov-report=xml:coverage.xml tests
+        run: pytest -vv -n auto --cov=infinity_grid --cov-report=xml:coverage.xml tests
 
       - name: Export coverage report
         uses: actions/upload-artifact@v4
