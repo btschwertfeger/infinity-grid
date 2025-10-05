@@ -96,7 +96,7 @@ class GridStrategyBase:
 
         self._cost_decimals: int
         self._amount_per_grid_plus_fee: float
-        self.__ensure_buy_order_timeout_start: datetime | None = None
+        self.__check_buy_order_timeout_start: datetime | None = None
 
         # Store messages received before the algorithm is ready to trade.
         self._missed_messages: list[OnMessageSchema] = []
@@ -697,7 +697,7 @@ class GridStrategyBase:
           - WHEN there are not enough funds available
             AND the maximum investment limit is not reached
             AND there are not enough open buy orders
-            THEN the algorithm triggers the timeout and exits early
+            THEN the function triggers the timeout and exits early
 
             ... to prevent to check for the users balances via REST API on each
             ticker update. If the timeout mechanism would not be employed, the
@@ -709,20 +709,20 @@ class GridStrategyBase:
         )
 
         if (
-            self.__ensure_buy_order_timeout_start is not None
-            and datetime.now() - self.__ensure_buy_order_timeout_start
+            self.__check_buy_order_timeout_start is not None
+            and datetime.now() - self.__check_buy_order_timeout_start
             < timedelta(seconds=10)
         ):
             # Return early in case the timeout is still active
             return
 
-        self.__ensure_buy_order_timeout_start = None
+        self.__check_buy_order_timeout_start = None
         can_place_buy_order = True
 
         while (
             can_place_buy_order
             and not self._max_investment_reached
-            and self.__ensure_buy_order_timeout_start is None
+            and self.__check_buy_order_timeout_start is None
             and self._pending_txids_table.count() == 0
             and (
                 n_active_buy_orders := self._orderbook_table.count(
@@ -749,7 +749,7 @@ class GridStrategyBase:
                     " Setting timeout of %s seconds before retrying ...",
                     10,
                 )
-                self.__ensure_buy_order_timeout_start = datetime.now()
+                self.__check_buy_order_timeout_start = datetime.now()
                 can_place_buy_order = False
 
     def __check_lowest_cancel_of_more_than_n_buy_orders(self: Self) -> None:
