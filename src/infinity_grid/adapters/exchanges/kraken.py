@@ -318,11 +318,6 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
         return f"{self.__base_currency}/{self.__quote_currency}"
 
     @cached_property
-    def ws_altname(self: Self) -> str:
-        base_currency, quote_currency = self.rest_symbol.split("/")
-        return f"{base_currency}{quote_currency}"
-
-    @cached_property
     def rest_symbol(self: Self) -> str:
         """Returns the symbol for the given base and quote currency."""
         asset_response = self.__market_service.get_assets(

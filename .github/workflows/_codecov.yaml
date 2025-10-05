@@ -22,6 +22,10 @@ on:
     secrets:
       CODECOV_TOKEN:
         required: true
+      INFINITY_GRID_API_PUBLIC_KEY:
+        required: true
+      INFINITY_GRID_API_SECRET_KEY:
+        required: true
 
 permissions:
   contents: read
@@ -81,7 +85,10 @@ jobs:
           uv pip install "$(find dist -name '*.whl' | head -1)" -r requirements-dev.txt
 
       - name: Generate coverage report
-        run: pytest -vv --cov=infinity_grid --cov-report=xml:coverage.xml tests
+        env:
+          INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
+          INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
+        run: pytest -vv -x --cov=infinity_grid --cov-report=xml:coverage.xml tests
 
       - name: Export coverage report
         uses: actions/upload-artifact@v4

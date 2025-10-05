@@ -5,6 +5,7 @@
 # https://github.com/btschwertfeger
 #
 
+import sys
 from logging import DEBUG, INFO, WARNING, basicConfig, getLogger
 from typing import Any
 
@@ -19,6 +20,8 @@ from infinity_grid.models.configuration import (
     NotificationConfigDTO,
     TelegramConfigDTO,
 )
+
+LOG = getLogger(__name__)
 
 
 def print_version(ctx: Context, param: Any, value: Any) -> None:  # noqa: ANN401, ARG001
@@ -121,6 +124,9 @@ def cli(ctx: Context, **kwargs: dict) -> None:
     else:
         getLogger("websockets").setLevel(WARNING)
         getLogger("kraken").setLevel(WARNING)
+
+    if sys.platform == "win32":
+        LOG.warning("The infinity-grid does not fully support Windows.")
 
 
 @cli.command(
