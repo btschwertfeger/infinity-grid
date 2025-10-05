@@ -59,6 +59,8 @@ class GridStrategyBase:
     GridHODL, GridSell, SWING, or CDCA.
     """
 
+    CHECK_BUY_ORDER_TIMEOUT_SECONDS: int = 10
+
     def __init__(
         self,
         config: BotConfigDTO,
@@ -711,7 +713,7 @@ class GridStrategyBase:
         if (
             self.__check_buy_order_timeout_start is not None
             and datetime.now() - self.__check_buy_order_timeout_start
-            < timedelta(seconds=10)
+            < timedelta(seconds=self.CHECK_BUY_ORDER_TIMEOUT_SECONDS)
         ):
             # Return early in case the timeout is still active
             return
@@ -747,7 +749,7 @@ class GridStrategyBase:
                 LOG.warning(
                     "Not enough quote currency available to place buy order!"
                     " Setting timeout of %s seconds before retrying ...",
-                    10,
+                    self.CHECK_BUY_ORDER_TIMEOUT_SECONDS,
                 )
                 self.__check_buy_order_timeout_start = datetime.now()
                 can_place_buy_order = False
