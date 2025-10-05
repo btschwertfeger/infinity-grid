@@ -17,7 +17,7 @@ import logging
 from typing import Self
 
 from .base_test_manager import BaseIntegrationTestManager
-from .test_data import (
+from .test_data_models import (
     CDCATestData,
     FillBuyOrderExpectation,
     FillSellOrderExpectation,
@@ -274,7 +274,8 @@ class IntegrationTestScenarios:
         # Check handling of insufficient funds for selling
         await self.scenario_check_not_enough_funds_for_sell(
             test_data.check_not_enough_funds_for_sell,
-        )  # =============================================================================
+        )
+    # =============================================================================
 
     async def scenario_prepare_for_trading(self: Self, initial_ticker: float) -> None:
         """
