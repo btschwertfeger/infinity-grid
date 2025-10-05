@@ -22,6 +22,10 @@ from .test_data import (
     ShiftOrdersExpectation,
     RapidPriceDropExpectation,
     MaxInvestmentExpectation,
+    FillSellOrderExpectation,
+    TriggerAllSellOrdersExpectation,
+    NotEnoughFundsForSellExpectation,
+    SellAfterNotEnoughFundsExpectation,
 )
 
 LOG = logging.getLogger(__name__)
@@ -179,3 +183,113 @@ class IntegrationTestScenarios:
             n_open_sell_orders=expectation.n_open_sell_orders,
             max_investment=expectation.max_investment,
         )
+
+    # =========================================================================
+    # GridHOLD-specific scenarios
+    # =========================================================================
+
+    async def scenario_fill_sell_order(
+        self: Self,
+        expectation: FillSellOrderExpectation
+    ) -> None:
+        """
+        Scenario: Test sell order filling behavior.
+
+        This scenario simulates filling a sell order and verifies the
+        remaining orders are correct.
+
+        Args:
+            expectation: Expected sell order fill behavior
+        """
+        LOG.info(f"Scenario: Filling sell order at price: {expectation.new_price}")
+        await self.manager.trigger_fill_sell_order(
+            new_price=expectation.new_price,
+            prices=expectation.prices,
+            volumes=expectation.volumes,
+            sides=expectation.sides,
+        )
+
+    async def scenario_trigger_all_sell_orders(
+        self: Self,
+        expectation: TriggerAllSellOrdersExpectation
+    ) -> None:
+        """
+        Scenario: Test triggering all sell orders.
+
+        This scenario simulates triggering all sell orders and verifies
+        the resulting order configuration.
+
+        Args:
+            expectation: Expected all sell orders behavior
+        """
+        LOG.info(f"Scenario: Triggering all sell orders at price: {expectation.new_price}")
+        await self.manager.trigger_all_sell_orders(
+            new_price=expectation.new_price,
+            buy_prices=expectation.buy_prices,
+            sell_prices=expectation.sell_prices,
+            buy_volumes=expectation.buy_volumes,
+            sell_volumes=expectation.sell_volumes,
+        )
+
+    async def scenario_check_not_enough_funds_for_sell(
+        self: Self,
+        expectation: NotEnoughFundsForSellExpectation
+    ) -> None:
+        """
+        Scenario: Test insufficient funds for sell order.
+
+        This scenario verifies behavior when there are insufficient funds
+        to place a sell order.
+
+        Args:
+            expectation: Expected insufficient funds behavior
+        """
+        LOG.info(f"Scenario: Checking insufficient funds for sell at price: {expectation.sell_price}")
+        await self.manager.check_not_enough_funds_for_sell(
+            sell_price=expectation.sell_price,
+            n_orders=expectation.n_orders,
+            n_sell_orders=expectation.n_sell_orders,
+            assume_base_available=expectation.assume_base_available,
+            assume_quote_available=expectation.assume_quote_available,
+            fail=False,
+        )
+
+    async def scenario_sell_after_not_enough_funds(
+        self: Self,
+        expectation: SellAfterNotEnoughFundsExpectation
+    ) -> None:
+        """
+        Scenario: Test sell behavior after resolving insufficient funds.
+
+        This scenario verifies that missed sell orders are placed once
+        sufficient funds become available.
+
+        Args:
+            expectation: Expected behavior after resolving insufficient funds
+        """
+        LOG.info(f"Scenario: Selling after insufficient funds resolved at price: {expectation.price}")
+
+        # Simulate ticker update that will place missed orders
+        await self.manager._mock_api.simulate_ticker_update(
+            callback=self.manager.ws_client.on_message,
+            last=expectation.price,
+        )
+
+        # Verify the expected order count
+        assert (
+            self.manager.strategy._orderbook_table.count() == expectation.n_orders
+        )
+
+        # Verify sell order prices and volumes
+        sell_orders = self.manager.strategy._orderbook_table.get_orders(
+            filters={"side": "sell"}
+        ).all()
+
+        for order, price, volume in zip(
+            sell_orders,
+            expectation.sell_prices,
+            expectation.sell_volumes,
+            strict=True,
+        ):
+            assert order.price == price
+            assert order.volume == volume

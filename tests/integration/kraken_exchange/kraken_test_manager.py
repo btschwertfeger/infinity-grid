@@ -106,17 +106,6 @@ class KrakenIntegrationTestManager(BaseIntegrationTestManager):
     framework for Kraken exchange.
     """
 
-    def __init__(
-        self,
-        bot_config: BotConfigDTO,
-        notification_config: NotificationConfigDTO,
-        db_config: DBConfigDTO,
-        exchange_config: ExchangeTestConfig,
-    ) -> None:
-        # Fixme to document here the parameters came from
-        super().__init__(bot_config, notification_config, db_config, exchange_config)
-        self._kraken_config = exchange_config
-
     async def initialize_engine(self) -> None:
         """Initialize the BotEngine with Kraken-specific adapters."""
 
@@ -124,7 +113,7 @@ class KrakenIntegrationTestManager(BaseIntegrationTestManager):
             bot_config=self.bot_config,
             notification_config=self._notification_config,
             db_config=self._db_config,
-            kraken_config=self._kraken_config,
+            kraken_config=self.exchange_config,
         )
 
     async def trigger_prepare_for_trading(
