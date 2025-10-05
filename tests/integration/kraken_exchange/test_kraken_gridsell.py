@@ -175,7 +175,7 @@ async def test_grid_sell(
     ],
     ids=("BTCUSD", "AAPLxUSD"),
 )
-async def test_kraken_grid_sell_unfilled_surplus(
+async def test_grid_sell_unfilled_surplus(
     mock_sleep1: mock.MagicMock,  # noqa: ARG001
     mock_sleep2: mock.Mock,  # noqa: ARG001
     mock_sleep3: mock.Mock,  # noqa: ARG001
