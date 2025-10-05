@@ -18,11 +18,6 @@ on:
       python-version:
         type: string
         required: true
-    secrets:
-      INFINITY_GRID_API_PUBLIC_KEY:
-        required: true
-      INFINITY_GRID_API_SECRET_KEY:
-        required: true
 
 permissions:
   contents: read
@@ -73,7 +68,4 @@ jobs:
           uv pip install "$wheel" -r requirements-dev.txt
 
       - name: Run the tests
-        env:
-          INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
-          INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
-        run: pytest -vv tests
+        run: pytest -vv -x tests

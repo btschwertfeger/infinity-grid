@@ -21,6 +21,8 @@ from infinity_grid.models.configuration import (
     TelegramConfigDTO,
 )
 
+LOG = getLogger(__name__)
+
 
 def print_version(ctx: Context, param: Any, value: Any) -> None:  # noqa: ANN401, ARG001
     """Prints the version of the package"""
@@ -122,6 +124,9 @@ def cli(ctx: Context, **kwargs: dict) -> None:
     else:
         getLogger("websockets").setLevel(WARNING)
         getLogger("kraken").setLevel(WARNING)
+
+    if sys.platform == "win32":
+        LOG.warning("The infinity-grid does not fully support Windows.")
 
 
 @cli.command(
@@ -415,9 +420,6 @@ def run(ctx: Context, **kwargs: dict[str, Any]) -> None:
         port=kwargs.pop("metrics_port"),
     )
     ctx.obj |= kwargs
-
-    if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     asyncio.run(
         BotEngine(
