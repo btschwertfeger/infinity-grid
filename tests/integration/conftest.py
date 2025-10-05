@@ -117,4 +117,3 @@ def test_manager_factory(
         )
 
     return _factory
-
