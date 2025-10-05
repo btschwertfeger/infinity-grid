@@ -228,20 +228,6 @@ class IExchangeRESTService(ABC):
             "This method must be implemented in the concrete exchange class.",
         )
 
-    @property
-    @abstractmethod
-    def ws_altname(self) -> str:
-        """Returns the alternative name for the given base and quote currency.
-
-        The return value is currently not used.
-
-        This method must be implemented with the @cached_property or @property
-        decorator.
-        """
-        raise NotImplementedError(
-            "This method must be implemented in the concrete exchange class.",
-        )
-
     # == Getters for exchange trade operations =================================
     @abstractmethod
     def create_order(

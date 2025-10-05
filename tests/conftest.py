@@ -6,6 +6,7 @@
 #
 
 import pytest
+from click.testing import CliRunner
 
 from infinity_grid.models.configuration import DBConfigDTO
 
@@ -20,3 +21,8 @@ def db_config() -> DBConfigDTO:
         database="test_db",
         sqlite_file=":memory:",
     )
+
+
+@pytest.fixture
+def cli_runner() -> CliRunner:
+    return CliRunner()

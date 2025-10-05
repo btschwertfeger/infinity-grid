@@ -83,7 +83,7 @@ services:
           memory: 150M
 
   postgresql:
-    image: postgres:17-bookworm
+    image: postgres:18-bookworm
     volumes:
       - postgres-data:/var/lib/postgresql/data
     environment:

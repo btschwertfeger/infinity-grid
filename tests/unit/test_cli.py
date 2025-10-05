@@ -10,36 +10,29 @@
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from click.testing import CliRunner
 
 from infinity_grid.core.cli import cli
 
-
-@pytest.fixture
-def runner() -> CliRunner:
-    return CliRunner()
-
-
 # ==============================================================================
 
 
-def test_cli_help(runner: CliRunner) -> None:
+def test_cli_help(cli_runner: CliRunner) -> None:
     """Test the help message"""
-    result = runner.invoke(cli, ["--help"])
+    result = cli_runner.invoke(cli, ["--help"])
     assert result.exit_code == 0
     assert "Usage:" in result.output
 
 
-def test_cli_version(runner: CliRunner) -> None:
+def test_cli_version(cli_runner: CliRunner) -> None:
     """Test the version message"""
-    result = runner.invoke(cli, ["--version"])
+    result = cli_runner.invoke(cli, ["--version"])
     assert result.exit_code == 0
 
 
 @patch.dict(os.environ, {})
 @patch("infinity_grid.core.engine.BotEngine", new_callable=MagicMock)
-def test_cli_run(mock_bot: MagicMock, runner: CliRunner) -> None:
+def test_cli_run(mock_bot: MagicMock, cli_runner: CliRunner) -> None:
     """Test the run command"""
     command = [
         "--api-public-key",
@@ -68,7 +61,7 @@ def test_cli_run(mock_bot: MagicMock, runner: CliRunner) -> None:
         "Kraken",
     ]
     mock_bot.return_value.run = AsyncMock()
-    result = runner.invoke(cli, command)
+    result = cli_runner.invoke(cli, command)
 
     assert result.exit_code == 0, result.stderr
     mock_bot.assert_called_once()

@@ -1,5 +1,6 @@
 pytest
 pytest-asyncio
 pytest-cov
+pytest-timeout
 pytest-xdist
 python-kraken-sdk>=3.2.6,<4.0.0

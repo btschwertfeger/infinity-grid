@@ -6,6 +6,7 @@
 #
 
 import os
+import sys
 from logging import DEBUG, INFO, WARNING, basicConfig, getLogger
 from typing import Any
 
@@ -124,6 +125,9 @@ def cli(ctx: Context, **kwargs: dict) -> None:
     else:
         getLogger("websockets").setLevel(WARNING)
         getLogger("kraken").setLevel(WARNING)
+
+    if sys.platform == "win32":
+        LOG.warning("The infinity-grid does not fully support Windows.")
 
     if collected_ffs := filter(
         lambda item: item[0].startswith("INFINITY_GRID_FF"),
