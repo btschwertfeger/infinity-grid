@@ -10,7 +10,7 @@ Base classes for exchange integration testing.
 """
 
 import logging
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Any, Callable, Iterable, Protocol, Self
 from unittest import mock
 
@@ -82,20 +82,74 @@ class BaseIntegrationTestManager(ABC):
         notification_config: NotificationConfigDTO,
         db_config: DBConfigDTO,
         exchange_config: ExchangeTestConfig,
+        mock_api_type: type[MockExchangeAPI],
     ) -> None:
         self.bot_config = bot_config
         self._notification_config = notification_config
         self._db_config = db_config
         self.exchange_config = exchange_config
+        self.mock_api_type = mock_api_type
 
         # Engine and mock API must be initialized using initialize_engine()
         self._engine: BotEngine | None = None
         self._mock_api: MockExchangeAPI | None = None
 
-    @abstractmethod
     async def initialize_engine(self) -> None:
         """Initialize the BotEngine with exchange-specific adapters."""
-        raise NotImplementedError
+        self._engine = BotEngine(
+            bot_config=self.bot_config,
+            db_config=self._db_config,
+            notification_config=self._notification_config,
+        )
+
+        from infinity_grid.adapters.exchanges.kraken import (
+            KrakenExchangeRESTServiceAdapter,
+            KrakenExchangeWebsocketServiceAdapter,
+        )
+
+        # ==========================================================================
+        # Initialize the mocked REST API client
+        self._engine._BotEngine__strategy._rest_api = KrakenExchangeRESTServiceAdapter(
+            api_public_key=self.bot_config.api_public_key,
+            api_secret_key=self.bot_config.api_secret_key,
+            state_machine=self._engine._BotEngine__state_machine,
+            base_currency=self.bot_config.base_currency,
+            quote_currency=self.bot_config.quote_currency,
+        )
+
+        self._mock_api = self.mock_api_type(self.exchange_config)
+        self._engine._BotEngine__strategy._rest_api._KrakenExchangeRESTServiceAdapter__user_service = (
+            self._mock_api
+        )
+        self._engine._BotEngine__strategy._rest_api._KrakenExchangeRESTServiceAdapter__trade_service = (
+            self._mock_api
+        )
+        self._engine._BotEngine__strategy._rest_api._KrakenExchangeRESTServiceAdapter__market_service = (
+            self._mock_api
+        )
+
+        # ==========================================================================
+        # Initialize the websocket client
+        self._engine._BotEngine__strategy._GridHODLStrategy__ws_client = (
+            KrakenExchangeWebsocketServiceAdapter(
+                api_public_key=self.bot_config.api_public_key,
+                api_secret_key=self.bot_config.api_secret_key,
+                state_machine=self._engine._BotEngine__state_machine,
+                event_bus=self._engine._BotEngine__event_bus,
+            )
+        )
+        # Stop the connection directly
+        await self._engine._BotEngine__strategy._GridHODLStrategy__ws_client.close()
+        # Use the mocked API client
+        self._engine._BotEngine__strategy._GridHODLStrategy__ws_client.__websocket_service = (
+            self._mock_api
+        )
+
+        # ==========================================================================
+        # Misc
+        self._engine._BotEngine__strategy._exchange_domain = (
+            self._engine._BotEngine__strategy._rest_api.get_exchange_domain()
+        )
 
     # =========================================================================
     # Common test workflow methods

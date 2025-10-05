@@ -54,62 +54,96 @@ class IntegrationTestScenarios:
         self: Self,
         test_data: CDCATestData,
     ) -> None:
+        """
+        Run complete cDCA strategy test scenarios.
+
+        Tests the continuous dollar-cost averaging strategy behavior including
+        initial order placement, price movements, order filling, and max investment limits.
+
+        Args:
+            test_data: Test expectations for cDCA strategy
+        """
         # Initialize the algorithm with the initial ticker price
         await self.scenario_prepare_for_trading(test_data.initial_ticker)
-        # Ensure the initial n open buy orders were placed correctly
+
+        # Ensure the initial buy orders were placed correctly
         await self.scenario_check_initial_buy_orders(
             test_data.check_initial_n_buy_orders,
         )
+
         # Shift buy orders up and verify the new state
         await self.scenario_shift_buy_orders_up(test_data.trigger_shift_up_buy_orders)
+
         # Fill a buy order and verify the resulting state
         await self.scenario_fill_buy_order(test_data.trigger_fill_buy_order)
+
         # Ensure that the correct number of open buy orders are maintained
         await self.scenario_ensure_n_open_buy_orders(
             test_data.trigger_ensure_n_open_buy_orders,
         )
+
         # Simulate a rapid price drop and verify the resulting state
         await self.scenario_rapid_price_drop(test_data.trigger_rapid_price_drop)
-        # Again, ensure the correct number of open buy orders after the price drop
+
+        # Ensure the correct number of open buy orders after the price drop
         await self.scenario_ensure_n_open_buy_orders(
             test_data.trigger_ensure_n_open_buy_orders_after_drop,
         )
-        # Finally, check that the max investment condition is handled correctly
+
+        # Check that the max investment condition is handled correctly
         await self.scenario_check_max_investment_reached(
             test_data.check_max_investment_reached,
         )
 
     async def run_gridhodl_scenarios(self: Self, test_data: GridHODLTestData) -> None:
+        """
+        Run complete GridHODL strategy test scenarios.
 
+        Tests the Grid HODL strategy behavior including initial order placement,
+        buy/sell order filling, rapid price drops, insufficient funds handling,
+        and max investment limits.
+
+        Args:
+            test_data: Test expectations for GridHODL strategy
+        """
         # Initialize and prepare for trading
         await self.scenario_prepare_for_trading(test_data.initial_ticker)
+
         # Ensure that initial buy orders are placed
         await self.scenario_check_initial_buy_orders(
             test_data.check_initial_n_buy_orders,
         )
+
         # Shift buy orders up and ensure correct behavior
         await self.scenario_shift_buy_orders_up(test_data.trigger_shift_up_buy_orders)
+
         # Fill a buy order and ensure correct behavior
         await self.scenario_fill_buy_order(test_data.trigger_fill_buy_order)
-        # Ensure that after filling a buy order, the correct number of buy orders
-        # are present
+
+        # Ensure that after filling a buy order, the correct number of buy orders are present
         await self.scenario_ensure_n_open_buy_orders(
             test_data.trigger_ensure_n_open_buy_orders,
         )
+
         # Fill a sell order
         await self.scenario_fill_sell_order(test_data.trigger_fill_sell_order)
+
         # Check rapid price drop handling
         await self.scenario_rapid_price_drop(test_data.trigger_rapid_price_drop)
+
         # After rapid price drop, execute the sell orders
         await self.scenario_trigger_all_sell_orders(test_data.trigger_all_sell_orders)
+
         # Check handling of insufficient funds for selling
         await self.scenario_check_not_enough_funds_for_sell(
             test_data.check_not_enough_funds_for_sell,
         )
+
         # Sell all after not having enough funds
         await self.scenario_sell_after_not_enough_funds(
             test_data.sell_after_not_enough_funds_for_sell,
         )
+
         # Check max investment reached
         await self.scenario_check_max_investment_reached(
             test_data.check_max_investment_reached,
@@ -119,64 +153,57 @@ class IntegrationTestScenarios:
         self: Self,
         test_data: GridSellTestData,
     ) -> None:
+        """
+        Run complete GridSell strategy test scenarios.
 
-        # ==========================================================================
-        # INITIALIZATION AND SETUP
+        Tests the Grid Sell strategy behavior including initial order placement,
+        buy/sell order filling, rapid price drops, max investment limits,
+        and insufficient funds handling (which should cause strategy failure).
+
+        Args:
+            test_data: Test expectations for GridSell strategy
+        """
+        # Initialize and prepare for trading
         await self.scenario_prepare_for_trading(test_data.initial_ticker)
 
-        # ==========================================================================
-        # 1. PLACEMENT OF INITIAL N BUY ORDERS
+        # Placement of initial buy orders
         await self.scenario_check_initial_buy_orders(
             test_data.check_initial_n_buy_orders,
         )
 
-        # ==========================================================================
-        # 2. SHIFTING UP BUY ORDERS
+        # Shifting up buy orders
         await self.scenario_shift_buy_orders_up(test_data.trigger_shift_up_buy_orders)
 
-        # ==========================================================================
-        # 3. FILLING A BUY ORDER
+        # Filling a buy order
         await self.scenario_fill_buy_order(test_data.trigger_fill_buy_order)
 
-        # ==========================================================================
-        # 4. ENSURING N OPEN BUY ORDERS
+        # Ensuring correct number of open buy orders
         await self.scenario_ensure_n_open_buy_orders(
             test_data.trigger_ensure_n_open_buy_orders,
         )
 
-        # ==========================================================================
-        # 5. FILLING A SELL ORDER
+        # Filling a sell order
         await self.scenario_fill_sell_order(test_data.trigger_fill_sell_order)
+        # Note: Sell order gets removed from orderbook without creating new buy order
+        # unless there are more sell orders. Buy orders shift up if price rises higher.
 
-        # ... as we can see, the sell order got removed from the orderbook.
-        # ... there is no new corresponding buy order placed - this would only be
-        # the case for the case, if there would be more sell orders.
-        # As usual, if the price would rise higher, the buy orders would shift up.
-
-        # ==========================================================================
-        # 6. RAPID PRICE DROP - FILLING ALL BUY ORDERS
+        # Rapid price drop - filling all buy orders
         await self.scenario_rapid_price_drop(test_data.trigger_rapid_price_drop)
 
-        # ==========================================================================
-        # 7. SELL ALL AND ENSURE N OPEN BUY ORDERS
+        # Sell all and ensure correct number of open buy orders
         await self.scenario_trigger_all_sell_orders(test_data.trigger_all_sell_orders)
 
-        # ==========================================================================
-        # 8. MAX INVESTMENT REACHED
+        # Max investment reached
         await self.scenario_check_max_investment_reached(
             test_data.check_max_investment_reached,
         )
 
-        # After this, we need to retrigger the placement of n buy orders, otherwise
-        # the following tests will fail.
+        # Retrigger placement of buy orders after max investment
         await self.scenario_ensure_n_open_buy_orders(
             test_data.trigger_ensure_n_open_buy_orders_after_max_investment,
         )
 
-        # ==========================================================================
-        # 9. Test what happens if there are not enough funds to place a sell order
-        #    for some reason. The GridSell strategy will fail in this case to trigger
-        #    a restart (handled by external process manager)
+        # Test insufficient funds for sell order - GridSell should fail in this case
         await self.scenario_check_not_enough_funds_for_sell(
             test_data.check_not_enough_funds_for_sell,
             fail=True,  # GridSell should fail in this case
@@ -186,7 +213,16 @@ class IntegrationTestScenarios:
         self: Self,
         test_data: SWINGTestData,
     ) -> None:
+        """
+        Run complete SWING strategy test scenarios.
 
+        Tests the SWING strategy behavior including initial order placement
+        (both buy and sell orders), rapid price drops, buy order shifting,
+        profit verification, and insufficient funds handling.
+
+        Args:
+            test_data: Test expectations for SWING strategy
+        """
         # Initialize and prepare for trading
         await self.scenario_prepare_for_trading(test_data.initial_ticker)
 
@@ -238,9 +274,7 @@ class IntegrationTestScenarios:
         # Check handling of insufficient funds for selling
         await self.scenario_check_not_enough_funds_for_sell(
             test_data.check_not_enough_funds_for_sell,
-        )
-
-    # =============================================================================
+        )  # =============================================================================
 
     async def scenario_prepare_for_trading(self: Self, initial_ticker: float) -> None:
         """
