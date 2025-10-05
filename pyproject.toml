@@ -88,6 +88,7 @@ markers = [
   "asyncio: used for async tests.",
   "integration: used for integration tests.",
   "wip: used for wip tests.",
+  "acceptance: marks tests as acceptance tests",
 ]
 asyncio_default_fixture_loop_scope = "function"
 filterwarnings = [
