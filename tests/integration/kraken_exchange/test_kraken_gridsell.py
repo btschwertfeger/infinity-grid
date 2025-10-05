@@ -383,7 +383,7 @@ async def test_grid_sell(
     caplog: pytest.LogCaptureFixture,
     test_manager_factory: Callable[[str, str], KrakenIntegrationTestManager],
     symbol: str,
-    test_data,
+    test_data: GridSellTestData,
 ) -> None:
     """
     Integration test for the GridSell strategy using the new testing framework.
@@ -488,7 +488,7 @@ GRIDSELL_UNFILLED_SURPLUS_AAPLXUSD_EXPECTATIONS = GridSellUnfilledSurplusTestDat
 @mock.patch("infinity_grid.strategies.grid_sell.sleep", return_value=None)
 @mock.patch("infinity_grid.strategies.grid_base.sleep", return_value=None)
 @pytest.mark.parametrize(
-    ("symbol", "expectations"),
+    ("symbol", "test_data"),
     [
         ("XBTUSD", GRIDSELL_UNFILLED_SURPLUS_XBTUSD_EXPECTATIONS),
         ("AAPLxUSD", GRIDSELL_UNFILLED_SURPLUS_AAPLXUSD_EXPECTATIONS),
@@ -502,7 +502,7 @@ async def test_grid_sell_unfilled_surplus(
     caplog: pytest.LogCaptureFixture,
     test_manager_factory: Callable[[str, str], KrakenIntegrationTestManager],
     symbol: str,
-    expectations,
+    test_data: GridSellUnfilledSurplusTestData,
 ) -> None:
     """
     Integration test for the GridSell strategy using the new testing framework.
@@ -525,12 +525,12 @@ async def test_grid_sell_unfilled_surplus(
 
     # ==========================================================================
     # INITIALIZATION AND SETUP
-    await scenarios.scenario_prepare_for_trading(expectations.initial_ticker)
+    await scenarios.scenario_prepare_for_trading(test_data.initial_ticker)
 
     # ==========================================================================
     # 1. PLACEMENT OF INITIAL N BUY ORDERS
     await scenarios.scenario_check_initial_buy_orders(
-        expectations.check_initial_n_buy_orders,
+        test_data.check_initial_n_buy_orders,
     )
 
     # ==========================================================================
@@ -539,21 +539,21 @@ async def test_grid_sell_unfilled_surplus(
 
     test_manager._mock_api.fill_order(
         test_manager.strategy._orderbook_table.get_orders().first().txid,
-        expectations.partial_fill.fill_volume,
+        test_data.partial_fill.fill_volume,
     )
     assert (
         test_manager.strategy._orderbook_table.count()
-        == expectations.partial_fill.n_open_orders
+        == test_data.partial_fill.n_open_orders
     )
 
     balances = test_manager._mock_api.get_balances()
     assert (
         float(balances[test_manager.exchange_config.base_currency]["balance"])
-        == expectations.partial_fill.expected_base_balance
+        == test_data.partial_fill.expected_base_balance
     )
     assert float(
         balances[test_manager.exchange_config.quote_currency]["balance"],
-    ) == pytest.approx(expectations.partial_fill.expected_quote_balance)
+    ) == pytest.approx(test_data.partial_fill.expected_quote_balance)
 
     test_manager.strategy._handle_cancel_order(
         test_manager.strategy._orderbook_table.get_orders().first().txid,
@@ -561,13 +561,13 @@ async def test_grid_sell_unfilled_surplus(
 
     assert (
         test_manager.strategy._configuration_table.get()["vol_of_unfilled_remaining"]
-        == expectations.partial_fill.fill_volume
+        == test_data.partial_fill.fill_volume
     )
     assert (
         test_manager.strategy._configuration_table.get()[
             "vol_of_unfilled_remaining_max_price"
         ]
-        == expectations.partial_fill.vol_of_unfilled_remaining_max_price
+        == test_data.partial_fill.vol_of_unfilled_remaining_max_price
     )
 
     # ==========================================================================
@@ -578,11 +578,11 @@ async def test_grid_sell_unfilled_surplus(
     LOG.info("******* Check selling the unfilled surplus *******")
 
     test_manager.strategy.new_buy_order(
-        order_price=expectations.sell_partial_fill.order_price,
+        order_price=test_data.sell_partial_fill.order_price,
     )
     assert (
         test_manager.strategy._orderbook_table.count()
-        == expectations.sell_partial_fill.n_open_orders
+        == test_data.sell_partial_fill.n_open_orders
     )
     assert (
         len(
@@ -594,15 +594,15 @@ async def test_grid_sell_unfilled_surplus(
                 if o.status == "open"
             ],
         )
-        == expectations.sell_partial_fill.n_open_orders
+        == test_data.sell_partial_fill.n_open_orders
     )
 
     order = test_manager.strategy._orderbook_table.get_orders(
-        filters={"price": expectations.sell_partial_fill.order_price},
+        filters={"price": test_data.sell_partial_fill.order_price},
     ).all()[0]
     test_manager._mock_api.fill_order(
         order["txid"],
-        expectations.partial_fill.fill_volume,
+        test_data.partial_fill.fill_volume,
     )
     test_manager.strategy._handle_cancel_order(order["txid"])
 
@@ -616,7 +616,7 @@ async def test_grid_sell_unfilled_surplus(
                 if o.status == "open"
             ],
         )
-        == expectations.sell_partial_fill.n_open_orders
+        == test_data.sell_partial_fill.n_open_orders
     )
     assert (
         test_manager.strategy._configuration_table.get()[
@@ -628,7 +628,7 @@ async def test_grid_sell_unfilled_surplus(
     sell_orders = test_manager.strategy._orderbook_table.get_orders(
         filters={"side": "sell"},
     ).all()
-    assert sell_orders[0].price == expectations.sell_partial_fill.expected_sell_price
+    assert sell_orders[0].price == test_data.sell_partial_fill.expected_sell_price
     assert sell_orders[0].volume == pytest.approx(
-        expectations.sell_partial_fill.expected_sell_volume,
+        test_data.sell_partial_fill.expected_sell_volume,
     )

@@ -24,10 +24,9 @@ from infinity_grid.models.configuration import (
 )
 
 from ..framework.base_test_manager import BaseIntegrationTestManager
+from .kraken_api_mock import ExchangeTestConfig, KrakenMockAPI
 
 LOG = logging.getLogger(__name__)
-
-from .kraken_api_mock import ExchangeTestConfig, KrakenMockAPI
 
 
 class KrakenIntegrationTestManager(BaseIntegrationTestManager):

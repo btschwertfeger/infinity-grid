@@ -10,9 +10,11 @@ Base classes for exchange integration testing.
 """
 
 import logging
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Any, Callable, Iterable, Protocol, Self
 from unittest import mock
+
+from pydantic import BaseModel
 
 from infinity_grid.core.engine import BotEngine
 from infinity_grid.core.state_machine import States
@@ -23,7 +25,6 @@ from infinity_grid.models.configuration import (
 )
 
 LOG = logging.getLogger(__name__)
-from pydantic import BaseModel
 
 
 class ExchangeTestConfig(BaseModel):
@@ -154,7 +155,7 @@ class BaseIntegrationTestManager(ABC):
     # =========================================================================
     # Common test workflow methods
     # =========================================================================
-
+    @abstractmethod
     async def trigger_prepare_for_trading(self, initial_ticker: float) -> None:
         """
         # 0. PREPARE FOR TRADING

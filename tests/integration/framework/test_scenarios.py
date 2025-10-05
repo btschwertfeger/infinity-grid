@@ -275,6 +275,7 @@ class IntegrationTestScenarios:
         await self.scenario_check_not_enough_funds_for_sell(
             test_data.check_not_enough_funds_for_sell,
         )
+
     # =============================================================================
 
     async def scenario_prepare_for_trading(self: Self, initial_ticker: float) -> None:
@@ -326,7 +327,7 @@ class IntegrationTestScenarios:
         Args:
             expectation: Expected order shifting behavior
         """
-        LOG.info(f"Scenario: Shifting buy orders up to price: {expectation.new_price}")
+        LOG.info("Scenario: Shifting buy orders up to price: %s", expectation.new_price)
         await self.manager.trigger_shift_up_buy_orders(
             new_price=expectation.new_price,
             prices=expectation.prices,
@@ -347,7 +348,7 @@ class IntegrationTestScenarios:
         Args:
             expectation: Expected fill behavior and resulting orders
         """
-        LOG.info(f"Scenario: Filling buy order at price: {expectation.new_price}")
+        LOG.info("Scenario: Filling buy order at price: %s", expectation.new_price)
         await self.manager.trigger_fill_buy_order(
             no_trigger_price=expectation.no_trigger_price,
             new_price=expectation.new_price,
@@ -373,7 +374,8 @@ class IntegrationTestScenarios:
             expectation: Expected order configuration
         """
         LOG.info(
-            f"Scenario: Ensuring N open buy orders at price: {expectation.new_price}",
+            "Scenario: Ensuring N open buy orders at price: %s",
+            expectation.new_price,
         )
         await self.manager.trigger_ensure_n_open_buy_orders(
             new_price=expectation.new_price,
@@ -395,7 +397,7 @@ class IntegrationTestScenarios:
         Args:
             expectation: Expected behavior during price drop
         """
-        LOG.info(f"Scenario: Rapid price drop to: {expectation.new_price}")
+        LOG.info("Scenario: Rapid price drop to: %s", expectation.new_price)
         await self.manager.trigger_rapid_price_drop(
             new_price=expectation.new_price,
             prices=expectation.prices,
@@ -417,7 +419,8 @@ class IntegrationTestScenarios:
             expectation: Expected max investment behavior
         """
         LOG.info(
-            f"Scenario: Checking max investment limit: {expectation.max_investment}",
+            "Scenario: Checking max investment limit: %s",
+            expectation.max_investment,
         )
         await self.manager.check_max_investment_reached(
             current_price=expectation.current_price,
@@ -438,7 +441,7 @@ class IntegrationTestScenarios:
         Args:
             expectation: Expected sell order fill behavior
         """
-        LOG.info(f"Scenario: Filling sell order at price: {expectation.new_price}")
+        LOG.info("Scenario: Filling sell order at price: %s", expectation.new_price)
         await self.manager.trigger_fill_sell_order(
             new_price=expectation.new_price,
             prices=expectation.prices,
@@ -460,7 +463,8 @@ class IntegrationTestScenarios:
             expectation: Expected all sell orders behavior
         """
         LOG.info(
-            f"Scenario: Triggering all sell orders at price: {expectation.new_price}",
+            "Scenario: Triggering all sell orders at price: %s",
+            expectation.new_price,
         )
         await self.manager.trigger_all_sell_orders(
             new_price=expectation.new_price,
@@ -486,7 +490,8 @@ class IntegrationTestScenarios:
             fail: Whether the scenario should expect failure (for GridSell)
         """
         LOG.info(
-            f"Scenario: Checking insufficient funds for sell at price: {expectation.sell_price}",
+            "Scenario: Checking insufficient funds for sell at price: %s",
+            expectation.sell_price,
         )
         await self.manager.check_not_enough_funds_for_sell(
             sell_price=expectation.sell_price,
@@ -511,7 +516,8 @@ class IntegrationTestScenarios:
             expectation: Expected behavior after resolving insufficient funds
         """
         LOG.info(
-            f"Scenario: Selling after insufficient funds resolved at price: {expectation.price}",
+            "Scenario: Selling after insufficient funds resolved at price: %s",
+            expectation.price,
         )
 
         # Simulate ticker update that will place missed orders
