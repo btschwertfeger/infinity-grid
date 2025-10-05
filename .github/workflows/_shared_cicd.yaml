@@ -28,11 +28,11 @@ on:
     secrets:
       CODECOV_TOKEN:
         required: true
+      INFINITY_GRID_API_PUBLIC_KEY:
+        required: true
+      INFINITY_GRID_API_SECRET_KEY:
+        required: true
       KUBECONFIG: # Only in PR runs
-        required: false
-      INFINITY_GRID_API_PUBLIC_KEY: # Only in PR runs
-        required: false
-      INFINITY_GRID_API_SECRET_KEY: # Only in PR runs
         required: false
       INFINITY_GRID_RUN_DB_PASSWORD: # Only in PR runs
         required: false
