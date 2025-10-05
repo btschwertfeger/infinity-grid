@@ -13,7 +13,6 @@ parameterization, making it easier to maintain test data and extend
 to new exchanges and trading pairs.
 """
 
-from typing import Any
 from pydantic import BaseModel
 
 
