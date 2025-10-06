@@ -59,6 +59,8 @@ class GridStrategyBase:
     GridHODL, GridSell, SWING, or CDCA.
     """
 
+    CHECK_BUY_ORDER_TIMEOUT_SECONDS: int = 10
+
     def __init__(
         self,
         config: BotConfigDTO,
@@ -96,6 +98,7 @@ class GridStrategyBase:
 
         self._cost_decimals: int
         self._amount_per_grid_plus_fee: float
+        self.__check_buy_order_timeout_start: datetime | None = None
 
         # Store messages received before the algorithm is ready to trade.
         self._missed_messages: list[OnMessageSchema] = []
@@ -609,8 +612,6 @@ class GridStrategyBase:
         If the price (``self.ticker``) raises to high, the open buy orders
         will be canceled and new buy orders below the price respecting the
         interval will be placed.
-
-        FIXME: Does it makes sens to use events for all these checks?
         """
         if self._config.dry_run:
             LOG.debug("Dry run, not checking price range.")
@@ -692,40 +693,65 @@ class GridStrategyBase:
     def __check_n_open_buy_orders(self: Self) -> None:
         """
         Ensures that there are n open buy orders and will place orders until n.
+
+        This function uses a timeout mechanism used in the following scenario
+
+          - WHEN there are not enough funds available
+            AND the maximum investment limit is not reached
+            AND there are not enough open buy orders
+            THEN the function triggers the timeout and exits early
+
+            ... to prevent to check for the users balances via REST API on each
+            ticker update. If the timeout mechanism would not be employed, the
+            instance might run into rate limit errors.
         """
         LOG.debug(
             "Checking if there are %d open buy orders...",
             self._config.n_open_buy_orders,
         )
-        can_place_buy_order: bool = True
-        buy_prices: list[float] = list(self._get_current_buy_prices())
+
+        if (
+            self.__check_buy_order_timeout_start is not None
+            and datetime.now() - self.__check_buy_order_timeout_start
+            < timedelta(seconds=self.CHECK_BUY_ORDER_TIMEOUT_SECONDS)
+        ):
+            # Return early in case the timeout is still active
+            return
+
+        self.__check_buy_order_timeout_start = None
+        can_place_buy_order = True
+
         while (
-            (
+            can_place_buy_order
+            and not self._max_investment_reached
+            and self.__check_buy_order_timeout_start is None
+            and self._pending_txids_table.count() == 0
+            and (
                 n_active_buy_orders := self._orderbook_table.count(
                     filters={"side": self._exchange_domain.BUY},
                 )
             )
             < self._config.n_open_buy_orders
-            and can_place_buy_order
-            and self._pending_txids_table.count() == 0
-            and not self._max_investment_reached
         ):
             fetched_balances = self._rest_api.get_pair_balance()
             if fetched_balances.quote_available > self._amount_per_grid_plus_fee:
                 order_price: float = self._get_buy_order_price(
                     last_price=(
-                        self._ticker if n_active_buy_orders == 0 else min(buy_prices)
+                        self._ticker
+                        if n_active_buy_orders == 0
+                        else min(list(self._get_current_buy_prices()))
                     ),
                 )
 
-                self._handle_arbitrage(
-                    side=self._exchange_domain.BUY,
-                    order_price=order_price,
-                )
-                buy_prices = list(self._get_current_buy_prices())
+                self._handle_arbitrage(self._exchange_domain.BUY, order_price)
                 LOG.debug("Length of active buy orders: %s", n_active_buy_orders + 1)
             else:
-                LOG.warning("Not enough quote currency available to place buy order!")
+                LOG.warning(
+                    "Not enough quote currency available to place buy order!"
+                    " Setting timeout of %s seconds before retrying ...",
+                    self.CHECK_BUY_ORDER_TIMEOUT_SECONDS,
+                )
+                self.__check_buy_order_timeout_start = datetime.now()
                 can_place_buy_order = False
 
     def __check_lowest_cancel_of_more_than_n_buy_orders(self: Self) -> None:
