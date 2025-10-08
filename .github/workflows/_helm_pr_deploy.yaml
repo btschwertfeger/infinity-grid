@@ -70,7 +70,6 @@ jobs:
       - name: Generate release name
         id: release-name
         run: |
-          # Use simple naming: infinity-grid-pr-{number}
           RELEASE_NAME="infinity-grid-pr-${{ inputs.pr_number }}"
           echo "name=$RELEASE_NAME" >> $GITHUB_OUTPUT
           echo "Release name: $RELEASE_NAME"
