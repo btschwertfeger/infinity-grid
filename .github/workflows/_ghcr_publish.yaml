@@ -75,7 +75,7 @@ jobs:
           TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           DIGEST=""
-          echo "$TAGS" | while IFS= read -r tag; do
+          while IFS= read -r tag; do
             docker tag btschwertfeger/infinity-grid:build-artifact "$tag"
             docker push "$tag"
 
@@ -83,7 +83,7 @@ jobs:
             if [ -z "$DIGEST" ]; then
               DIGEST=$(docker image inspect "$tag" --format='{{index .RepoDigests 0}}' | cut -d'@' -f2)
             fi
-          done
+          done <<< "$TAGS"
 
           echo "digest=$DIGEST" >> $GITHUB_OUTPUT
 
