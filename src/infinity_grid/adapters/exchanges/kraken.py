@@ -300,13 +300,14 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
         currency.
 
         FIXME: Is there a way to get the balances of the asset pair directly?
-        FIXME: Respect balances held by auto earn
 
         On Kraken, crypto assets are prefixed with 'X' (e.g., 'XETH', 'XXBT'),
         while fiat assets are prefixed with 'Z' (e.g., 'ZEUR', 'ZUSD').
 
         Tokenized assets have a '.T' suffix
         https://docs.kraken.com/api/docs/rest-api/get-extended-balance/.
+
+        Balances earning automatically in Kraken Rewards have a '.F' suffix.
         """
         pair_info = self.get_asset_pair_info()
         custom_base = pair_info.base
@@ -318,25 +319,25 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
             custom_quote = pair_info.quote + ".T"
 
         base_balance = Decimal(0)
-        base_available = Decimal(0)
+        base_hold_trade = Decimal(0)
         quote_balance = Decimal(0)
-        quote_available = Decimal(0)
+        quote_hold_trade = Decimal(0)
 
         for balance in self.get_balances():
-            if balance.asset == custom_base:
-                base_balance = Decimal(balance.balance)
-                base_available = base_balance - Decimal(balance.hold_trade)
-            elif balance.asset == custom_quote:
-                quote_balance = Decimal(balance.balance)
-                quote_available = quote_balance - Decimal(balance.hold_trade)
+            if balance.asset in {custom_base, f"{custom_base}.F"}:
+                base_balance += Decimal(balance.balance)
+                base_hold_trade += Decimal(balance.hold_trade)
+            elif balance.asset in {custom_quote, f"{custom_quote}.F"}:
+                quote_balance += Decimal(balance.balance)
+                quote_hold_trade += Decimal(balance.hold_trade)
 
         LOG.debug(
             "Retrieved balances: %s",
             balances := PairBalanceSchema(
                 base_balance=float(base_balance),
                 quote_balance=float(quote_balance),
-                base_available=float(base_available),
-                quote_available=float(quote_available),
+                base_available=float(base_balance - base_hold_trade),
+                quote_available=float(quote_balance - quote_hold_trade),
             ),
         )
         return balances

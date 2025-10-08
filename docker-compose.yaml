@@ -11,12 +11,14 @@
 # variables accordingly. See https://infinity-grid.readthedocs.io/en/stable/ for
 # complete documentation.
 #
+# Note: Do not use this file from the master branch! Use one from a stable tag
+#       instead. See https://github.com/btschwertfeger/infinity-grid/releases.
+# Note: Before increasing the version number of the infinity-grid, please check
+#       the release notes for breaking changes.
 # Note: For running multiple instances of the infinity-grid in parallel, you can
 #       simply duplicate and configure the service, as it supports sharing the
 #       same database. BUT: Keep in mind to use different API keys as well as
 #       different userref's! Otherwise you will encounter errors.
-# Note: Before increasing the version number of the infinity-grid, please check
-#       the release notes for breaking changes.
 # Note: Do not update the PostgreSQL version that serves a running infinity-grid
 #       instance unless absolutely necessary. Here again, read the release
 #       notes. and always create a backup before making changes.
