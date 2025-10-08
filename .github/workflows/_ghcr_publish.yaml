@@ -64,11 +64,10 @@ jobs:
           tags: |
             type=schedule
             type=ref,event=branch
-            type=ref,event=tag
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=ref,event=tag
+            type=semver,pattern=v{{major}}.{{minor}}-latest
+            type=semver,pattern=v{{major}}-latest
 
       - name: Tag and push to GHCR
         id: push
