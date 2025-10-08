@@ -64,25 +64,26 @@ jobs:
           tags: |
             type=schedule
             type=ref,event=branch
-            type=ref,event=tag
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=ref,event=tag
+            type=semver,pattern=v{{major}}.{{minor}}-latest
+            type=semver,pattern=v{{major}}-latest
 
       - name: Tag and push to GHCR
         id: push
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           DIGEST=""
-          for tag in ${{ steps.meta.outputs.tags }}; do
-            docker tag btschwertfeger/infinity-grid:build-artifact $tag
-            docker push $tag
+          while IFS= read -r tag; do
+            docker tag btschwertfeger/infinity-grid:build-artifact "$tag"
+            docker push "$tag"
 
             # Get digest from the first pushed tag
             if [ -z "$DIGEST" ]; then
-              DIGEST=$(docker image inspect $tag --format='{{index .RepoDigests 0}}' | cut -d'@' -f2)
+              DIGEST=$(docker image inspect "$tag" --format='{{index .RepoDigests 0}}' | cut -d'@' -f2)
             fi
-          done
+          done <<< "$TAGS"
 
           echo "digest=$DIGEST" >> $GITHUB_OUTPUT
 
