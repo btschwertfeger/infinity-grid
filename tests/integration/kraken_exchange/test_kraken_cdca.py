@@ -5,236 +5,252 @@
 # https://github.com/btschwertfeger
 #
 
+"""
+Integration tests for cDCA strategy using the new scenario-based framework.
+
+This module demonstrates the use of individual test scenarios that can be
+tested independently, providing better modularity and test isolation.
+"""
+
 import logging
+from typing import Callable
 from unittest import mock
 
 import pytest
 
-from infinity_grid.core.state_machine import States
-from infinity_grid.models.configuration import (
-    BotConfigDTO,
-    DBConfigDTO,
-    NotificationConfigDTO,
+from ..framework.test_data_models import (
+    CDCATestData,
+    FillBuyOrderExpectation,
+    MaxInvestmentExpectation,
+    OrderExpectation,
+    RapidPriceDropExpectation,
+    ShiftOrdersExpectation,
+)
+from ..framework.test_scenarios import IntegrationTestScenarios
+
+CDCA_XBTUSD_EXPECTATIONS = CDCATestData(
+    initial_ticker=50_000.0,
+    check_initial_n_buy_orders=OrderExpectation(
+        prices=(
+            49_504.9,
+            49_014.7,
+            48_529.4,
+            48_048.9,
+            47_573.1,
+        ),
+        volumes=(
+            0.00202,
+            0.0020402,
+            0.0020606,
+            0.00208121,
+            0.00210202,
+        ),
+        sides=("buy", "buy", "buy", "buy", "buy"),
+    ),
+    trigger_shift_up_buy_orders=ShiftOrdersExpectation(
+        new_price=60_000.0,
+        prices=(
+            59_405.9,
+            58_817.7,
+            58_235.3,
+            57_658.7,
+            57_087.8,
+        ),
+        volumes=(
+            0.00168333,
+            0.00170016,
+            0.00171717,
+            0.00173434,
+            0.00175168,
+        ),
+        sides=("buy", "buy", "buy", "buy", "buy"),
+    ),
+    trigger_fill_buy_order=FillBuyOrderExpectation(
+        no_trigger_price=59_990.0,
+        new_price=59_000.0,
+        old_prices=(
+            59_405.9,
+            58_817.7,
+            58_235.3,
+            57_658.7,
+            57_087.8,
+        ),
+        old_volumes=(
+            0.00168333,
+            0.00170016,
+            0.00171717,
+            0.00173434,
+            0.00175168,
+        ),
+        old_sides=("buy", "buy", "buy", "buy", "buy"),
+        new_prices=(
+            58_817.7,
+            58_235.3,
+            57_658.7,
+            57_087.8,
+        ),
+        new_volumes=(
+            0.00170016,
+            0.00171717,
+            0.00173434,
+            0.00175168,
+        ),
+        new_sides=("buy", "buy", "buy", "buy"),
+    ),
+    trigger_ensure_n_open_buy_orders=ShiftOrdersExpectation(
+        new_price=59_100.0,
+        prices=(58_817.7, 58_235.3, 57_658.7, 57_087.8, 56_522.5),
+        volumes=(
+            0.00170016,
+            0.00171717,
+            0.00173434,
+            0.00175168,
+            0.0017692,
+        ),
+        sides=("buy", "buy", "buy", "buy", "buy"),
+    ),
+    trigger_rapid_price_drop=RapidPriceDropExpectation(
+        new_price=50_000.0,
+        prices=(),
+        volumes=(),
+        sides=(),
+    ),
+    trigger_ensure_n_open_buy_orders_after_drop=ShiftOrdersExpectation(
+        new_price=50_100.0,
+        prices=(
+            49_603.9,
+            49_112.7,
+            48_626.4,
+            48_144.9,
+            47_668.2,
+        ),
+        volumes=(
+            0.00201597,
+            0.00203613,
+            0.00205649,
+            0.00207706,
+            0.00209783,
+        ),
+        sides=("buy", "buy", "buy", "buy", "buy"),
+    ),
+    check_max_investment_reached=MaxInvestmentExpectation(
+        current_price=50_000.0,
+        n_open_sell_orders=0,
+        max_investment=50.0,
+    ),
 )
 
-from .helper import get_kraken_instance
-
-
-@pytest.fixture
-def kraken_cdca_bot_config() -> BotConfigDTO:
-    return BotConfigDTO(
-        strategy="cDCA",
-        exchange="Kraken",
-        api_public_key="",
-        api_secret_key="",
-        name="Local Tests Bot cDCA",
-        userref=0,
-        base_currency="BTC",
-        quote_currency="USD",
-        max_investment=10000.0,
-        amount_per_grid=100.0,
-        interval=0.01,
-        n_open_buy_orders=5,
-        verbosity=0,
-    )
+CDCA_AAPLXUSD_EXPECTATIONS = CDCATestData(
+    initial_ticker=260.0,
+    check_initial_n_buy_orders=OrderExpectation(
+        prices=(257.42, 254.87, 252.34, 249.84, 247.36),
+        volumes=(
+            0.3884702,
+            0.39235688,
+            0.39629071,
+            0.40025616,
+            0.40426908,
+        ),
+        sides=("buy", "buy", "buy", "buy", "buy"),
+    ),
+    trigger_shift_up_buy_orders=ShiftOrdersExpectation(
+        new_price=280.0,
+        prices=(277.22, 274.47, 271.75, 269.05, 266.38),
+        volumes=(
+            0.36072433,
+            0.36433854,
+            0.36798528,
+            0.37167812,
+            0.37540355,
+        ),
+        sides=("buy", "buy", "buy", "buy", "buy"),
+    ),
+    trigger_fill_buy_order=FillBuyOrderExpectation(
+        no_trigger_price=279.0,
+        new_price=277.0,
+        old_prices=(277.22, 274.47, 271.75, 269.05, 266.38),
+        old_volumes=(
+            0.36072433,
+            0.36433854,
+            0.36798528,
+            0.37167812,
+            0.37540355,
+        ),
+        old_sides=("buy", "buy", "buy", "buy", "buy"),
+        new_prices=(274.47, 271.75, 269.05, 266.38),
+        new_volumes=(
+            0.36433854,
+            0.36798528,
+            0.37167812,
+            0.37540355,
+        ),
+        new_sides=("buy", "buy", "buy", "buy"),
+    ),
+    trigger_ensure_n_open_buy_orders=ShiftOrdersExpectation(
+        new_price=277.1,
+        prices=(274.47, 271.75, 269.05, 266.38, 263.74),
+        volumes=(
+            0.36433854,
+            0.36798528,
+            0.37167812,
+            0.37540355,
+            0.37916129,
+        ),
+        sides=("buy", "buy", "buy", "buy", "buy"),
+    ),
+    trigger_rapid_price_drop=RapidPriceDropExpectation(
+        new_price=260.0,
+        prices=(),
+        volumes=(),
+        sides=(),
+    ),
+    trigger_ensure_n_open_buy_orders_after_drop=ShiftOrdersExpectation(
+        new_price=260.0,
+        prices=(257.42, 254.87, 252.34, 249.84, 247.36),
+        volumes=(
+            0.3884702,
+            0.39235688,
+            0.39629071,
+            0.40025616,
+            0.40426908,
+        ),
+        sides=("buy", "buy", "buy", "buy", "buy"),
+    ),
+    check_max_investment_reached=MaxInvestmentExpectation(
+        current_price=260.0,
+        n_open_sell_orders=0,
+        max_investment=50.0,
+    ),
+)
 
 
 @pytest.mark.integration
 @pytest.mark.asyncio
 @mock.patch("infinity_grid.adapters.exchanges.kraken.sleep", return_value=None)
 @mock.patch("infinity_grid.strategies.grid_base.sleep", return_value=None)
-async def test_kraken_cdca(
+@pytest.mark.parametrize(
+    ("symbol", "test_data"),
+    [
+        ("XBTUSD", CDCA_XBTUSD_EXPECTATIONS),
+        ("AAPLxUSD", CDCA_AAPLXUSD_EXPECTATIONS),
+    ],
+    ids=["XBTUSD", "AAPLxUSD"],
+)
+async def test_cdca(
     mock_sleep1: mock.MagicMock,  # noqa: ARG001
     mock_sleep2: mock.MagicMock,  # noqa: ARG001
     caplog: pytest.LogCaptureFixture,
-    kraken_cdca_bot_config: BotConfigDTO,
-    notification_config: NotificationConfigDTO,
-    db_config: DBConfigDTO,
+    test_manager_factory: Callable,
+    symbol: str,
+    test_data: CDCATestData,
 ) -> None:
     """
-    Integration test for cDCA strategy using pre-generated websocket messages.
+    Test the cDCA strategy on Kraken exchange using predefined scenarios.
     """
     caplog.set_level(logging.INFO)
 
-    # Create engine using mocked Kraken API
-    engine = await get_kraken_instance(
-        bot_config=kraken_cdca_bot_config,
-        notification_config=notification_config,
-        db_config=db_config,
-    )
-    state_machine = engine._BotEngine__state_machine
-    strategy = engine._BotEngine__strategy
-    ws_client = strategy._GridHODLStrategy__ws_client
-    rest_api = strategy._rest_api
-    api = engine._BotEngine__strategy._GridHODLStrategy__ws_client.__websocket_service
+    test_manager = test_manager_factory("Kraken", symbol, strategy="cDCA")
+    await test_manager.initialize_engine()
 
-    # ==========================================================================
-    # During the following processing, the following steps are done:
-    # 1. The algorithm prepares for trading (see setup)
-    # 2. The order manager checks the price range
-    # 3. The order manager checks for n open buy orders
-    # 4. The order manager places new orders
-    await ws_client.on_message(
-        {
-            "channel": "executions",
-            "type": "snapshot",
-            "data": [{"exec_type": "canceled", "order_id": "txid0"}],
-        },
-    )
-    assert state_machine.state == States.INITIALIZING
-    assert strategy._ready_to_trade is False
-
-    await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    assert strategy._ticker == 50000.0
-    assert state_machine.state == States.RUNNING
-    assert strategy._ready_to_trade is True
-
-    # ==========================================================================
-    # 1. PLACEMENT OF INITIAL N BUY ORDERS
-    # After both fake-websocket channels are connected, the algorithm went
-    # through its full setup and placed orders against the fake Kraken API and
-    # finally saved those results into the local orderbook table.
-
-    # Check if the five initial buy orders are placed with the expected price
-    # and volume. Note that the interval is not exactly 0.01 due to the fee
-    # which is taken into account.
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (49504.9, 49014.7, 48529.4, 48048.9, 47573.1),
-        (0.00202, 0.0020402, 0.0020606, 0.00208121, 0.00210202),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
-
-    # ==========================================================================
-    # 2. SHIFTING UP BUY ORDERS
-    # Check if shifting up the buy orders works
-    await api.on_ticker_update(callback=ws_client.on_message, last=60000.0)
-    assert strategy._ticker == 60000.0
-    assert state_machine.state == States.RUNNING
-
-    # We should now still have 5 buy orders, but at a higher price. The other
-    # orders should be canceled.
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (59405.9, 58817.7, 58235.3, 57658.7, 57087.8),
-        (0.00168333, 0.00170016, 0.00171717, 0.00173434, 0.00175168),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
-
-    # ==========================================================================
-    # 3. FILLING A BUY ORDER
-    # Now lets let the price drop a bit so that a buy order gets triggered.
-    await api.on_ticker_update(callback=ws_client.on_message, last=59990.0)
-    assert strategy._ticker == 59990.0
-    assert state_machine.state == States.RUNNING
-
-    # Quick re-check ... the price update should not affect any orderbook
-    # changes when dropping.
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (59405.9, 58817.7, 58235.3, 57658.7, 57087.8),
-        (0.00168333, 0.00170016, 0.00171717, 0.00173434, 0.00175168),
-        strict=False,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
-
-    assert strategy._orderbook_table.count() == 5
-
-    # Now trigger the execution of the first buy order
-    await api.on_ticker_update(callback=ws_client.on_message, last=59000.0)
-    assert state_machine.state == States.RUNNING
-    assert strategy._orderbook_table.count() == 4
-
-    # Ensure that we have 4 buy orders and no sell order
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (58817.7, 58235.3, 57658.7, 57087.8),
-        (0.00170016, 0.00171717, 0.00173434, 0.00175168),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
-
-    # ==========================================================================
-    # 4. ENSURING N OPEN BUY ORDERS
-    # If there is a new price event, the algorithm will place the 5th buy order.
-    await api.on_ticker_update(callback=ws_client.on_message, last=59100.0)
-    assert state_machine.state == States.RUNNING
-    assert strategy._orderbook_table.count() == 5
-
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (58817.7, 58235.3, 57658.7, 57087.8, 56522.5),
-        (0.00170016, 0.00171717, 0.00173434, 0.00175168, 0.0017692),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
-
-    # ==========================================================================
-    # 5. RAPID PRICE DROP - FILLING ALL BUY ORDERS
-    # Now check the behavior for a rapid price drop.
-    await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    assert state_machine.state == States.RUNNING
-    assert strategy._orderbook_table.count() == 0
-    assert rest_api.get_open_orders(userref=strategy._config.userref) == []
-
-    # ==========================================================================
-    # 6. ENSURE N OPEN BUY ORDERS
-    await api.on_ticker_update(callback=ws_client.on_message, last=50100.0)
-    assert state_machine.state == States.RUNNING
-    assert strategy._orderbook_table.count() == 5
-
-    for order, price, volume in zip(
-        strategy._orderbook_table.get_orders().all(),
-        (49603.9, 49112.7, 48626.4, 48144.9, 47668.2),
-        (0.00201597, 0.00203613, 0.00205649, 0.00207706, 0.00209783),
-        strict=True,
-    ):
-        assert order.price == price
-        assert order.volume == volume
-        assert order.side == "buy"
-        assert order.symbol == "XBTUSD"
-        assert order.userref == strategy._config.userref
-
-    # ==========================================================================
-    # 7. MAX INVESTMENT REACHED
-
-    # First ensure that new buy orders can be placed...
-    assert not strategy._max_investment_reached
-    strategy._GridStrategyBase__cancel_all_open_buy_orders()
-    assert strategy._orderbook_table.count() == 0
-    await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    assert strategy._orderbook_table.count() == 5
-
-    # Now with a different max investment, the max investment should be reached
-    # and no further orders be placed.
-    assert not strategy._max_investment_reached
-    strategy._config.max_investment = 202.0  # 200 USD + fee
-    strategy._GridStrategyBase__cancel_all_open_buy_orders()
-    assert strategy._orderbook_table.count() == 0
-    await api.on_ticker_update(callback=ws_client.on_message, last=50000.0)
-    assert strategy._orderbook_table.count() == 2
-    assert strategy._max_investment_reached
-
-    assert state_machine.state == States.RUNNING
+    scenarios = IntegrationTestScenarios(test_manager)
+    await scenarios.run_cdca_scenarios(test_data)

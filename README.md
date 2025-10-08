@@ -72,12 +72,12 @@ Note: This project is the successor of the
 
 **Product Support Matrix:**
 
-| Exchange                                 | Status  |
-| ---------------------------------------- | ------- |
-| [Binance](https://binance.com)           | Planned |
-| [Coinbase](https://binance.com)          | Planned |
-| [Kraken](https://pro.kraken.com)         | ✅      |
-| Other ideas? Issues and PRs are welcome! | 💡      |
+| Exchange                                              | Status  |
+| ----------------------------------------------------- | ------- |
+| [Binance](https://binance.com)                        | Planned |
+| [Coinbase](https://binance.com)                       | Planned |
+| [Kraken](https://pro.kraken.com) (Crypto and xStocks) | ✅      |
+| Other ideas? Issues and PRs are welcome!              | 💡      |
 
 ## 📚 Fundamental concepts
 
@@ -255,7 +255,8 @@ configuration. Avoid running the algorithm with real money before you are
 confident in the algorithm's behavior and performance!
 
 Depending on the used exchange, different preparatory steps might be needed. In
-the following, the steps for use with the Kraken Crypto Asset Exchange is shown:
+the following, the steps for use with the Kraken Crypto Asset Exchange are
+shown:
 
 1. In order to trade at the [Kraken Crypto Asset
    Exchange](https://pro.kraken.com), you need to generate API keys for the

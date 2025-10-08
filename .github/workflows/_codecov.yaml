@@ -88,7 +88,7 @@ jobs:
         env:
           INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
           INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
-        run: pytest -vv -x --cov=infinity_grid --cov-report=xml:coverage.xml tests
+        run: pytest -vv -x -n auto --cov=infinity_grid --cov-report=xml:coverage.xml tests
 
       - name: Export coverage report
         uses: actions/upload-artifact@v4

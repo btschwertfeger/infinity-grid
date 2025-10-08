@@ -28,6 +28,7 @@ Dependencies:
 
 """
 
+import os
 from contextlib import suppress
 from decimal import Decimal
 from functools import cached_property, lru_cache
@@ -71,6 +72,11 @@ from infinity_grid.models.exchange import (
 
 LOG = getLogger(__name__)
 
+# Feature flags to override the default URLs
+FF_REST_URL = os.getenv("INFINITY_GRID_FF_KRAKEN_REST_URL")
+FF_WS_URL = os.getenv("INFINITY_GRID_FF_KRAKEN_WS_URL")
+FF_AUTH_WS_URL = os.getenv("INFINITY_GRID_FF_KRAKEN_AUTH_WS_URL")
+
 
 class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
     """Adapter for the Kraken exchange user service implementation."""
@@ -85,10 +91,22 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
     ) -> None:
         self.__base_currency = base_currency
         self.__quote_currency = quote_currency
-        self.__user_service: User = User(key=api_public_key, secret=api_secret_key)
-        self.__trade_service: Trade = Trade(key=api_public_key, secret=api_secret_key)
-        self.__market_service: Market = Market()
+        self.__user_service: User = User(
+            key=api_public_key,
+            secret=api_secret_key,
+            url=FF_REST_URL,
+        )
+        self.__trade_service: Trade = Trade(
+            key=api_public_key,
+            secret=api_secret_key,
+            url=FF_REST_URL,
+        )
+        self.__market_service: Market = Market(url=FF_REST_URL)
         self.__state_machine: StateMachine = state_machine
+
+        self.__asset_class: str = (
+            "tokenized_asset" if self.__base_currency.endswith("x") else "currency"
+        )
 
     # == Implemented abstract methods from IExchangeRESTService ================
 
@@ -276,17 +294,28 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
             balances.append(AssetBalanceSchema(asset=symbol, **data))
         return balances
 
-    def get_pair_balance(
-        self: Self,
-    ) -> PairBalanceSchema:
+    def get_pair_balance(self: Self) -> PairBalanceSchema:
         """
         Returns the available and overall balances of the quote and base
         currency.
 
         FIXME: Is there a way to get the balances of the asset pair directly?
         FIXME: Respect balances held by auto earn
+
+        On Kraken, crypto assets are prefixed with 'X' (e.g., 'XETH', 'XXBT'),
+        while fiat assets are prefixed with 'Z' (e.g., 'ZEUR', 'ZUSD').
+
+        Tokenized assets have a '.T' suffix
+        https://docs.kraken.com/api/docs/rest-api/get-extended-balance/.
         """
-        custom_base, custom_quote = self.__retrieve_custom_base_quote_names()
+        pair_info = self.get_asset_pair_info()
+        custom_base = pair_info.base
+        custom_quote = pair_info.quote
+
+        if pair_info.aclass_base == "tokenized_asset":
+            custom_base = pair_info.base + ".T"
+        if pair_info.aclass_quote == "tokenized_asset":
+            custom_quote = pair_info.quote + ".T"
 
         base_balance = Decimal(0)
         base_available = Decimal(0)
@@ -320,9 +349,15 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
     @cached_property
     def rest_symbol(self: Self) -> str:
         """Returns the symbol for the given base and quote currency."""
-        asset_response = self.__market_service.get_assets(
-            assets=[self.__base_currency, self.__quote_currency],
-        )
+        if self.__asset_class == "tokenized_asset":
+            asset_response = self.__market_service.get_assets(
+                assets=[self.__base_currency],
+                extra_params={"aclass": self.__asset_class},
+            ) | self.__market_service.get_assets(assets=[self.__quote_currency])
+        else:
+            asset_response = self.__market_service.get_assets(
+                assets=[self.__base_currency, self.__quote_currency],
+            )
 
         base_currency = quote_currency = None
         assets = {self.__base_currency, self.__quote_currency}
@@ -375,6 +410,7 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
                 userref=userref,
                 validate=validate,
                 oflags=oflags,
+                extra_params={"asset_class": self.__asset_class},
             )["txid"][0],
         )
 
@@ -395,21 +431,24 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
             amount=amount,
             amount_type=amount_type,
             pair=self.rest_altname,
+            asset_class=self.__asset_class,
         )
 
     def get_system_status(self: Self) -> str:
         """Get the current system status of the exchange."""
         return self.__market_service.get_system_status()["status"]  # type: ignore[no-any-return]
 
-    def get_asset_pair_info(
-        self: Self,
-    ) -> AssetPairInfoSchema:
+    @lru_cache(maxsize=1)  # noqa: B019
+    def get_asset_pair_info(self: Self) -> AssetPairInfoSchema:
         """Get available asset pair information from the exchange."""
         # NOTE: Kraken allows "XBTUSD", "BTCUSD", "BTC/USD" but not "XBT/USD"
         # which is the actual self.rest_symbol, so we need to use self.ws_symbol
         # here. Ticket Nr.: 18252552
         if (
-            pair_info := self.__market_service.get_asset_pairs(pair=self.ws_symbol)
+            pair_info := self.__market_service.get_asset_pairs(
+                pair=self.ws_symbol,
+                extra_params={"aclass_base": self.__asset_class},
+            )
         ) == {}:
             self.__state_machine.transition_to(States.ERROR)
             raise BotStateError(
@@ -431,20 +470,6 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
             PENDING="pending",
         )
 
-    # == Custom Kraken Methods for convenience =================================
-
-    @lru_cache(maxsize=1)  # noqa: B019
-    def __retrieve_custom_base_quote_names(self: Self) -> tuple[str, str]:
-        """
-        Returns the custom base and quote name for the given currencies.
-        On Kraken, crypto assets are prefixed with 'X' (e.g., 'XETH', 'XXBT'),
-        while fiat assets are prefixed with 'Z' (e.g., 'ZEUR', 'ZUSD').
-
-        This can be cached, since the asset names do not change frequently.
-        """
-        pair_info: AssetPairInfoSchema = self.get_asset_pair_info()
-        return pair_info.base, pair_info.quote
-
 
 class KrakenExchangeWebsocketServiceAdapter(IExchangeWebSocketService):
     """Adapter for the Kraken exchange websocket service implementation."""
@@ -460,6 +485,9 @@ class KrakenExchangeWebsocketServiceAdapter(IExchangeWebSocketService):
             key=api_public_key,
             secret=api_secret_key,
             callback=self.on_message,
+            rest_url=FF_REST_URL,
+            ws_url=FF_WS_URL,
+            auth_ws_url=FF_AUTH_WS_URL,
         )
         self.__state_machine: StateMachine = state_machine
         self.__event_bus: EventBus = event_bus

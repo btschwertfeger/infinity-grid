@@ -5,6 +5,7 @@
 # https://github.com/btschwertfeger
 #
 
+import os
 import sys
 from logging import DEBUG, INFO, WARNING, basicConfig, getLogger
 from typing import Any
@@ -128,6 +129,14 @@ def cli(ctx: Context, **kwargs: dict) -> None:
     if sys.platform == "win32":
         LOG.warning("The infinity-grid does not fully support Windows.")
 
+    if collected_ffs := filter(
+        lambda item: item[0].startswith("INFINITY_GRID_FF"),
+        ((key, value) for key, value in os.environ.items()),
+    ):
+        LOG.info("Using the following feature flags:")
+    for key, value in collected_ffs:
+        LOG.info(" - %s: %s", key, value)
+
 
 @cli.command(
     context_settings={
@@ -214,7 +223,10 @@ def cli(ctx: Context, **kwargs: dict) -> None:
         "--base-currency",
         required=True,
         type=STRING,
-        help="The base currency.",
+        help="""
+        The base currency. Can also be a tokenized asset like 'AAPLx' in case of
+        xStocks on Kraken.
+        """,
     ),
     option(
         "--quote-currency",

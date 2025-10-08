@@ -9,7 +9,7 @@
 UV ?= uv
 PYTHON := python
 PYTEST := pytest
-PYTEST_OPTS := -vv --junit-xml=pytest.xml
+PYTEST_OPTS := -vv --junit-xml=pytest.xml -n auto
 PYTEST_COV_OPTS := $(PYTEST_OPTS) --cov=infinity_grid --cov-report=xml:coverage.xml --cov-report=term-missing --cov-report=html
 TEST_DIR := tests
 
@@ -37,7 +37,7 @@ doc:
 
 ## image	Build the Docker image
 ##
-image:
+image: rebuild
 	docker build \
 	--build-arg VERSION=dev \
 	--build-arg CREATE_TIME=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ") \
