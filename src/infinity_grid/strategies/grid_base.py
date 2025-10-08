@@ -1176,11 +1176,12 @@ class GridStrategyBase:
         if self._pending_txids_table.count(filters={"txid": order_details.txid}) != 0:
             self._orderbook_table.add(order_details)
             self._pending_txids_table.remove(order_details.txid)
-        else:
-            self._orderbook_table.update(
-                order_details,
-            )
+        elif self._orderbook_table.count(filters={"txid": order_details.txid}) != 0:
+            self._orderbook_table.update(order_details)
             LOG.info("Updated order '%s' in orderbook.", order_details.txid)
+        else:
+            self._orderbook_table.add(order_details)
+            LOG.info("Added order '%s' to orderbook.", order_details.txid)
 
         LOG.info(
             "Current investment: %f / %d %s",
