@@ -64,7 +64,7 @@ services:
       INFINITY_GRID_RUN_DB_USER: infinity_grid
       INFINITY_GRID_RUN_DB_PASSWORD: infinity_grid
     networks:
-      - internal_network
+      - infinity_grid_network
     restart: always
     healthcheck:
       test:
@@ -94,7 +94,7 @@ services:
       POSTGRES_PASSWORD: infinity_grid
       POSTGRES_DB: infinity_grid
     networks:
-      internal_network:
+      infinity_grid_network:
         aliases:
           - postgresql
     restart: always
