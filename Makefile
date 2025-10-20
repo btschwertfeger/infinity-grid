@@ -41,7 +41,6 @@ image: rebuild
 	docker build \
 	--build-arg VERSION=dev \
 	--build-arg CREATE_TIME=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ") \
-	--platform linux/amd64,linux/arm64 \
 	-t btschwertfeger/infinity-grid:dev .
 
 ## ======= I N S T A L L A T I O N =============================================
