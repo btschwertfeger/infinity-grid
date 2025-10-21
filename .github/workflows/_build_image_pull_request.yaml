@@ -4,7 +4,7 @@
 # All rights reserved.
 # https://github.com/btschwertfeger
 #
-# Workflow to build the docker image.
+# Workflow to build the docker image for pull requests
 
 name: Build and Upload Container Image
 

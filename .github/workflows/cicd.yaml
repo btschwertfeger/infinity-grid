@@ -4,7 +4,7 @@
 # All rights reserved.
 # https://github.com/btschwertfeger
 #
-# Workflow running for master branch and releases
+# Workflow running for master and release events
 
 name: CI/CD
 
