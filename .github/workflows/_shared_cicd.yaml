@@ -221,7 +221,7 @@ jobs:
       && github.actor == 'btschwertfeger'
       && inputs.run_default
       && (
-        (inputs.trigger_context == 'push' && github.ref == 'refs/heads/master')
+        (inputs.trigger_context == 'push' && github.ref == 'refs/heads/test-arm-image-build')
         || inputs.trigger_context == 'release'
       )
     needs:
