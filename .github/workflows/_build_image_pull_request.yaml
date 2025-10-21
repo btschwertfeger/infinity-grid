@@ -47,6 +47,7 @@ jobs:
           path: dist/
 
       # ========================================================================
+
       # Ensure that the image is available in the local registry
       - name: Set up Docker
         uses: docker/setup-docker-action@v4
@@ -58,9 +59,9 @@ jobs:
                 "containerd-snapshotter": true
               }
             }
-        # if: |
-        #   success()
-        #   && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
+        if: |
+          success()
+          && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
 
       # Login to Registries
       - name: Log in to GitHub Container registry

@@ -21,21 +21,21 @@ jobs:
   ## ===========================================================================
   ##    Checks the code logic, style and more
   ##
-  # Pre-Commit:
-  #   uses: ./.github/workflows/_pre_commit.yaml
+  Pre-Commit:
+    uses: ./.github/workflows/_pre_commit.yaml
 
-  # ## ===========================================================================
-  # ##  Discover vulnerabilities
-  # ##
-  # CodeQL:
-  #   uses: ./.github/workflows/_codeql.yaml
+  ## ===========================================================================
+  ##  Discover vulnerabilities
+  ##
+  CodeQL:
+    uses: ./.github/workflows/_codeql.yaml
 
   ## ===========================================================================
   ##    Builds the package on multiple OS for multiple
   ##    Python versions
   ##
   Build:
-    # needs: [Pre-Commit]
+    needs: [Pre-Commit]
     uses: ./.github/workflows/_build.yaml
     strategy:
       fail-fast: true
@@ -46,84 +46,84 @@ jobs:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
 
-  # ## ===========================================================================
-  # ##    Build the documentation
-  # ##
-  # Build-Doc:
-  #   needs: [Pre-Commit]
-  #   uses: ./.github/workflows/_build_doc.yaml
-  #   with:
-  #     os: "ubuntu-latest"
-  #     python-version: "3.11"
+  ## ===========================================================================
+  ##    Build the documentation
+  ##
+  Build-Doc:
+    needs: [Pre-Commit]
+    uses: ./.github/workflows/_build_doc.yaml
+    with:
+      os: "ubuntu-latest"
+      python-version: "3.11"
 
-  # ## ===========================================================================
-  # ##    Run the unit and integration tests
-  # ##
-  # Test:
-  #   needs: [Build]
-  #   uses: ./.github/workflows/_test.yaml
-  #   strategy:
-  #     fail-fast: true
-  #     matrix:
-  #       os: [ubuntu-latest, macos-latest]
-  #       python-version: ["3.11", "3.12", "3.13"]
-  #   with:
-  #     os: ${{ matrix.os }}
-  #     python-version: ${{ matrix.python-version }}
+  ## ===========================================================================
+  ##    Run the unit and integration tests
+  ##
+  Test:
+    needs: [Build]
+    uses: ./.github/workflows/_test.yaml
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+    with:
+      os: ${{ matrix.os }}
+      python-version: ${{ matrix.python-version }}
 
-  # ## ===========================================================================
-  # ##    Generates and uploads the coverage statistics to codecov
-  # ##
-  # CodeCov:
-  #   if: success() && github.actor == 'btschwertfeger'
-  #   needs: [Build]
-  #   uses: ./.github/workflows/_codecov.yaml
-  #   with:
-  #     os: "ubuntu-latest"
-  #     python-version: "3.11"
-  #   secrets:
-  #     CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-  #     INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
-  #     INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
+  ## ===========================================================================
+  ##    Generates and uploads the coverage statistics to codecov
+  ##
+  CodeCov:
+    if: success() && github.actor == 'btschwertfeger'
+    needs: [Build]
+    uses: ./.github/workflows/_codecov.yaml
+    with:
+      os: "ubuntu-latest"
+      python-version: "3.11"
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
+      INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
 
   ## ===========================================================================
   ##    Build and push the Docker image
   ##
   ContainerImage:
     needs:
-      # - Pre-Commit
+      - Pre-Commit
       - Build
-      # - Build-Doc
-      # - Test
-      # - CodeQL
+      - Build-Doc
+      - Test
+      - CodeQL
     uses: ./.github/workflows/_build_image_pull_request.yaml
 
-  # ## ===========================================================================
-  # ##    Validate the Helm Chart
-  # ##
-  # Validate-Chart:
-  #   if: |
-  #     success()
-  #     && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
-  #   needs: [Pre-Commit]
-  #   uses: ./.github/workflows/_helm_test.yaml
-  #   secrets:
-  #     KUBECONFIG: ${{ secrets.KUBECONFIG }}
+  ## ===========================================================================
+  ##    Validate the Helm Chart
+  ##
+  Validate-Chart:
+    if: |
+      success()
+      && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
+    needs: [Pre-Commit]
+    uses: ./.github/workflows/_helm_test.yaml
+    secrets:
+      KUBECONFIG: ${{ secrets.KUBECONFIG }}
 
-  # ## ===========================================================================
-  # ##    Deploy to Kubernetes
-  # ##
-  # Deploy:
-  #   if: |
-  #     success()
-  #     && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
-  #   needs: [ContainerImage, Validate-Chart]
-  #   uses: ./.github/workflows/_helm_pr_deploy.yaml
-  #   with:
-  #     pr_number: ${{ github.event.number }}
-  #   secrets:
-  #     KUBECONFIG: ${{ secrets.KUBECONFIG }}
-  #     INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
-  #     INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
-  #     INFINITY_GRID_RUN_DB_PASSWORD: ${{ secrets.INFINITY_GRID_RUN_DB_PASSWORD }}
-  #     INFINITY_GRID_RUN_DB_USER: ${{ secrets.INFINITY_GRID_RUN_DB_USER }}
+  ## ===========================================================================
+  ##    Deploy to Kubernetes
+  ##
+  Deploy:
+    if: |
+      success()
+      && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
+    needs: [ContainerImage, Validate-Chart]
+    uses: ./.github/workflows/_helm_pr_deploy.yaml
+    with:
+      pr_number: ${{ github.event.number }}
+    secrets:
+      KUBECONFIG: ${{ secrets.KUBECONFIG }}
+      INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
+      INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
+      INFINITY_GRID_RUN_DB_PASSWORD: ${{ secrets.INFINITY_GRID_RUN_DB_PASSWORD }}
+      INFINITY_GRID_RUN_DB_USER: ${{ secrets.INFINITY_GRID_RUN_DB_USER }}
