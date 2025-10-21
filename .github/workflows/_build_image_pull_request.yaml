@@ -6,24 +6,30 @@
 #
 # Workflow to build the docker image.
 
-name: Build Docker Image
+name: Build and Upload Container Image
 
 on:
   workflow_call:
+    inputs:
+      pr_number:
+        description: "Pull request number for tagging"
+        required: true
+        type: string
 
 permissions:
+  packages: write
   contents: read
 
 jobs:
-  Build:
-    name: Build Docker image
+  Build-and-Push-PR:
+    name: Publish PR Docker image to GitHub Container Registry
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
         with:
           disable-sudo: true
-          egress-policy: block
+          egress-policy: audit
           allowed-endpoints: >
             auth.docker.io:443
             deb.debian.org:80
@@ -44,6 +50,17 @@ jobs:
           name: python-package-distributions
           path: dist/
 
+      # ========================================================================
+      # Login to Registries
+      - name: Log in to GitHub Container registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ========================================================================
+      # Build Setup
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -66,29 +83,38 @@ jobs:
             echo "version=${version}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build Docker image
+      # ========================================================================
+      # Build and test container image
+      - name: Build and push container image
+        uses: docker/build-push-action@v6.18.0
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/${{ github.repository }}:pr-${{ inputs.pr_number }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            CREATE_TIME=${{ steps.date.outputs.date }}
+        if: |
+          success()
+          && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
+
+      - name: Build container image
         uses: docker/build-push-action@v6.18.0
         with:
           context: .
           file: Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
-          load: true
-          tags: btschwertfeger/infinity-grid:build-artifact
+          tags: ghcr.io/${{ github.repository }}:pr-${{ inputs.pr_number }}
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
             CREATE_TIME=${{ steps.date.outputs.date }}
+        if: |
+          success()
+          && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
 
-      - name: Test Docker image
-        run: docker run --rm --entrypoint=infinity-grid btschwertfeger/infinity-grid:build-artifact --help
-
-      - name: Export Docker image to tar
+      - name: Test container image
         run: |
-          docker save btschwertfeger/infinity-grid:build-artifact -o ${{ runner.temp }}/infinity-grid-image.tar
-
-      - name: Upload Docker image artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-image
-          path: ${{ runner.temp }}/infinity-grid-image.tar
-          retention-days: 1
+          docker run --rm --entrypoint=infinity-grid ghcr.io/${{ github.repository }}:pr-${{ inputs.pr_number }} --help

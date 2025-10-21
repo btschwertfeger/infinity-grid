@@ -4,17 +4,14 @@
 # All rights reserved.
 # https://github.com/btschwertfeger
 #
-# Workflow running for master branch and releases
+# Workflow running for pull requests
 
-name: CI/CD
+name: PR CI/CD
 
 on:
-  push:
-    branches: [master]
-  schedule:
-    - cron: "0 6 * * FRI"
-  release:
-    types: [created]
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: ["**"]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -78,10 +75,7 @@ jobs:
   ##    Generates and uploads the coverage statistics to codecov
   ##
   CodeCov:
-    if: |
-      success()
-      && github.actor == 'btschwertfeger'
-      && ${{ github.event_name }} != 'schedule'
+    if: success() && github.actor == 'btschwertfeger'
     needs: [Build]
     uses: ./.github/workflows/_codecov.yaml
     with:
@@ -95,58 +89,41 @@ jobs:
   ## ===========================================================================
   ##    Build and push the Docker image
   ##
-  UploadContainerImage:
+  Docker:
     needs:
+      - Pre-Commit
       - Build
       - Build-Doc
-      - Build-Docker
-      - CodeCov
-      - CodeQL
       - Test
-    uses: ./.github/workflows/_build_image_release.yaml
-    if: |
-      success()
-      && github.actor == 'btschwertfeger'
-      && (
-        (${{ github.event_name }} == 'push' && github.ref == 'refs/heads/master')
-        || ${{ github.event_name }} == 'release'
-      )
+      - CodeQL
+    uses: ./.github/workflows/_build_image_pull_request.yaml
 
   ## ===========================================================================
-  ##    Uploads the package to test.pypi.org on master if triggered by
-  ##    a regular commit/push.
+  ##    Validate the Helm Chart (only in PR runs)
   ##
-  UploadTestPyPI:
+  Validate-Chart:
     if: |
       success()
-      && github.ref == 'refs/heads/master'
-      && (${{ github.event_name }} == 'push' || ${{ github.event_name }} == 'release')
-    needs:
-      - Build
-      - Build-Doc
-      - Build-Docker
-      - CodeCov
-      - CodeQL
-      - Test
-    uses: ./.github/workflows/_pypi_test_publish.yaml
+      && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
+    needs: [Pre-Commit]
+    uses: ./.github/workflows/_helm_test.yaml
     secrets:
-      API_TOKEN: ${{ secrets.TEST_PYPI_API_TOKEN }}
+      KUBECONFIG: ${{ secrets.KUBECONFIG }}
 
   ## ===========================================================================
-  ##    Upload the package to PyPI
+  ##    Deploy to Kubernetes (only in PR runs)
   ##
-  UploadPyPI:
+  Deploy:
     if: |
       success()
-      && github.actor == 'btschwertfeger'
-      && ${{ github.event_name }} == 'release'
-    needs:
-      - Build
-      - Build-Doc
-      - Build-Docker
-      - CodeCov
-      - CodeQL
-      - Test
-    uses: ./.github/workflows/_pypi_publish.yaml
+      && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
+    needs: [Docker, Validate-Chart]
+    uses: ./.github/workflows/_helm_pr_deploy.yaml
+    with:
+      pr_number: ${{ github.event.number }}
     secrets:
-      API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+      KUBECONFIG: ${{ secrets.KUBECONFIG }}
+      INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
+      INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
+      INFINITY_GRID_RUN_DB_PASSWORD: ${{ secrets.INFINITY_GRID_RUN_DB_PASSWORD }}
+      INFINITY_GRID_RUN_DB_USER: ${{ secrets.INFINITY_GRID_RUN_DB_USER }}
