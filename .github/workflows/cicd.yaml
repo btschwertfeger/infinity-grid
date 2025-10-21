@@ -99,7 +99,6 @@ jobs:
     needs:
       - Build
       - Build-Doc
-      - Build-Docker
       - CodeCov
       - CodeQL
       - Test
@@ -124,7 +123,7 @@ jobs:
     needs:
       - Build
       - Build-Doc
-      - Build-Docker
+      - UploadContainerImage
       - CodeCov
       - CodeQL
       - Test
@@ -143,7 +142,7 @@ jobs:
     needs:
       - Build
       - Build-Doc
-      - Build-Docker
+      - UploadContainerImage
       - CodeCov
       - CodeQL
       - Test
