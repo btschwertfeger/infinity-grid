@@ -120,10 +120,10 @@ jobs:
         #   success()
         #   && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
 
-      - name: Load amd64 image for testing
+      - name: Load and test image
         run: |
-          docker buildx imagetools create --tag test:local oci-layout:./image.tar
-          docker run --rm test:local echo "test"
+          docker load -i image.tar
+          docker run --rm --entrypoint=infinity-grid ghcr.io/${{ github.repository }}:pr-${{ github.event.number }} --help
         # if: |
         #   success()
         #   && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
