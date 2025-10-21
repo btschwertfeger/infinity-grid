@@ -10,11 +10,6 @@ name: Build and Upload Container Image
 
 on:
   workflow_call:
-    inputs:
-      pr_number:
-        description: "Pull request number for tagging"
-        required: true
-        type: string
 
 permissions:
   packages: write
@@ -92,7 +87,7 @@ jobs:
           file: Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ghcr.io/${{ github.repository }}:pr-${{ inputs.pr_number }}
+          tags: ghcr.io/${{ github.repository }}:pr-${{ github.event.number }}
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
             CREATE_TIME=${{ steps.date.outputs.date }}
@@ -107,7 +102,7 @@ jobs:
           file: Dockerfile
           platforms: linux/amd64,linux/arm64
           push: false
-          tags: ghcr.io/${{ github.repository }}:pr-${{ inputs.pr_number }}
+          tags: ghcr.io/${{ github.repository }}:pr-${{ github.event.number }}
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
             CREATE_TIME=${{ steps.date.outputs.date }}
@@ -117,4 +112,4 @@ jobs:
 
       - name: Test container image
         run: |
-          docker run --rm --entrypoint=infinity-grid ghcr.io/${{ github.repository }}:pr-${{ inputs.pr_number }} --help
+          docker run --rm --entrypoint=infinity-grid ghcr.io/${{ github.repository }}:pr-${{ github.event.number }} --help
