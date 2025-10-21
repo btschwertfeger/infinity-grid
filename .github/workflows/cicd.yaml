@@ -81,7 +81,7 @@ jobs:
     if: |
       success()
       && github.actor == 'btschwertfeger'
-      && ${{ github.event_name }} != 'schedule'
+      && github.event_name != 'schedule'
     needs: [Build]
     uses: ./.github/workflows/_codecov.yaml
     with:
@@ -107,8 +107,8 @@ jobs:
       success()
       && github.actor == 'btschwertfeger'
       && (
-        (${{ github.event_name }} == 'push' && github.ref == 'refs/heads/master')
-        || ${{ github.event_name }} == 'release'
+        (github.event_name == 'push' && github.ref == 'refs/heads/master')
+        || github.event_name == 'release'
       )
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -122,7 +122,7 @@ jobs:
     if: |
       success()
       && github.ref == 'refs/heads/master'
-      && ${{ github.event_name }} == 'push'
+      && github.event_name == 'push'
     needs:
       - Build
       - Build-Doc
@@ -141,7 +141,7 @@ jobs:
     if: |
       success()
       && github.actor == 'btschwertfeger'
-      && ${{ github.event_name }} == 'release'
+      && github.event_name == 'release'
     needs:
       - Build
       - Build-Doc
