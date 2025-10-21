@@ -84,21 +84,20 @@ jobs:
 
       # ========================================================================
       # Build and test container image
-      - name: Build and push container image
-        uses: docker/build-push-action@v6.18.0
-        with:
-          context: .
-          file: Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ghcr.io/${{ github.repository }}:pr-${{ github.event.number }}
-          build-args: |
-            VERSION=${{ steps.version.outputs.version }}
-            CREATE_TIME=${{ steps.date.outputs.date }}
-        if: |
-          success()
-          && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
-
+      # - name: Build and push container image
+      #   uses: docker/build-push-action@v6.18.0
+      #   with:
+      #     context: .
+      #     file: Dockerfile
+      #     platforms: linux/amd64,linux/arm64
+      #     push: true
+      #     tags: ghcr.io/${{ github.repository }}:pr-${{ github.event.number }}
+      #     build-args: |
+      #       VERSION=${{ steps.version.outputs.version }}
+      #       CREATE_TIME=${{ steps.date.outputs.date }}
+      #   if: |
+      #     success()
+      #     && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
       - name: Build container image
         uses: docker/build-push-action@v6.18.0
         with:
@@ -110,9 +109,9 @@ jobs:
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
             CREATE_TIME=${{ steps.date.outputs.date }}
-        if: |
-          success()
-          && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
+        # if: |
+        #   success()
+        #   && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
 
       - name: Test container image
         run: |
