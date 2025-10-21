@@ -104,26 +104,33 @@ jobs:
       #   if: |
       #     success()
       #     && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
-      - name: Build container image
+      # - name: Build container image
+      #   uses: docker/build-push-action@v6.18.0
+      #   with:
+      #     context: .
+      #     file: Dockerfile
+      #     platforms: linux/amd64,linux/arm64
+      #     push: false
+      #     tags: ghcr.io/${{ github.repository }}:pr-${{ github.event.number }}
+      #     build-args: |
+      #       VERSION=${{ steps.version.outputs.version }}
+      #       CREATE_TIME=${{ steps.date.outputs.date }}
+      # if: |
+      #   success()
+      #   && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
+
+      - name: Build container image (just to load)
         uses: docker/build-push-action@v6.18.0
         with:
           context: .
           file: Dockerfile
-          platforms: linux/amd64,linux/arm64
           push: false
+          load: true
           tags: ghcr.io/${{ github.repository }}:pr-${{ github.event.number }}
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
             CREATE_TIME=${{ steps.date.outputs.date }}
-          outputs: type=oci,dest=./image.tar
-        # if: |
-        #   success()
-        #   && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
 
-      - name: Load and test image
+      - name: Test container image
         run: |
-          docker load -i image.tar
           docker run --rm --entrypoint=infinity-grid ghcr.io/${{ github.repository }}:pr-${{ github.event.number }} --help
-        # if: |
-        #   success()
-        #   && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
