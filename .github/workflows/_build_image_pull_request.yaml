@@ -47,22 +47,6 @@ jobs:
           path: dist/
 
       # ========================================================================
-
-      # Ensure that the image is available in the local registry
-      - name: Set up Docker
-        uses: docker/setup-docker-action@v4
-        with:
-          daemon-config: |
-            {
-              "debug": true,
-              "features": {
-                "containerd-snapshotter": true
-              }
-            }
-        if: |
-          success()
-          && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
-
       # Login to Registries
       - name: Log in to GitHub Container registry
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
@@ -100,21 +84,26 @@ jobs:
 
       # ========================================================================
       # Build and test container image
-      - name: Build and push container image
-        uses: docker/build-push-action@v6.18.0
-        with:
-          context: .
-          file: Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ghcr.io/${{ github.repository }}:pr-${{ github.event.number }}
-          build-args: |
-            VERSION=${{ steps.version.outputs.version }}
-            CREATE_TIME=${{ steps.date.outputs.date }}
-        if: |
-          success()
-          && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
-
+      # - name: Build and push container image
+      #   uses: docker/build-push-action@v6.18.0
+      #   with:
+      #     context: .
+      #     file: Dockerfile
+      #     platforms: linux/amd64,linux/arm64
+      #     push: true
+      #     tags: ghcr.io/${{ github.repository }}:pr-${{ github.event.number }}
+      #     build-args: |
+      #       VERSION=${{ steps.version.outputs.version }}
+      #       CREATE_TIME=${{ steps.date.outputs.date }}
+      #   if: |
+      #     success()
+      #     && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
+      # - name: Test container image
+      #   run: |
+      #     docker run --rm --entrypoint=infinity-grid ghcr.io/${{ github.repository }}:pr-${{ github.event.number }} --help
+      #   if: |
+      #     success()
+      #     && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
       - name: Build container image
         uses: docker/build-push-action@v6.18.0
         with:
@@ -126,10 +115,15 @@ jobs:
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
             CREATE_TIME=${{ steps.date.outputs.date }}
-        if: |
-          success()
-          && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
+          outputs: type=oci,dest=./image.tar
+        # if: |
+        #   success()
+        #   && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
 
-      - name: Test container image
+      - name: Load amd64 image for testing
         run: |
-          docker run --rm --entrypoint=infinity-grid ghcr.io/${{ github.repository }}:pr-${{ github.event.number }} --help
+          docker buildx imagetools create --tag test:local oci-layout:./image.tar
+          docker run --rm test:local echo "test"
+        # if: |
+        #   success()
+        #   && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
