@@ -47,6 +47,22 @@ jobs:
           path: dist/
 
       # ========================================================================
+
+      # Ensure that the image is available in the local registry
+      - name: Set up Docker
+        uses: docker/setup-docker-action@v4
+        with:
+          daemon-config: |
+            {
+              "debug": true,
+              "features": {
+                "containerd-snapshotter": true
+              }
+            }
+        if: |
+          success()
+          && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
+
       # Login to Registries
       - name: Log in to GitHub Container registry
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
@@ -81,20 +97,6 @@ jobs:
             version=$(basename "$wheel_file" | sed 's/infinity_grid-\([^-]*\)-.*/\1/')
             echo "version=${version}" >> $GITHUB_OUTPUT
           fi
-
-      - name: Set up Docker
-        uses: docker/setup-docker-action@v4
-        with:
-          daemon-config: |
-            {
-              "debug": true,
-              "features": {
-                "containerd-snapshotter": true
-              }
-            }
-        if: |
-          success()
-          && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
 
       # ========================================================================
       # Build and test container image
