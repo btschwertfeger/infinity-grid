@@ -19,12 +19,10 @@ on:
 permissions:
   packages: write
   contents: read
-  attestations: write
-  id-token: write
 
 jobs:
   Build-and-Push:
-    name: Build Docker image
+    name: Build and push container image
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
@@ -36,6 +34,7 @@ jobs:
             auth.docker.io:443
             deb.debian.org:80
             files.pythonhosted.org:443
+            ghcr.io:443
             github.com:443
             production.cloudflare.docker.com:443
             pypi.org:443
@@ -109,7 +108,6 @@ jobs:
       # ========================================================================
       # Build and Test Docker Image
       - name: Build Docker image
-        id: build
         uses: docker/build-push-action@v6.18.0
         with:
           context: .
@@ -131,12 +129,3 @@ jobs:
 
       - name: Test Docker image
         run: docker run --rm --entrypoint=infinity-grid ${{ steps.test_tag.outputs.tag }} --help
-
-      # ========================================================================
-      # Generate Attestation
-      - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v3
-        with:
-          subject-name: ghcr.io/${{ github.repository }}
-          subject-digest: ${{ steps.build.outputs.digest }}
-          push-to-registry: true

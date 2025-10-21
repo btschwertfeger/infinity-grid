@@ -89,7 +89,7 @@ jobs:
   ## ===========================================================================
   ##    Build and push the Docker image
   ##
-  Docker:
+  ContainerImage:
     needs:
       - Pre-Commit
       - Build
@@ -99,7 +99,7 @@ jobs:
     uses: ./.github/workflows/_build_image_pull_request.yaml
 
   ## ===========================================================================
-  ##    Validate the Helm Chart (only in PR runs)
+  ##    Validate the Helm Chart
   ##
   Validate-Chart:
     if: |
@@ -111,13 +111,13 @@ jobs:
       KUBECONFIG: ${{ secrets.KUBECONFIG }}
 
   ## ===========================================================================
-  ##    Deploy to Kubernetes (only in PR runs)
+  ##    Deploy to Kubernetes
   ##
   Deploy:
     if: |
       success()
       && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
-    needs: [Docker, Validate-Chart]
+    needs: [ContainerImage, Validate-Chart]
     uses: ./.github/workflows/_helm_pr_deploy.yaml
     with:
       pr_number: ${{ github.event.number }}

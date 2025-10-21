@@ -16,8 +16,8 @@ permissions:
   contents: read
 
 jobs:
-  Build-and-Push-PR:
-    name: Publish PR Docker image to GitHub Container Registry
+  Build-and-Push:
+    name: Build and conditionally publish PR container image to GitHub Container Registry
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
@@ -29,6 +29,7 @@ jobs:
             auth.docker.io:443
             deb.debian.org:80
             files.pythonhosted.org:443
+            ghcr.io:443
             github.com:443
             production.cloudflare.docker.com:443
             pypi.org:443
@@ -53,6 +54,9 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+        if: |
+          success()
+          && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
 
       # ========================================================================
       # Build Setup

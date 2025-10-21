@@ -93,9 +93,9 @@ jobs:
       INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
 
   ## ===========================================================================
-  ##    Build and push the Docker image
+  ##    Build and push the container image
   ##
-  UploadContainerImage:
+  ContainerImage:
     needs:
       - Build
       - Build-Doc
@@ -110,6 +110,9 @@ jobs:
         (${{ github.event_name }} == 'push' && github.ref == 'refs/heads/master')
         || ${{ github.event_name }} == 'release'
       )
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   ## ===========================================================================
   ##    Uploads the package to test.pypi.org on master if triggered by
@@ -119,11 +122,11 @@ jobs:
     if: |
       success()
       && github.ref == 'refs/heads/master'
-      && (${{ github.event_name }} == 'push' || ${{ github.event_name }} == 'release')
+      && ${{ github.event_name }} == 'push'
     needs:
       - Build
       - Build-Doc
-      - UploadContainerImage
+      - ContainerImage
       - CodeCov
       - CodeQL
       - Test
@@ -142,7 +145,7 @@ jobs:
     needs:
       - Build
       - Build-Doc
-      - UploadContainerImage
+      - ContainerImage
       - CodeCov
       - CodeQL
       - Test
