@@ -91,11 +91,11 @@ jobs:
   ##
   ContainerImage:
     needs:
-      # - Pre-Commit
+      - Pre-Commit
       - Build
-      # - Build-Doc
-      # - Test
-      # - CodeQL
+      - Build-Doc
+      - Test
+      - CodeQL
     uses: ./.github/workflows/_build_image_pull_request.yaml
 
   ## ===========================================================================
