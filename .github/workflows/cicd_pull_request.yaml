@@ -110,20 +110,20 @@ jobs:
     secrets:
       KUBECONFIG: ${{ secrets.KUBECONFIG }}
 
-  ## ===========================================================================
-  ##    Deploy to Kubernetes
-  ##
-  Deploy:
-    if: |
-      success()
-      && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
-    needs: [ContainerImage, Validate-Chart]
-    uses: ./.github/workflows/_helm_pr_deploy.yaml
-    with:
-      pr_number: ${{ github.event.number }}
-    secrets:
-      KUBECONFIG: ${{ secrets.KUBECONFIG }}
-      INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
-      INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
-      INFINITY_GRID_RUN_DB_PASSWORD: ${{ secrets.INFINITY_GRID_RUN_DB_PASSWORD }}
-      INFINITY_GRID_RUN_DB_USER: ${{ secrets.INFINITY_GRID_RUN_DB_USER }}
+  # ## ===========================================================================
+  # ##    Deploy to Kubernetes
+  # ##
+  # Deploy:
+  #   if: |
+  #     success()
+  #     && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
+  #   needs: [ContainerImage, Validate-Chart]
+  #   uses: ./.github/workflows/_helm_pr_deploy.yaml
+  #   with:
+  #     pr_number: ${{ github.event.number }}
+  #   secrets:
+  #     KUBECONFIG: ${{ secrets.KUBECONFIG }}
+  #     INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
+  #     INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
+  #     INFINITY_GRID_RUN_DB_PASSWORD: ${{ secrets.INFINITY_GRID_RUN_DB_PASSWORD }}
+  #     INFINITY_GRID_RUN_DB_USER: ${{ secrets.INFINITY_GRID_RUN_DB_USER }}
