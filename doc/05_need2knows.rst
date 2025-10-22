@@ -138,7 +138,7 @@ with explanations about the different sections:
       available funds of the traded asset pair.
   * - I
     - Investment amount (current/maximum configured) in quote asset. This value
-      is calculated by the actual price that was paid and do not reflect the
+      is calculated by the actual price that was paid and does not reflect the
       current value of the assets.
   * - J
     - Configured grid size in quote asset
