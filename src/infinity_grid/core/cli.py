@@ -211,9 +211,9 @@ def cli(ctx: Context, **kwargs: dict) -> None:
         required=False,
         callback=ensure_larger_equal_zero,
         help="""
-        The fee percentage to respect, e.g. '0.0026' for 0.26 %. This value does not
-        change the actual paid fee! It is used to estimate order sizes. If not
-        passed, the highest maker fee will be assumed.
+        The fee percentage to respect, e.g. '0.0026' for 0.26 %. This value does
+        not change the actual paid fee! It is used to estimate order sizes. If
+        not passed, the highest maker fee for that asset pair will be assumed.
         """,
     ),
 )
