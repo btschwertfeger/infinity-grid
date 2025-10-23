@@ -1,0 +1,142 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright (C) 2023 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+# Workflow to build the docker image for pull requests
+
+name: Build and Upload Container Image
+
+on:
+  workflow_call:
+
+permissions:
+  packages: write
+  contents: read
+
+jobs:
+  Build-and-Push:
+    name: Build and conditionally publish PR container image to GitHub Container Registry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          disable-sudo: true
+          egress-policy: audit
+          allowed-endpoints: >
+            auth.docker.io:443
+            deb.debian.org:80
+            files.pythonhosted.org:443
+            ghcr.io:443
+            github.com:443
+            production.cloudflare.docker.com:443
+            pypi.org:443
+            registry-1.docker.io:443
+
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0 # IMPORTANT: otherwise the current tag does not get fetched and the build version gets worse
+
+      - name: Download the built wheel
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      # ========================================================================
+      # Login to Registries
+      - name: Log in to GitHub Container registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+        if: |
+          success()
+          && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
+
+      # ========================================================================
+      # Build Setup
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU for multi-platform builds
+        uses: docker/setup-qemu-action@v3
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+
+      - name: Get version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            # Extract version from the built wheel filename
+            wheel_file=$(ls dist/*.whl | head -1)
+            version=$(basename "$wheel_file" | sed 's/infinity_grid-\([^-]*\)-.*/\1/')
+            echo "version=${version}" >> $GITHUB_OUTPUT
+          fi
+
+      # ========================================================================
+      # Build and test container image
+      - name: Build and push container image
+        uses: docker/build-push-action@v6.18.0
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/${{ github.repository }}:pr-${{ github.event.number }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            CREATE_TIME=${{ steps.date.outputs.date }}
+        if: |
+          success()
+          && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
+
+      # Check if multi-platform build works on other actors
+      - name: Build container image
+        uses: docker/build-push-action@v6.18.0
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false
+          tags: ghcr.io/${{ github.repository }}:pr-${{ github.event.number }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            CREATE_TIME=${{ steps.date.outputs.date }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+        if: |
+          success()
+          && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
+
+      # Build it again to check if loading and testing works
+      # The reason for building it again is that one cannot load multi-platform
+      # images directly after building them with push=false.
+      # This build will benefit from the cache created earlier.
+      - name: Build container image (just to load)
+        uses: docker/build-push-action@v6.18.0
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          load: true
+          tags: ghcr.io/${{ github.repository }}:pr-${{ github.event.number }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            CREATE_TIME=${{ steps.date.outputs.date }}
+          cache-from: type=gha
+        if: |
+          success()
+          && (github.actor != 'btschwertfeger' && github.actor != 'dependabot[bot]')
+
+      - name: Test container image
+        run: |
+          docker run --rm --entrypoint=infinity-grid ghcr.io/${{ github.repository }}:pr-${{ github.event.number }} --help
