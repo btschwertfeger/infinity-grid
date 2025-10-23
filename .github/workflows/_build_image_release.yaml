@@ -1,0 +1,131 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright (C) 2023 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+# Workflow to build the docker image for master and tag workflows
+
+name: Build and Upload Container Image
+
+on:
+  workflow_call:
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_TOKEN:
+        required: true
+
+permissions:
+  packages: write
+  contents: read
+
+jobs:
+  Build-and-Push:
+    name: Build and push container image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          disable-sudo: true
+          egress-policy: audit
+          allowed-endpoints: >
+            auth.docker.io:443
+            deb.debian.org:80
+            files.pythonhosted.org:443
+            ghcr.io:443
+            github.com:443
+            production.cloudflare.docker.com:443
+            pypi.org:443
+            registry-1.docker.io:443
+
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0 # IMPORTANT: otherwise the current tag does not get fetched and the build version gets worse
+
+      - name: Download the built wheel
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      # ========================================================================
+      # Login to Registries
+      - name: Log in to Docker Hub
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to GitHub Container registry
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ========================================================================
+      # Build Setup
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU for multi-platform builds
+        uses: docker/setup-qemu-action@v3
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+
+      - name: Get version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            # Extract version from the built wheel filename
+            wheel_file=$(ls dist/*.whl | head -1)
+            version=$(basename "$wheel_file" | sed 's/infinity_grid-\([^-]*\)-.*/\1/')
+            echo "version=${version}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f
+        with:
+          images: |
+            ${{ github.repository }}
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=schedule
+            type=ref,event=branch
+            type=ref,event=pr
+            type=ref,event=tag
+            type=semver,pattern=v{{major}}.{{minor}}-latest
+            type=semver,pattern=v{{major}}-latest
+
+      # ========================================================================
+      # Build and Test Docker Image
+      - name: Build Docker image
+        uses: docker/build-push-action@v6.18.0
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            CREATE_TIME=${{ steps.date.outputs.date }}
+
+      - name: Extract first tag for testing
+        id: test_tag
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          FIRST_TAG=$(echo "$TAGS" | head -n1)
+          echo "tag=$FIRST_TAG" >> $GITHUB_OUTPUT
+
+      - name: Test Docker image
+        run: docker run --rm --entrypoint=infinity-grid ${{ steps.test_tag.outputs.tag }} --help

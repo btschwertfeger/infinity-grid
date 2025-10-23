@@ -62,6 +62,7 @@ jobs:
       - name: Validate Helm Chart with cluster configuration
         run: |
           helm template test-release helm/infinity-grid/ \
+            -n infinity-grid \
             --values tests/deployment/values.yaml \
             --set-string infinityGrid.apiPublicKey="foo" \
             --set-string infinityGrid.apiSecretKey="bar" \
@@ -71,6 +72,7 @@ jobs:
       - name: Test dry-run deployment
         run: |
           helm upgrade --install test-release helm/infinity-grid/ \
+            -n infinity-grid \
             --values tests/deployment/values.yaml \
             --set-string infinityGrid.apiPublicKey="foo" \
             --set-string infinityGrid.apiSecretKey="bar" \
@@ -82,6 +84,7 @@ jobs:
         run: |
           echo "=== Checking generated manifests ==="
           helm template test-release helm/infinity-grid/ \
+            -n infinity-grid \
             --values tests/deployment/values.yaml \
             --set-string infinityGrid.apiPublicKey="foo" \
             --set-string infinityGrid.apiSecretKey="bar" \
