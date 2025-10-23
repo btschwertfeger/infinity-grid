@@ -19,7 +19,7 @@
 #
 # ```console
 # helm -n infinity-grid \
-#   upgrade --install --atomic \
+#   upgrade --install --atomic -n infinity-grid \
 #   --version 16.7.27 \
 #   --values <path to this file> \
 #   infinity-grid-postgresql bitnami/postgresql \
@@ -37,8 +37,7 @@ global:
       database: "infinity_grid"
 image:
   registry: docker.io
-  repository: bitnami/postgresql
-  tag: 17.6.0-debian-12-r4
+  repository: bitnamilegacy/postgresql
   pullPolicy: IfNotPresent
 auth:
   enablePostgresUser: false # not needed
