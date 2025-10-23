@@ -98,7 +98,7 @@ leveraging the natural oscillations in market prices.
 <div align="center">
   <figure>
     <img
-    src="doc/_static/images/blsh.png?raw=true"
+    src="doc/_static/images/grid_trading_visualized.png?raw=true"
     alt="Buying low and selling high in high-volatile markets"
     style="background-color: white; border-radius: 7px">
     <figcaption>Figure 1: Buying low and selling high in high-volatile markets</figcaption>

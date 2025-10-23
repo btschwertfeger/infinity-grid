@@ -109,7 +109,8 @@ clean:
 		dist/ \
 		doc/_build \
 		src/infinity_grid.egg-info \
-	    build/
+	    build/ \
+		htmlcov/
 
 	rm -f \
 		.coverage \

@@ -64,12 +64,10 @@ within a "grid" of prices, purchasing assets when prices dip and selling them as
 prices rise. This systematic approach helps in capturing small gains repeatedly,
 leveraging the natural oscillations in market prices.
 
-.. figure:: _static/images/blsh.png
-   :width: 600
+.. figure:: _static/images/grid_trading_visualized.png
+   :width: 750
    :align: center
    :alt: Buying low and selling high
-
-*All currency pairs mentioned here are for illustrative purposes only.*
 
 Key Elements of Grid Trading
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
