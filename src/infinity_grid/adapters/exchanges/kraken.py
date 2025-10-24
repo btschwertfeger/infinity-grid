@@ -505,6 +505,28 @@ class KrakenExchangeWebsocketServiceAdapter(IExchangeWebSocketService):
         """Subscribe to the websocket service."""
         await self.__websocket_service.subscribe(params=params)
 
+    def get_required_subscriptions(
+        self: Self,
+        rest_api: IExchangeRESTService,
+    ) -> list[dict[str, Any]]:
+        """
+        Returns the required subscriptions for Kraken exchange.
+
+        Subscribes to:
+        - Ticker channel for price updates
+        - Executions channel for order execution updates (with snapshots)
+        """
+        return [
+            {"channel": "ticker", "symbol": [rest_api.ws_symbol]},
+            {
+                "channel": "executions",
+                # Snapshots are only required to check if the channel is
+                # connected. They are not used for any other purpose.
+                "snap_orders": True,
+                "snap_trades": True,
+            },
+        ]
+
     async def on_message(self: Self, message: dict) -> None:
         """Handle incoming messages from the WebSocket."""
 

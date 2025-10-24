@@ -161,23 +161,13 @@ class GridStrategyBase:
         LOG.info("Websocket connection established!")
 
         # ======================================================================
-        # Subscribe to the execution and ticker channels
+        # Subscribe to the required channels
         ##
         LOG.info("Subscribing to channels...")
-        # FIXME: improve this to be more generic and not hardcoded at this place
-        for subscription in {
-            "Kraken": [
-                {"channel": "ticker", "symbol": [self._rest_api.ws_symbol]},
-                {
-                    "channel": "executions",
-                    # Snapshots are only required to check if the channel is
-                    # connected. They are not used for any other purpose.
-                    "snap_orders": True,
-                    "snap_trades": True,
-                },
-            ],
-        }[self._config.exchange]:
-            await self.__ws_client.subscribe(subscription)  # type: ignore[arg-type]
+        for subscription in self.__ws_client.get_required_subscriptions(
+            rest_api=self._rest_api,
+        ):
+            await self.__ws_client.subscribe(subscription)
 
         while True:
             try:
@@ -939,9 +929,6 @@ class GridStrategyBase:
         Gets triggered by a filled order event from the ``on_message`` function.
 
         It fetches the filled order info (using some tries).
-
-        If there is the KeyError which happens due to Krakens shitty, then wait
-        for one second and this function will call it self again and return.
         """
         LOG.debug("Handling a new filled order event for txid: %s", txid)
 
@@ -985,7 +972,7 @@ class GridStrategyBase:
             LOG.warning(
                 "Can not handle filled order, since the fetched order is not"
                 " closed in upstream!"
-                " This may happen due to Kraken's websocket API being faster"
+                " This may happen due to the websocket API being faster"
                 " than their REST backend. Retrying in a few seconds...",
             )
             self.handle_filled_order_event(txid=txid)
@@ -1057,9 +1044,9 @@ class GridStrategyBase:
         NOTE: The orderbook is the "gate keeper" of this function. If the order
               is not present in the local orderbook, nothing will happen.
 
-        For post-only buy orders - if these were cancelled by Kraken, they are
-        still in the local orderbook and will be handled just like regular calls
-        of the handle_cancel_order of the algorithm.
+        For post-only buy orders - if these were cancelled by the exchange, they
+        are still in the local orderbook and will be handled just like regular
+        calls of the handle_cancel_order of the algorithm.
 
         For orders that were cancelled by the algorithm, these will cancelled
         via API and removed from the orderbook. The incoming "canceled" message
