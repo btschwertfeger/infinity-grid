@@ -21,6 +21,7 @@ from logging import getLogger
 from time import sleep
 from typing import TYPE_CHECKING, Iterable, Self
 
+from infinity_grid.adapters import ExchangeAdapterRegistry
 from infinity_grid.core.event_bus import EventBus
 from infinity_grid.core.state_machine import StateMachine, States
 from infinity_grid.exceptions import BotStateError, UnknownOrderError
@@ -29,10 +30,6 @@ from infinity_grid.infrastructure.database import (
     Orderbook,
     PendingTXIDs,
     UnsoldBuyOrderTXIDs,
-)
-from infinity_grid.interfaces.exchange import (
-    IExchangeRESTService,
-    IExchangeWebSocketService,
 )
 from infinity_grid.models.configuration import BotConfigDTO
 from infinity_grid.models.exchange import (
@@ -44,6 +41,10 @@ from infinity_grid.services.database import DBConnect
 
 if TYPE_CHECKING:
 
+    from infinity_grid.interfaces.exchange import (
+        IExchangeRESTService,
+        IExchangeWebSocketService,
+    )
     from infinity_grid.models.exchange import AssetPairInfoSchema, ExchangeDomain
 
 LOG = getLogger(__name__)
@@ -119,7 +120,7 @@ class GridStrategyBase:
         # Try to connect to the API, validate credentials and API key
         # permissions.
         ##
-        self._rest_api = self.get_rest_adapter(
+        self._rest_api = ExchangeAdapterRegistry.get_rest_adapter(
             self._config.exchange,
         )(
             api_public_key=self._config.api_public_key,
@@ -130,7 +131,7 @@ class GridStrategyBase:
         )
         self._exchange_domain = self._rest_api.get_exchange_domain()
 
-        self.__ws_client = self.get_websocket_adapter(
+        self.__ws_client = ExchangeAdapterRegistry.get_websocket_adapter(
             self._config.exchange,
         )(
             api_public_key=self._config.api_public_key,
@@ -283,33 +284,6 @@ class GridStrategyBase:
             LOG.error(msg="Exception while processing message.", exc_info=exc)
             self._state_machine.transition_to(States.ERROR)
             return
-
-    @classmethod
-    def get_rest_adapter(cls, exchange: str) -> type[IExchangeRESTService]:
-        """Get the exchange REST adapter."""
-        if exchange == "Kraken":
-            from infinity_grid.adapters.exchanges.kraken import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
-                KrakenExchangeRESTServiceAdapter,
-            )
-
-            return KrakenExchangeRESTServiceAdapter
-
-        raise ValueError(
-            f"Unsupported exchange for REST adapter: {exchange}",
-        )
-
-    @classmethod
-    def get_websocket_adapter(cls, exchange: str) -> type[IExchangeWebSocketService]:
-        if exchange == "Kraken":
-            from infinity_grid.adapters.exchanges.kraken import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
-                KrakenExchangeWebsocketServiceAdapter,
-            )
-
-            return KrakenExchangeWebsocketServiceAdapter
-
-        raise ValueError(
-            f"Unsupported exchange for Websocket adapter: {exchange}",
-        )
 
     # ==========================================================================
     # Event handlers
