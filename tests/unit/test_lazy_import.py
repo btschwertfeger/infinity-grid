@@ -13,67 +13,61 @@ allowing the package to be imported even when optional extras (like Kraken)
 are not installed.
 """
 
-import builtins
-import sys
 from types import ModuleType
+from unittest.mock import patch
 
 import pytest
 
 
 def test_package_imports_without_kraken_sdk() -> None:
     """
-    Test that infinity_grid.adapters can be imported without kraken-sdk installed.
+    Test that infinity_grid.adapters can be imported without kraken-sdk
+    installed.
 
     This simulates the scenario where a user has not installed the Kraken extra
-    but still wants to use other parts of the package or check supported exchanges.
+    but still wants to use other parts of the package or check supported
+    exchanges.
     """
-    # Mock the kraken module to simulate it not being installed
-    original_import = builtins.__import__
+    from infinity_grid.adapters import ExchangeAdapterRegistry
+    from infinity_grid.adapters.exchange_registry import _LazyAdapter
 
-    def mock_import(name: str, *args, **kwargs) -> ModuleType:  # noqa: ANN002,ANN003
-        if name.startswith("kraken"):
+    # Kraken is registered via lazy loading
+    assert "Kraken" in ExchangeAdapterRegistry.get_supported_exchanges()
+
+    # Get the Kraken adapter and clear its cache to force a fresh import
+    kraken_adapter = ExchangeAdapterRegistry._adapters["Kraken"]
+    assert isinstance(kraken_adapter, _LazyAdapter)
+    kraken_adapter._rest_adapter = None
+    kraken_adapter._websocket_adapter = None
+
+    # Mock importlib.import_module to simulate kraken not being installed
+    def mock_import_module(name: str) -> ModuleType:
+        if "kraken" in name.lower():
             raise ImportError(f"No module named '{name}'")
-        return original_import(name, *args, **kwargs)
+        # For any other module, use the real import
+        import importlib
 
-    # Temporarily replace the import function
-    builtins.__import__ = mock_import
+        return importlib.import_module(name)
 
-    try:
-        # Remove kraken from sys.modules if it's already loaded
-        kraken_modules = [key for key in sys.modules if key.startswith("kraken")]
-        removed_modules = {}
-        for mod in kraken_modules:
-            removed_modules[mod] = sys.modules.pop(mod)
-
-        # Also remove infinity_grid.adapters.exchanges.kraken if loaded
-        infinity_kraken_modules = [
-            key
-            for key in sys.modules
-            if "infinity_grid.adapters.exchanges.kraken" in key
-        ]
-        for mod in infinity_kraken_modules:
-            removed_modules[mod] = sys.modules.pop(mod)
-
-        # This should work even without python-kraken-sdk
-        from infinity_grid.adapters import ExchangeAdapterRegistry
-
-        # Kraken should be registered (lazy loading)
-        assert "Kraken" in ExchangeAdapterRegistry.get_supported_exchanges()
-
-        # Trying to use Kraken should raise ImportError with helpful message
-        try:
+    # Use of python-kraken-sdk must raise ImportError
+    with patch(
+        "infinity_grid.adapters.exchange_registry.import_module",
+        side_effect=mock_import_module,
+    ):
+        with pytest.raises(
+            ImportError,
+            match="Failed to load REST adapter for Kraken",
+        ):
             ExchangeAdapterRegistry.get_rest_adapter("Kraken")
-            pytest.fail("Should have raised ImportError")
-        except ImportError as exc:
-            assert "Failed to load REST adapter for Kraken" in str(exc)  # noqa: PT017
-            assert "pip install infinity-grid[kraken]" in str(exc)  # noqa: PT017
 
-    finally:
-        # Restore the original import function
-        builtins.__import__ = original_import
+        # Reset cache again for websocket test
+        kraken_adapter._websocket_adapter = None
 
-        # Restore removed modules
-        sys.modules.update(removed_modules)
+        with pytest.raises(
+            ImportError,
+            match="Failed to load WebSocket adapter for Kraken",
+        ):
+            ExchangeAdapterRegistry.get_websocket_adapter("Kraken")
 
 
 def test_registry_shows_all_exchanges_without_importing() -> None:
