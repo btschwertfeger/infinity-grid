@@ -254,6 +254,7 @@ task-tags = ["todo", "TODO", "fixme", "FIXME"]
   "N999",   # Invalid module name
   "PLR0915", # Too many statements
   "PLC0415", # Import outside top-level
+  "PLC2701", # Private name import from external module
 ]
 "tools/*.py" = [
   "T201", # `print` found

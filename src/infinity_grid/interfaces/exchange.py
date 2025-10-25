@@ -369,6 +369,26 @@ class IExchangeWebSocketService(ABC):
         )
 
     @abstractmethod
+    def get_required_subscriptions(
+        self: Self,
+        rest_api: IExchangeRESTService,
+    ) -> list[dict[str, Any]]:
+        """
+        Returns the list of required subscriptions for the trading strategy.
+
+        This method should return exchange-specific subscription parameters
+        needed for ticker and execution channels.
+
+        :param rest_api: The REST API service instance to access symbol information
+        :type rest_api: IExchangeRESTService
+        :return: List of subscription parameter dictionaries
+        :rtype: list[dict[str, Any]]
+        """
+        raise NotImplementedError(
+            "This method must be implemented in the concrete exchange class.",
+        )
+
+    @abstractmethod
     async def on_message(self: Self, message: OnMessageSchema) -> None:
         """Function called on every received message."""
         raise NotImplementedError(

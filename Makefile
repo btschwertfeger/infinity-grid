@@ -10,7 +10,7 @@ UV ?= uv
 PYTHON := python
 PYTEST := pytest
 PYTEST_OPTS := -vv --junit-xml=pytest.xml -n auto
-PYTEST_COV_OPTS := $(PYTEST_OPTS) --cov=infinity_grid --cov-report=xml:coverage.xml --cov-report=term-missing --cov-report=html
+PYTEST_COV_OPTS := $(PYTEST_OPTS) -x --cov=infinity_grid --cov-report=xml:coverage.xml --cov-report=term-missing --cov-report=html
 TEST_DIR := tests
 
 ## ======= H E L P =============================================================
