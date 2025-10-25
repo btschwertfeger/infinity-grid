@@ -1,0 +1,66 @@
+# -*- mode: yaml; coding: utf-8 -*-
+#
+# Copyright (C) 2025 Benjamin Thomas Schwertfeger
+# All rights reserved.
+# https://github.com/btschwertfeger
+#
+# Workflow to clean up untagged layers in GitHub Container Registry
+
+name: Cleanup untagged layers in GitHub Container Registry
+
+on:
+  schedule:
+    - cron: "0 3 1 * *"
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Fetch untagged image versions
+        id: fetch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: btschwertfeger
+          PACKAGE: infinity-grid
+        run: |
+          echo "Fetching untagged image versions..."
+          versions=$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            /users/$OWNER/packages/container/$PACKAGE/versions?per_page=100 \
+            --jq '.[] | select(.metadata.container.tags | length == 0) | .id')
+
+          if [ -z "$versions" ]; then
+            echo "No untagged images found."
+            echo "versions=" >> $GITHUB_OUTPUT
+            echo "count=0" >> $GITHUB_OUTPUT
+          else
+            count=$(echo "$versions" | wc -l)
+            echo "Found $count untagged image version(s)."
+            echo "versions<<EOF" >> $GITHUB_OUTPUT
+            echo "$versions" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "count=$count" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Delete untagged images
+        if: steps.fetch.outputs.count > 0
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: btschwertfeger
+          PACKAGE: infinity-grid
+        run: |
+          echo "Deleting ${{ steps.fetch.outputs.count }} untagged image version(s)..."
+          while IFS= read -r id; do
+            if [ -n "$id" ]; then
+              echo " - Deleting version $id"
+              gh api \
+                --method DELETE \
+                -H "Accept: application/vnd.github+json" \
+                /users/$OWNER/packages/container/$PACKAGE/versions/$id || echo "Failed to delete version $id"
+            fi
+          done <<< "${{ steps.fetch.outputs.versions }}"
+          echo "Cleanup completed."
