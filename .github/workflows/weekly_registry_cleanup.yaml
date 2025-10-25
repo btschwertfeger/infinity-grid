@@ -1,6 +1,6 @@
 # -*- mode: yaml; coding: utf-8 -*-
 #
-# Copyright (C) 2023 Benjamin Thomas Schwertfeger
+# Copyright (C) 2025 Benjamin Thomas Schwertfeger
 # All rights reserved.
 # https://github.com/btschwertfeger
 #
@@ -19,7 +19,6 @@ jobs:
     permissions:
       packages: write
       contents: read
-
     steps:
       - name: Delete untagged images from GHCR
         env:
