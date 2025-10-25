@@ -370,6 +370,11 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
                 # will return AVAX and ZEUR or DOT ZEUR. So we need to cut of
                 # the Z in case.
                 key = key[1:]  # noqa: PLW2901
+            elif key.startswith("X") and key[1:] in assets:
+                # Assets like ETH will be named like XETH. Pair like ETH/USD
+                # will be returned as XETH and ZUSD, so we need to cut of the X
+                # in case.
+                key = key[1:]  # noqa: PLW2901
 
             if key == self.__base_currency:
                 base_currency = value["altname"]
