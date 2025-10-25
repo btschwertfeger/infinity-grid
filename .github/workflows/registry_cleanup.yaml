@@ -4,7 +4,7 @@
 # All rights reserved.
 # https://github.com/btschwertfeger
 #
-#
+# Workflow to clean up untagged layers in GitHub Container Registry
 
 name: Cleanup untagged layers in GitHub Container Registry
 
