@@ -79,6 +79,26 @@ Note: This project is the successor of the
 | [Kraken](https://pro.kraken.com) (Crypto and xStocks) | ✅      |
 | Other ideas? Issues and PRs are welcome!              | 💡      |
 
+## 📑 Table of Contents
+
+- [📚 Fundamental Concepts](#-fundamental-concepts)
+  - [📈 The Core Idea: Grid Trading](#-the-core-idea-grid-trading)
+  - [📊 Key Elements of Grid Trading](#-key-elements-of-grid-trading)
+  - [📉 Risk Management and Reinvestment](#-risk-management-and-reinvestment)
+- [📊 Available Strategies](#-available-strategies)
+  - [`GridHODL`](#gridhodl)
+  - [`GridSell`](#gridsell)
+  - [`SWING`](#swing)
+  - [`cDCA`](#cdca)
+- [🚀 Setup](#-setup)
+  - [Preparation](#preparation)
+  - [Running the Algorithm](#running-the-algorithm)
+- [🛠 Configuration](#-configuration)
+- [📡 Monitoring](#-monitoring)
+- [🚨 Troubleshooting](#-troubleshooting)
+- [📈 Backtesting](#-backtesting)
+- [📝 Versioning](#-versioning)
+
 ## 📚 Fundamental concepts
 
 `infinity-grid` is a sophisticated trading algorithm designed for
@@ -401,9 +421,9 @@ the current state of the algorithm via Telegram Bots (see
 There are currently no backtesting mechanisms implemented. This will be added
 soon.
 
-<a name="notes"></a>
+<a name="versioning"></a>
 
-## 📝 Notes
+## 📝 Versioning
 
 This project follows the principles of [semantic
 versioning](https://semver.org/) (`v<Major>.<Minor>.<Patch>`). Here's what each

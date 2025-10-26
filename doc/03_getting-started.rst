@@ -15,6 +15,11 @@ make sure to fully understand the available trading strategies and their
 configuration. Avoid running the algorithm with real money before you are
 confident in the algorithm's behavior and performance!
 
+It is also highly recommended to run the algorithm in dry-run mode first, to get
+to know each other. Many exchanges provide test/sandbox environments that can be
+used without risking real money. Make use of those and only switch to real
+money trading once you are fully confident in the algorithm's behavior.
+
 🛠️ Preparation
 --------------
 
