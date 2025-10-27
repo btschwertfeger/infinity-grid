@@ -42,7 +42,6 @@ class GridHODLStrategy(GridStrategyBase):
         # ======================================================================
         volume: float | None = None
         if txid_to_delete is not None:  # If corresponding buy order filled
-            # GridSell always has txid_to_delete set.
 
             # Add the txid of the corresponding buy order to the unsold buy
             # order txids in order to ensure that the corresponding sell order
@@ -58,9 +57,7 @@ class GridHODLStrategy(GridStrategyBase):
             # ==================================================================
             # Get the corresponding buy order in order to retrieve the volume.
             corresponding_buy_order: OrderInfoSchema = (
-                self._rest_api.get_order_with_retry(
-                    txid=txid_to_delete,
-                )
+                self._rest_api.get_order_with_retry(txid=txid_to_delete)
             )
 
             # In some cases the corresponding buy order is not closed yet and

@@ -1007,7 +1007,7 @@ class GridStrategyBase:
                 txid_to_delete=txid,
             )
         else:
-            # Remove filled order from list of all orders
+            # Remove filled order from orderbook
             self._orderbook_table.remove(filters={"txid": txid})
 
     def _handle_cancel_order(self: Self, txid: str) -> None:

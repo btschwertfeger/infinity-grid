@@ -51,7 +51,8 @@ class AssetPairInfoSchema(BaseModel):
         str  #: The asset class of the quote (e.g. "currency", "tokenized_asset")
     )
 
-    cost_decimals: int  #: Number of decimals for cost, e.g. 5
+    lot_decimals: int  #: Number of decimals for lot/base size, e.g. 8
+    cost_decimals: int  #: Number of decimals for cost/quote, e.g. 5
     #: Fees for maker orders, e.g. [[0, 0.25], [10000, 0.2], ...]
     fees_maker: list[list[float]] = Field(..., description="Maker fees structure")
 
