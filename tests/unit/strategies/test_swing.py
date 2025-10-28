@@ -44,9 +44,12 @@ class TestSwingStrategy:
                 "price_of_highest_buy": 100.0,
             }
             strategy._orderbook_table = Mock()
+            strategy._pending_txids_table = Mock()
+            strategy._unsold_buy_order_txids_table = Mock()
             strategy._ticker = 50000.0
             strategy._exchange_domain = Mock()
             strategy._exchange_domain.SELL = "sell"
+            strategy._exchange_domain.BUY = "buy"
             strategy._rest_api = Mock()
             strategy._amount_per_grid_plus_fee = 105.0
             strategy._event_bus = mock_dependencies["event_bus"]
@@ -109,8 +112,11 @@ class TestSwingStrategy:
         mock_strategy: SwingStrategy,
     ) -> None:
         """Test _check_extra_sell_order places order when conditions are met."""
-        # Given: no existing sell orders and sufficient balance
-        mock_strategy._orderbook_table.count.return_value = 0
+        # Given: no existing sell or pending orders and sufficient balance
+        mock_strategy._orderbook_table.count.side_effect = [0, 5]
+        mock_strategy._pending_txids_table.count.return_value = 0
+        mock_strategy._unsold_buy_order_txids_table.count.return_value = 0
+        mock_strategy._config.n_open_buy_orders = 5
 
         mock_balance = Mock()
         mock_balance.base_available = (
@@ -122,8 +128,9 @@ class TestSwingStrategy:
         mock_strategy._check_extra_sell_order()
 
         # Then: should check orderbook, get balance, and place arbitrage order
-        mock_strategy._orderbook_table.count.assert_called_once_with(
-            filters={"side": "sell"},
+        assert mock_strategy._orderbook_table.count.call_count == 2
+        mock_strategy._orderbook_table.count.assert_called_with(
+            filters={"side": mock_strategy._exchange_domain.BUY},
         )
         mock_strategy._rest_api.get_pair_balance.assert_called_once()
         mock_strategy._handle_arbitrage.assert_called_once()
@@ -135,7 +142,7 @@ class TestSwingStrategy:
     ) -> None:
         """Test _check_extra_sell_order does nothing when sell orders exist."""
         # Given: existing sell orders
-        mock_strategy._orderbook_table.count.return_value = 1
+        mock_strategy._orderbook_table.count.side_effect = [1, 5]
 
         # When: checking for extra sell order
         mock_strategy._check_extra_sell_order()
@@ -152,8 +159,11 @@ class TestSwingStrategy:
         mock_strategy: SwingStrategy,
     ) -> None:
         """Test _check_extra_sell_order does nothing when balance is insufficient."""
-        # Given: no existing sell orders but insufficient balance
-        mock_strategy._orderbook_table.count.return_value = 0
+        # Given: matching prerequisites but insufficient balance
+        mock_strategy._orderbook_table.count.side_effect = [0, 5]
+        mock_strategy._pending_txids_table.count.return_value = 0
+        mock_strategy._unsold_buy_order_txids_table.count.return_value = 0
+        mock_strategy._config.n_open_buy_orders = 5
 
         mock_balance = Mock()
         mock_balance.base_available = 0.001  # Not enough (0.001 * 50000 = 50 < 105)
@@ -163,8 +173,9 @@ class TestSwingStrategy:
         mock_strategy._check_extra_sell_order()
 
         # Then: should check orderbook and balance but not place order
-        mock_strategy._orderbook_table.count.assert_called_once_with(
-            filters={"side": "sell"},
+        assert mock_strategy._orderbook_table.count.call_count == 2
+        mock_strategy._orderbook_table.count.assert_called_with(
+            filters={"side": mock_strategy._exchange_domain.BUY},
         )
         mock_strategy._rest_api.get_pair_balance.assert_called_once()
         mock_strategy._handle_arbitrage.assert_not_called()
@@ -175,7 +186,10 @@ class TestSwingStrategy:
     ) -> None:
         """Test _check_extra_sell_order calls _get_extra_sell_order_price with correct params."""
         # Given: conditions met for placing order
-        mock_strategy._orderbook_table.count.return_value = 0
+        mock_strategy._orderbook_table.count.side_effect = [0, 5]
+        mock_strategy._pending_txids_table.count.return_value = 0
+        mock_strategy._unsold_buy_order_txids_table.count.return_value = 0
+        mock_strategy._config.n_open_buy_orders = 5
 
         mock_balance = Mock()
         mock_balance.base_available = 2.0
@@ -192,7 +206,7 @@ class TestSwingStrategy:
             mock_strategy._check_extra_sell_order()
 
             # Then: should call _get_extra_sell_order_price with ticker value
-            mock_get_price.assert_called_once_with(last_price=50000.0)
+            mock_get_price.assert_called_once_with(50000.0)
             mock_strategy._handle_arbitrage.assert_called_once_with(
                 side="sell",
                 order_price=52500.0,

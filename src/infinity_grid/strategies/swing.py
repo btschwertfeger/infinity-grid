@@ -55,6 +55,8 @@ class SwingStrategy(GridStrategyBase):
             == 0
             and self._orderbook_table.count(filters={"side": self._exchange_domain.BUY})
             == self._config.n_open_buy_orders
+            and self._pending_txids_table.count() == 0
+            and self._unsold_buy_order_txids_table.count() == 0
         ):
             fetched_balances = self._rest_api.get_pair_balance()
 
