@@ -245,7 +245,7 @@ naming convention.
     * - ``INFINITY_GRID_RUN_STRATEGY``
       - ``str``
       - The trading strategy, e.g., ``GridHODL``, ``GridSell``, ``SWING``, or ``cDCA``
-    * - ``INFINITY_GRID_DRY_RUN``
+    * - ``INFINITY_GRID_RUN_DRY_RUN``
       - ``bool``
       - Enable dry-run mode (no actual trades).
     * - ``INFINITY_GRID_RUN_SKIP_PRICE_TIMEOUT``
