@@ -136,7 +136,9 @@ class GridSellStrategy(GridStrategyBase):
         # If there's not enough balance for the full volume, try with volume
         # reduced by the smallest unit to account for potential floating-point
         # precision issues (e.g., base_available = 0.012053559999999998 vs
-        # volume = 0.01205356).
+        # volume = 0.01205356). This might lead to an accumulation of dust,
+        # but is better than having sell orders not being placed. Open for
+        # alternative ideas!
         if fetched_balances.base_available < volume:
             lot_decimals = self._rest_api.get_asset_pair_info().lot_decimals
             smallest_unit = Decimal(10) ** -lot_decimals
