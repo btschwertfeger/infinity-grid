@@ -48,13 +48,15 @@ class SwingStrategy(GridStrategyBase):
         return order_price
 
     def _check_extra_sell_order(self: Self) -> None:
-        """
-        Checks if an extra sell order can be placed.
-        """
+        """Checks if an extra sell order can be placed."""
         LOG.debug("Checking if extra sell order can be placed...")
         if (
             self._orderbook_table.count(filters={"side": self._exchange_domain.SELL})
             == 0
+            and self._orderbook_table.count(filters={"side": self._exchange_domain.BUY})
+            == self._config.n_open_buy_orders
+            and self._pending_txids_table.count() == 0
+            and self._unsold_buy_order_txids_table.count() == 0
         ):
             fetched_balances = self._rest_api.get_pair_balance()
 
@@ -62,9 +64,7 @@ class SwingStrategy(GridStrategyBase):
                 fetched_balances.base_available * self._ticker
                 > self._amount_per_grid_plus_fee
             ):
-                order_price = self._get_extra_sell_order_price(
-                    last_price=self._ticker,
-                )
+                order_price = self._get_extra_sell_order_price(self._ticker)
                 self._event_bus.publish(
                     "notification",
                     data={
