@@ -62,7 +62,8 @@ class GridSellStrategy(GridStrategyBase):
         # ======================================================================
         volume: float | None = None
         if txid_to_delete is not None:  # If corresponding buy order filled
-            # GridSell always has txid_to_delete set.
+            # GridSell almost always has txid_to_delete set, except for extra
+            # sell orders.
 
             # Add the txid of the corresponding buy order to the unsold buy
             # order txids in order to ensure that the corresponding sell order
@@ -78,9 +79,7 @@ class GridSellStrategy(GridStrategyBase):
             # ==================================================================
             # Get the corresponding buy order in order to retrieve the volume.
             corresponding_buy_order: OrderInfoSchema = (
-                self._rest_api.get_order_with_retry(
-                    txid=txid_to_delete,
-                )
+                self._rest_api.get_order_with_retry(txid=txid_to_delete)
             )
 
             # In some cases the corresponding buy order is not closed yet and
@@ -112,10 +111,7 @@ class GridSellStrategy(GridStrategyBase):
             )
 
         order_price = float(
-            self._rest_api.truncate(
-                amount=order_price,
-                amount_type="price",
-            ),
+            self._rest_api.truncate(amount=order_price, amount_type="price"),
         )
 
         if volume is None:
@@ -136,6 +132,32 @@ class GridSellStrategy(GridStrategyBase):
         # ======================================================================
         # Check if there is enough base currency available for selling.
         fetched_balances = self._rest_api.get_pair_balance()
+
+        # If there's not enough balance for the full volume, try with volume
+        # reduced by the smallest unit to account for potential floating-point
+        # precision issues (e.g., base_available = 0.012053559999999998 vs
+        # volume = 0.01205356). This might lead to an accumulation of dust,
+        # but is better than having sell orders not being placed. Open for
+        # alternative ideas!
+        if fetched_balances.base_available < volume:
+            lot_decimals = self._rest_api.get_asset_pair_info().lot_decimals
+            smallest_unit = Decimal(10) ** -lot_decimals
+            adjusted_volume = float(
+                Decimal(str(volume)) - (Decimal(10) ** -lot_decimals),
+            )
+
+            # Only use the adjusted volume if it's now within available balance
+            if fetched_balances.base_available >= adjusted_volume:
+                LOG.debug(
+                    "Adjusting sell volume from %s to %s (reduced by %s) due to"
+                    " insufficient balance. Available: %s",
+                    volume,
+                    adjusted_volume,
+                    float(smallest_unit),
+                    fetched_balances.base_available,
+                )
+                volume = adjusted_volume
+
         if fetched_balances.base_available >= volume:
             # Place new sell order, append id to pending list, and delete
             # corresponding buy order from local orderbook.
