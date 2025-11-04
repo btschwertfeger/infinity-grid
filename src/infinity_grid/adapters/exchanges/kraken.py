@@ -301,8 +301,8 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
 
         FIXME: Is there a way to get the balances of the asset pair directly?
 
-        On Kraken, crypto assets are prefixed with 'X' (e.g., 'XETH', 'XXBT'),
-        while fiat assets are prefixed with 'Z' (e.g., 'ZEUR', 'ZUSD').
+        On Kraken, crypto assets are often prefixed with 'X' (e.g., 'XETH',
+        'XXBT'), while fiat assets are prefixed with 'Z' (e.g., 'ZEUR', 'ZUSD').
 
         Tokenized assets have a '.T' suffix
         https://docs.kraken.com/api/docs/rest-api/get-extended-balance/.
@@ -323,11 +323,24 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
         quote_balance = Decimal(0)
         quote_hold_trade = Decimal(0)
 
+        # {XXBT, XBT.F} or {XETH, ETH.F} or {AVAX, AVAX.F} or {DOT, DOT.F}
+        base_options = {custom_base}
+        if custom_base.startswith(("X", "Z")):
+            base_options |= {f"{custom_base[1:]}.F"}
+        else:
+            base_options |= {f"{custom_base}.F"}
+
+        quote_options = {custom_quote}
+        if custom_quote.startswith(("X", "Z")):
+            quote_options |= {f"{custom_quote[1:]}.F"}
+        else:
+            quote_options |= {f"{custom_quote}.F"}
+
         for balance in self.get_balances():
-            if balance.asset in {custom_base, f"{custom_base}.F"}:
+            if balance.asset in base_options:
                 base_balance += Decimal(balance.balance)
                 base_hold_trade += Decimal(balance.hold_trade)
-            elif balance.asset in {custom_quote, f"{custom_quote}.F"}:
+            elif balance.asset in quote_options:
                 quote_balance += Decimal(balance.balance)
                 quote_hold_trade += Decimal(balance.hold_trade)
 

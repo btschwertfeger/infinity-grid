@@ -44,13 +44,10 @@ class AssetPairInfoSchema(BaseModel):
 
     base: str  #: The base currency, e.g. "XXBT"
     quote: str  #: The quote currency, e.g. "ZUSD"
-    aclass_base: (
-        str  #: The asset class of the base (e.g. "currency", "tokenized_asset")
-    )
-    aclass_quote: (
-        str  #: The asset class of the quote (e.g. "currency", "tokenized_asset")
-    )
-
+    #: The asset class of the base (e.g. "currency", "tokenized_asset")
+    aclass_base: str
+    #: The asset class of the quote (e.g. "currency", "tokenized_asset")
+    aclass_quote: str
     lot_decimals: int  #: Number of decimals for lot/base size, e.g. 8
     cost_decimals: int  #: Number of decimals for cost/quote, e.g. 5
     #: Fees for maker orders, e.g. [[0, 0.25], [10000, 0.2], ...]
@@ -122,19 +119,6 @@ class PairBalanceSchema(BaseModel):
         ge=0,
         description="Available quote asset balance",
     )
-
-    @model_validator(mode="after")
-    def validate_available_balances(self) -> Self:
-        """Validate that available balances don't exceed total balances"""
-        if self.base_available > self.base_balance:
-            raise ValueError(
-                f"Available base balance ({self.base_available}) cannot exceed total base balance ({self.base_balance})",
-            )
-        if self.quote_available > self.quote_balance:
-            raise ValueError(
-                f"Available quote balance ({self.quote_available}) cannot exceed total quote balance ({self.quote_balance})",
-            )
-        return self
 
 
 class AssetBalanceSchema(BaseModel):
