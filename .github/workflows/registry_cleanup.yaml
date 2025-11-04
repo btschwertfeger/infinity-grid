@@ -29,6 +29,8 @@ jobs:
           RETENTION_DAYS: 14
         run: |
           echo "Fetching image versions older than $RETENTION_DAYS days..."
+          # NOTE: The following uses GNU date syntax (-d), which works on Ubuntu runners.
+          # If you change the runner to macOS or Alpine, this will fail.
           cutoff_date=$(date -u -d "$RETENTION_DAYS days ago" +%Y-%m-%dT%H:%M:%SZ)
           echo "Cutoff date: $cutoff_date"
 
