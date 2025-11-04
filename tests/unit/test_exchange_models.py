@@ -161,16 +161,6 @@ class TestPairBalanceSchema:
         assert balance.base_balance == 1.5
         assert balance.quote_balance == 75000.0
 
-    def test_available_balance_validation(self) -> None:
-        """Test that available balance cannot exceed total balance"""
-        with pytest.raises(ValidationError, match=r"cannot exceed total.*balance"):
-            PairBalanceSchema(
-                base_balance=1.0,
-                quote_balance=50000.0,
-                base_available=1.5,  # Exceeds base_balance
-                quote_available=25000.0,
-            )
-
     def test_negative_balances_fail(self) -> None:
         """Test that negative balances fail validation"""
         with pytest.raises(ValidationError):

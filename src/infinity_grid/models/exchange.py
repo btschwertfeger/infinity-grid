@@ -120,19 +120,6 @@ class PairBalanceSchema(BaseModel):
         description="Available quote asset balance",
     )
 
-    @model_validator(mode="after")
-    def validate_available_balances(self) -> Self:
-        """Validate that available balances don't exceed total balances"""
-        if self.base_available > self.base_balance:
-            raise ValueError(
-                f"Available base balance ({self.base_available}) cannot exceed total base balance ({self.base_balance})",
-            )
-        if self.quote_available > self.quote_balance:
-            raise ValueError(
-                f"Available quote balance ({self.quote_available}) cannot exceed total quote balance ({self.quote_balance})",
-            )
-        return self
-
 
 class AssetBalanceSchema(BaseModel):
     """Schema for a single asset balance."""
