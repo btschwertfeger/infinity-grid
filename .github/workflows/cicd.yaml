@@ -44,7 +44,7 @@ jobs:
       fail-fast: true
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.11", "3.12", "3.13"] # just for compatibility reasons
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
@@ -69,7 +69,7 @@ jobs:
       fail-fast: true
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}

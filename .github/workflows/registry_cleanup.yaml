@@ -4,9 +4,9 @@
 # All rights reserved.
 # https://github.com/btschwertfeger
 #
-# Workflow to clean up untagged layers in GitHub Container Registry
+# Workflow to clean up old images and layers in GitHub Container Registry
 
-name: Cleanup untagged layers in GitHub Container Registry
+name: Cleanup old images in GitHub Container Registry
 
 on:
   schedule:
@@ -20,40 +20,46 @@ jobs:
       packages: write
       contents: read
     steps:
-      - name: Fetch untagged image versions
+      - name: Fetch old image versions
         id: fetch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OWNER: btschwertfeger
           PACKAGE: infinity-grid
+          RETENTION_DAYS: 14
         run: |
-          echo "Fetching untagged image versions..."
+          echo "Fetching image versions older than $RETENTION_DAYS days..."
+          # NOTE: The following uses GNU date syntax (-d), which works on Ubuntu runners.
+          # If you change the runner to macOS or Alpine, this will fail.
+          cutoff_date=$(date -u -d "$RETENTION_DAYS days ago" +%Y-%m-%dT%H:%M:%SZ)
+          echo "Cutoff date: $cutoff_date"
+
           versions=$(gh api \
             -H "Accept: application/vnd.github+json" \
-            /users/$OWNER/packages/container/$PACKAGE/versions?per_page=100 \
-            --jq '.[] | select(.metadata.container.tags | length == 0) | .id')
+            /users/$OWNER/packages/container/$PACKAGE/versions?per_page=100 | \
+            jq -r --arg cutoff "$cutoff_date" '.[] | select(.updated_at < $cutoff) | .id')
 
           if [ -z "$versions" ]; then
-            echo "No untagged images found."
+            echo "No images older than $RETENTION_DAYS days found."
             echo "versions=" >> $GITHUB_OUTPUT
             echo "count=0" >> $GITHUB_OUTPUT
           else
             count=$(echo "$versions" | wc -l)
-            echo "Found $count untagged image version(s)."
+            echo "Found $count image version(s) older than $RETENTION_DAYS days."
             echo "versions<<EOF" >> $GITHUB_OUTPUT
             echo "$versions" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
             echo "count=$count" >> $GITHUB_OUTPUT
           fi
 
-      - name: Delete untagged images
+      - name: Delete old images
         if: steps.fetch.outputs.count > 0
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OWNER: btschwertfeger
           PACKAGE: infinity-grid
         run: |
-          echo "Deleting ${{ steps.fetch.outputs.count }} untagged image version(s)..."
+          echo "Deleting ${{ steps.fetch.outputs.count }} old image version(s)..."
           while IFS= read -r id; do
             if [ -n "$id" ]; then
               echo " - Deleting version $id"
