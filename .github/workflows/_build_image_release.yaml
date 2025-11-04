@@ -96,7 +96,6 @@ jobs:
         with:
           images: |
             ${{ github.repository }}
-            ghcr.io/${{ github.repository }}
           tags: |
             type=schedule
             type=ref,event=branch
