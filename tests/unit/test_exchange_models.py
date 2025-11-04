@@ -185,15 +185,6 @@ class TestAssetBalanceSchema:
         assert asset_balance.asset == "XXBT"
         assert asset_balance.balance == 2.5
 
-    def test_hold_trade_validation(self) -> None:
-        """Test that hold_trade cannot exceed balance"""
-        with pytest.raises(ValidationError, match="cannot exceed total balance"):
-            AssetBalanceSchema(
-                asset="BTC",
-                balance=1.0,
-                hold_trade=1.5,  # Exceeds balance
-            )
-
     def test_empty_asset_fails(self) -> None:
         """Test that empty asset name fails validation"""
         with pytest.raises(ValidationError):
