@@ -323,10 +323,18 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
         quote_balance = Decimal(0)
         quote_hold_trade = Decimal(0)
 
-        # {XXBT, ---, XBT.F} or {XETH, ---, ETH.F} or
-        # {AVAX, AVAX.F, ---} or {DOT, DOT.F, ---}
-        base_options = {custom_base, f"{custom_base}.F", f"{custom_base[1:]}.F"}
-        quote_options = {custom_quote, f"{custom_quote}.F", f"{custom_quote[1:]}.F"}
+        # {XXBT, XBT.F} or {XETH, ETH.F} or {AVAX, AVAX.F} or {DOT, DOT.F}
+        base_options = {custom_base}
+        if custom_base.startswith(("X", "Z")):
+            base_options |= {f"{custom_base[1:]}.F"}
+        else:
+            base_options |= {f"{custom_base}.F"}
+
+        quote_options = {custom_quote}
+        if custom_quote.startswith(("X", "Z")):
+            quote_options |= {f"{custom_quote[1:]}.F"}
+        else:
+            quote_options |= {f"{custom_quote}.F"}
 
         for balance in self.get_balances():
             if balance.asset in base_options:
