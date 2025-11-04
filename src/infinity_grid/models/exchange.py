@@ -44,13 +44,10 @@ class AssetPairInfoSchema(BaseModel):
 
     base: str  #: The base currency, e.g. "XXBT"
     quote: str  #: The quote currency, e.g. "ZUSD"
-    aclass_base: (
-        str  #: The asset class of the base (e.g. "currency", "tokenized_asset")
-    )
-    aclass_quote: (
-        str  #: The asset class of the quote (e.g. "currency", "tokenized_asset")
-    )
-
+    #: The asset class of the base (e.g. "currency", "tokenized_asset")
+    aclass_base: str
+    #: The asset class of the quote (e.g. "currency", "tokenized_asset")
+    aclass_quote: str
     lot_decimals: int  #: Number of decimals for lot/base size, e.g. 8
     cost_decimals: int  #: Number of decimals for cost/quote, e.g. 5
     #: Fees for maker orders, e.g. [[0, 0.25], [10000, 0.2], ...]
