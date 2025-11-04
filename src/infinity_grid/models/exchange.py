@@ -131,15 +131,6 @@ class AssetBalanceSchema(BaseModel):
     #: The balance of an asset that is held in trades
     hold_trade: float = Field(..., ge=0, description="Balance held in trades")
 
-    @model_validator(mode="after")
-    def validate_hold_trade(self) -> Self:
-        """Validate that held balance doesn't exceed total balance"""
-        if self.hold_trade > self.balance:
-            raise ValueError(
-                f"Held balance ({self.hold_trade}) cannot exceed total balance ({self.balance})",
-            )
-        return self
-
 
 class CreateOrderResponseSchema(BaseModel):
     """Schema for the response of a create order operation"""
