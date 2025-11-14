@@ -82,7 +82,6 @@ local_scheme = "no-local-version"
 junit_family = "xunit2"
 testpaths = ["tests"]
 
-[tool.pytest.ini_options]
 cache_dir = ".cache/pytest"
 markers = [
   "asyncio: used for async tests.",
