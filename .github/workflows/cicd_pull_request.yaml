@@ -41,7 +41,7 @@ jobs:
       fail-fast: true
       matrix:
         os: [ubuntu-latest, macos-latest] # Windows is not supported
-        python-version: ["3.11", "3.12", "3.13"] # just for compatibility reasons
+        python-version: ["3.11", "3.12", "3.13", "3.14"] # just for compatibility reasons
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
@@ -66,7 +66,7 @@ jobs:
       fail-fast: true
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
@@ -112,18 +112,19 @@ jobs:
 
   ## ===========================================================================
   ##    Deploy to Kubernetes
+  ##    Disabled since the maintenance overhead is too high at this moment
   ##
-  Deploy:
-    if: |
-      success()
-      && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
-    needs: [ContainerImage, Validate-Chart]
-    uses: ./.github/workflows/_helm_pr_deploy.yaml
-    with:
-      pr_number: ${{ github.event.number }}
-    secrets:
-      KUBECONFIG: ${{ secrets.KUBECONFIG }}
-      INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
-      INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
-      INFINITY_GRID_RUN_DB_PASSWORD: ${{ secrets.INFINITY_GRID_RUN_DB_PASSWORD }}
-      INFINITY_GRID_RUN_DB_USER: ${{ secrets.INFINITY_GRID_RUN_DB_USER }}
+  # Deploy:
+  #   if: |
+  #     success()
+  #     && (github.actor == 'btschwertfeger' || github.actor == 'dependabot[bot]')
+  #   needs: [ContainerImage, Validate-Chart]
+  #   uses: ./.github/workflows/_helm_pr_deploy.yaml
+  #   with:
+  #     pr_number: ${{ github.event.number }}
+  #   secrets:
+  #     KUBECONFIG: ${{ secrets.KUBECONFIG }}
+  #     INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
+  #     INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
+  #     INFINITY_GRID_RUN_DB_PASSWORD: ${{ secrets.INFINITY_GRID_RUN_DB_PASSWORD }}
+  #     INFINITY_GRID_RUN_DB_USER: ${{ secrets.INFINITY_GRID_RUN_DB_USER }}

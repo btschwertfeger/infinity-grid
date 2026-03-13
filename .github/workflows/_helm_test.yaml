@@ -59,37 +59,40 @@ jobs:
             --set-string database.password="baz" \
             --debug
 
-      - name: Validate Helm Chart with cluster configuration
-        run: |
-          helm template test-release helm/infinity-grid/ \
-            -n infinity-grid \
-            --values tests/deployment/values.yaml \
-            --set-string infinityGrid.apiPublicKey="foo" \
-            --set-string infinityGrid.apiSecretKey="bar" \
-            --set-string database.password="baz" \
-            --validate
+      # The following steps are commented out as long as the maintenance
+      # overhead for the cluster is higher than the benefits of this workflow.
 
-      - name: Test dry-run deployment
-        run: |
-          helm upgrade --install test-release helm/infinity-grid/ \
-            -n infinity-grid \
-            --values tests/deployment/values.yaml \
-            --set-string infinityGrid.apiPublicKey="foo" \
-            --set-string infinityGrid.apiSecretKey="bar" \
-            --set-string database.password="baz" \
-            --dry-run \
-            --debug
+      # - name: Validate Helm Chart with cluster configuration
+      #   run: |
+      #     helm template test-release helm/infinity-grid/ \
+      #       -n infinity-grid \
+      #       --values tests/deployment/values.yaml \
+      #       --set-string infinityGrid.apiPublicKey="foo" \
+      #       --set-string infinityGrid.apiSecretKey="bar" \
+      #       --set-string database.password="baz" \
+      #       --validate
 
-      - name: Check generated Kubernetes manifests
-        run: |
-          echo "=== Checking generated manifests ==="
-          helm template test-release helm/infinity-grid/ \
-            -n infinity-grid \
-            --values tests/deployment/values.yaml \
-            --set-string infinityGrid.apiPublicKey="foo" \
-            --set-string infinityGrid.apiSecretKey="bar" \
-            --set-string database.password="baz" \
-            --output-dir /tmp/helm-output
+      # - name: Test dry-run deployment
+      #   run: |
+      #     helm upgrade --install test-release helm/infinity-grid/ \
+      #       -n infinity-grid \
+      #       --values tests/deployment/values.yaml \
+      #       --set-string infinityGrid.apiPublicKey="foo" \
+      #       --set-string infinityGrid.apiSecretKey="bar" \
+      #       --set-string database.password="baz" \
+      #       --dry-run \
+      #       --debug
 
-          echo "=== Generated files ==="
-          find /tmp/helm-output -name "*.yaml" -exec echo "File: {}" \; -exec head -20 {} \;
+      # - name: Check generated Kubernetes manifests
+      #   run: |
+      #     echo "=== Checking generated manifests ==="
+      #     helm template test-release helm/infinity-grid/ \
+      #       -n infinity-grid \
+      #       --values tests/deployment/values.yaml \
+      #       --set-string infinityGrid.apiPublicKey="foo" \
+      #       --set-string infinityGrid.apiSecretKey="bar" \
+      #       --set-string database.password="baz" \
+      #       --output-dir /tmp/helm-output
+
+      #     echo "=== Generated files ==="
+      #     find /tmp/helm-output -name "*.yaml" -exec echo "File: {}" \; -exec head -20 {} \;
