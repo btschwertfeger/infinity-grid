@@ -29,8 +29,7 @@ sys.path.insert(0, str(Path("..").resolve() / "src"))
 
 rst_epilog = ""
 # Read link all targets from file
-with Path("links.rst").open(encoding="utf-8") as f:
-    rst_epilog += f.read()
+rst_epilog += Path("links.rst").read_text(encoding="utf-8")
 
 
 # def setup(app: Any) -> None:

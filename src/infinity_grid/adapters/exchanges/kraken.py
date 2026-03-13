@@ -177,9 +177,7 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
                 return
             LOG.warning("- Kraken Exchange API Status: %s", status)
             raise ConnectionError("Kraken API is not online.")
-        except (
-            Exception  # noqa: BLE001
-        ) as exc:  # pylint: disable=broad-exception-caught
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             LOG.debug(
                 "Exception while checking Kraken API status: %s",
                 exc,

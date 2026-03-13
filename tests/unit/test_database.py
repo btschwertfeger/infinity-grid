@@ -7,7 +7,6 @@
 
 """Unit tests for the database module."""
 
-
 from typing import Generator
 
 import pytest

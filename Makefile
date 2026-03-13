@@ -126,8 +126,6 @@ clean:
 
 	find src/infinity_grid -name "__pycache__" | xargs rm -rf
 	find tests -name "__pycache__" | xargs rm -rf
-	find tools -name ".ipynb_checkpoints" | xargs rm -rf
-	find tools -name "__pycache__" | xargs rm -rf
 	find tests -name "*.log" | xargs rm -rf
 
 ## check-uv       Check if uv is installed

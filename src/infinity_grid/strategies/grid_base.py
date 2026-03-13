@@ -12,7 +12,6 @@ All grid-based strategies should inherit from this class and implement
 the required methods and override exiting ones as needed.
 """
 
-
 import asyncio
 import traceback
 from datetime import datetime, timedelta
@@ -193,9 +192,7 @@ class GridStrategyBase:
                     self._state_machine.transition_to(States.ERROR)
                     return
 
-            except (
-                Exception  # noqa: BLE001
-            ) as exc:  # pylint: disable=broad-exception-caught
+            except Exception as exc:  # pylint: disable=broad-exception-caught
                 LOG.error("Exception in main.", exc_info=exc)
                 self._state_machine.transition_to(States.ERROR)
                 return
@@ -280,7 +277,7 @@ class GridStrategyBase:
                         )
                         self._handle_cancel_order(execution.order_id)
 
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             LOG.error(msg="Exception while processing message.", exc_info=exc)
             self._state_machine.transition_to(States.ERROR)
             return
@@ -1061,7 +1058,7 @@ class GridStrategyBase:
 
         # Check if the order has some vol_exec to sell
         ##
-        if order_details.vol_exec != 0.0:
+        if order_details.vol_exec != 0.0:  # noqa: RUF069
             LOG.info(
                 "Order '%s' is partly filled - saving those funds.",
                 txid,

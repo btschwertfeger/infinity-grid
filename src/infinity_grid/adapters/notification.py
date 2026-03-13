@@ -43,6 +43,6 @@ class TelegramNotificationChannelAdapter(INotificationChannel):
                 timeout=10,
             )
             return response.status_code == 200
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             LOG.error("Failed to send Telegram notification", exc_info=exc)
             return False
