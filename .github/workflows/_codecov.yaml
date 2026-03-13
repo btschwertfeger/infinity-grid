@@ -43,7 +43,7 @@ jobs:
       url: https://app.codecov.io/github/btschwertfeger/infinity-grid/
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
         with:
           disable-sudo: true
           egress-policy: audit
@@ -61,15 +61,15 @@ jobs:
             ws.kraken.com:443
 
       - name: Checkout repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@4f41a90a1f38628c7ccc608d05fbafe701bc20ae # v6.0.0
+        uses: actions/setup-python@28f2168f4d98ee0445e3c6321f6e6616c83dd5ec # v6.0.0
         with:
           python-version: ${{ inputs.python-version }}
 
       - name: Download the built wheel
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: python-package-distributions
           path: dist/
@@ -91,7 +91,7 @@ jobs:
         run: pytest -vv -x -n auto --cov=infinity_grid --cov-report=xml:coverage.xml tests
 
       - name: Export coverage report
-        uses: actions/upload-artifact@v6.0.0
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: coverage
           path: coverage.xml

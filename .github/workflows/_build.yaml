@@ -29,7 +29,7 @@ jobs:
     name: Build the Python package for ${{ inputs.os }} ${{ inputs.python-version }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
         with:
           disable-sudo: true
           egress-policy: block
@@ -43,12 +43,12 @@ jobs:
             release-assets.githubusercontent.com:443
 
       - name: Checkout repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0 # IMPORTANT: otherwise the current tag does not get fetched and the build version gets worse
 
       - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@v6.1.0
+        uses: actions/setup-python@v6.2.0
         with:
           python-version: ${{ inputs.python-version }}
 
@@ -105,7 +105,7 @@ jobs:
           }
 
       - name: Store the distribution package
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         # upload artifacts with the oldest supported version
         if: runner.os == 'linux' && inputs.python-version == '3.11'
         with:
