@@ -254,18 +254,8 @@ task-tags = ["todo", "TODO", "fixme", "FIXME"]
   "PLR0915", # Too many statements
   "PLC0415", # Import outside top-level
   "PLC2701", # Private name import from external module
+"RUF069", # Unreliable floating point equality comparison
 ]
-"tools/*.py" = [
-  "T201", # `print` found
-  "E501", # Line too long
-]
-"tools/generate_ws_messages.py" = [
-  "S311", # pseudo-random-generator
-]
-"tools/backtesting/Backtesting.ipynb" = [
-  "CPY001", # Copyright
-]
-
 [tool.ruff.lint.flake8-copyright]
 author = "Benjamin Thomas Schwertfeger"
 notice-rgx = "(?i)Copyright \\(C\\) \\d{4}"

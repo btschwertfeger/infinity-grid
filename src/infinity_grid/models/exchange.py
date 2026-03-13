@@ -12,6 +12,7 @@ This module contains Pydantic models that define the structure and validation
 rules for exchange-related data such as orders, balances, and market updates.
 All schemas include appropriate validators to ensure data integrity.
 """
+
 from __future__ import annotations
 
 from typing import Self

@@ -16,7 +16,7 @@ from infinity_grid.adapters.exchange_registry import ExchangeAdapterRegistry
 
 # Register exchanges with lazy loading to avoid import errors when optional
 # dependencies (extras) are not installed.
-ExchangeAdapterRegistry.register_lazy(
+ExchangeAdapterRegistry.register_lazy(  # noqa: RUF067
     exchange_name="Kraken",
     module_path="infinity_grid.adapters.exchanges.kraken",
     rest_class_name="KrakenExchangeRESTServiceAdapter",
