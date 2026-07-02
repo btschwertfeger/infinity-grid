@@ -81,9 +81,17 @@ jobs:
     if: success() && github.actor == 'btschwertfeger'
     needs: [Build]
     uses: ./.github/workflows/_test_acceptance.yaml
+    strategy:
+      fail-fast: true
+      # Serialized (one at a time) because the jobs share a single Kraken API
+      # key; concurrent requests would trigger nonce errors.
+      max-parallel: 1
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     with:
-      os: "ubuntu-latest"
-      python-version: "3.11"
+      os: ${{ matrix.os }}
+      python-version: ${{ matrix.python-version }}
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
