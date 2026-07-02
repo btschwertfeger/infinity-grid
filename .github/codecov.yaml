@@ -1,3 +1,13 @@
+##    Coverage is uploaded from two independent test jobs, each tagged with its
+##    own flag (unittests, acceptance). Carryforward lets Codecov reuse a flag's
+##    last-known coverage on commits where that flag is absent, so the reported
+##    total does not drop when a partition is skipped (e.g. the acceptance job on
+##    a fork PR or scheduled run).
+##
+flag_management:
+  default_rules:
+    carryforward: true
+
 coverage:
   ##    Status checks in PR
   ##

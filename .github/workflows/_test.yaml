@@ -4,7 +4,9 @@
 # All rights reserved.
 # https://github.com/btschwertfeger
 #
-# Template workflow to run the tests.
+# Template workflow to run the tests that do not require API keys and upload
+# their coverage to Codecov (flag: unittests). The API-key dependent acceptance
+# tests live in _test_acceptance.yaml.
 #
 
 name: Test
@@ -18,6 +20,9 @@ on:
       python-version:
         type: string
         required: true
+    secrets:
+      CODECOV_TOKEN:
+        required: false
 
 permissions:
   contents: read
@@ -26,6 +31,9 @@ jobs:
   Test:
     name: Test ${{ inputs.os }} ${{ inputs.python-version }}
     runs-on: ${{ inputs.os }}
+    env:
+      OS: ${{ inputs.os }}
+      PYTHON: ${{ inputs.python-version }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -68,4 +76,27 @@ jobs:
           uv pip install "$wheel" -r requirements-dev.txt
 
       - name: Run the tests
-        run: pytest -vv -x -n auto tests
+        run: pytest -vv -x -n auto -m "not acceptance" --cov=infinity_grid --cov-report=xml:coverage.xml tests
+
+      - name: Export coverage report
+        if: ${{ inputs.os == 'ubuntu-latest' && inputs.python-version == '3.11' }}
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: coverage-unittests
+          path: coverage.xml
+
+      - name: Upload coverage to Codecov
+        if: |
+          inputs.os == 'ubuntu-latest'
+          && inputs.python-version == '3.11'
+          && github.actor == 'btschwertfeger'
+          && github.event_name != 'schedule'
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+          env_vars: OS,PYTHON
+          fail_ci_if_error: true
+          flags: unittests
+          name: codecov-umbrella
+          verbose: true
