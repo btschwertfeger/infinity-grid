@@ -4,11 +4,13 @@
 # All rights reserved.
 # https://github.com/btschwertfeger
 #
-# Template workflow to build the project for a specific os and Python version,
-# run the tests and upload the results to codecov.
+# Template workflow to run the acceptance tests, which require live (read-only)
+# exchange API keys, and upload their coverage to Codecov (flag: acceptance).
+# Kept separate from _test.yaml so the API keys are only exposed to this single
+# job instead of every matrix cell.
 #
 
-name: CodeCov
+name: Test Acceptance
 
 on:
   workflow_call:
@@ -21,41 +23,43 @@ on:
         required: true
     secrets:
       CODECOV_TOKEN:
-        required: true
+        required: false
       INFINITY_GRID_API_PUBLIC_KEY:
-        required: true
+        required: false
       INFINITY_GRID_API_SECRET_KEY:
-        required: true
+        required: false
 
 permissions:
   contents: read
 
 jobs:
-  CodeCov:
-    name: Coverage
+  Test-Acceptance:
+    name: Acceptance ${{ inputs.os }} ${{ inputs.python-version }}
     runs-on: ${{ inputs.os }}
     timeout-minutes: 10
     env:
       OS: ${{ inputs.os }}
       PYTHON: ${{ inputs.python-version }}
-    environment:
-      name: codecov
-      url: https://app.codecov.io/github/btschwertfeger/infinity-grid/
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
           disable-sudo: true
-          egress-policy: audit
+          egress-policy: block
           allowed-endpoints: >
             api.codecov.io:443
-            api.kraken.com:443
             api.github.com:443
+            api.kraken.com:443
             cli.codecov.io:443
+            keybase.io:443
             files.pythonhosted.org:443
             github.com:443
+            ingest.codecov.io:443
             objects.githubusercontent.com:443
             pypi.org:443
+            raw.githubusercontent.com:443
+            release-assets.githubusercontent.com:443
+            releases.astral.sh:443
             storage.googleapis.com:443
             ws-auth.kraken.com:443
             ws.kraken.com:443
@@ -64,7 +68,7 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Set up Python ${{ inputs.python-version }}
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.0.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v5.3.0
         with:
           python-version: ${{ inputs.python-version }}
 
@@ -84,25 +88,27 @@ jobs:
           echo ${GITHUB_WORKSPACE}/.venv/bin >> $GITHUB_PATH
           uv pip install "$(find dist -name '*.whl' | head -1)" -r requirements-dev.txt
 
-      - name: Generate coverage report
+      - name: Run the acceptance tests
         env:
           INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
           INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
-        run: pytest -vv -x -n auto --cov=infinity_grid --cov-report=xml:coverage.xml tests
+        run: pytest -vv -x -n auto -m acceptance --cov=infinity_grid --cov-report=xml:coverage.xml tests
 
       - name: Export coverage report
+        if: ${{ inputs.os == 'ubuntu-latest' && inputs.python-version == '3.11' }}
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: coverage
+          name: coverage-acceptance
           path: coverage.xml
 
       - name: Upload coverage to Codecov
+        if: ${{ inputs.os == 'ubuntu-latest' && inputs.python-version == '3.11' }}
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
           env_vars: OS,PYTHON
-          fail_ci_if_error: false
-          flags: unittests
+          fail_ci_if_error: true
+          flags: acceptance
           name: codecov-umbrella
           verbose: true
