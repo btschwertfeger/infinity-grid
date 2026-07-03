@@ -46,7 +46,6 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-yaml
-        exclude: "helm/infinity-grid/templates/.*.yaml"
       - id: check-ast
       - id: check-json
       - id: check-toml
@@ -83,7 +82,6 @@ repos:
     rev: v3.8.1
     hooks:
       - id: prettier
-        exclude: "helm/infinity-grid/templates/.*.yaml"
   - repo: https://github.com/PyCQA/isort # TODO: remove as soon as ruff is stable
     rev: 8.0.1
     hooks:
@@ -101,8 +99,3 @@ repos:
       - id: dclint-docker
         files: (docker-)?compose\.ya?ml$
         # args: [--fix]
-  - repo: https://github.com/gruntwork-io/pre-commit
-    rev: v0.1.30
-    hooks:
-      - id: helmlint
-        args: [helm/infinity-grid]
