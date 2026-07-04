@@ -92,7 +92,10 @@ jobs:
         env:
           INFINITY_GRID_API_PUBLIC_KEY: ${{ secrets.INFINITY_GRID_API_PUBLIC_KEY }}
           INFINITY_GRID_API_SECRET_KEY: ${{ secrets.INFINITY_GRID_API_SECRET_KEY }}
-        run: pytest -vv -x -n auto -m acceptance --cov=infinity_grid --cov-report=xml:coverage.xml tests
+        run: >
+          pytest -vv -x -n auto -m acceptance --cov=infinity_grid
+          --cov-report=xml:coverage.xml --junitxml=junit-acceptance.xml
+          -o junit_family=legacy tests
 
       - name: Export coverage report
         if: ${{ inputs.os == 'ubuntu-latest' && inputs.python-version == '3.11' }}
@@ -110,5 +113,19 @@ jobs:
           env_vars: OS,PYTHON
           fail_ci_if_error: true
           flags: acceptance
+          report_type: coverage
+          name: codecov-umbrella
+          verbose: true
+
+      - name: Upload test results to Codecov
+        if: ${{ inputs.os == 'ubuntu-latest' && inputs.python-version == '3.11' }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: junit-acceptance.xml
+          env_vars: OS,PYTHON
+          fail_ci_if_error: true
+          flags: acceptance
+          report_type: test_results
           name: codecov-umbrella
           verbose: true
