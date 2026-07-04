@@ -76,7 +76,10 @@ jobs:
           uv pip install "$wheel" -r requirements-dev.txt
 
       - name: Run the tests
-        run: pytest -vv -x -n auto -m "not acceptance" --cov=infinity_grid --cov-report=xml:coverage.xml tests
+        run: >
+          pytest -vv -x -n auto -m "not acceptance" --cov=infinity_grid
+          --cov-report=xml:coverage.xml --junitxml=junit-unittests.xml
+          -o junit_family=legacy tests
 
       - name: Export coverage report
         if: ${{ inputs.os == 'ubuntu-latest' && inputs.python-version == '3.11' }}
@@ -98,5 +101,23 @@ jobs:
           env_vars: OS,PYTHON
           fail_ci_if_error: true
           flags: unittests
+          report_type: coverage
+          name: codecov-umbrella
+          verbose: true
+
+      - name: Upload test results to Codecov
+        if: |
+          inputs.os == 'ubuntu-latest'
+          && inputs.python-version == '3.11'
+          && github.actor == 'btschwertfeger'
+          && github.event_name != 'schedule'
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: junit-unittests.xml
+          env_vars: OS,PYTHON
+          fail_ci_if_error: true
+          flags: unittests
+          report_type: test_results
           name: codecov-umbrella
           verbose: true
