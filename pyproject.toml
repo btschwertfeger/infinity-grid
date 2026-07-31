@@ -236,6 +236,14 @@ fixable = ["ALL"]
 ignore = [
   "PLR2004", # magic value in comparison
   "PLR6301", # Method `…` could be a function or static method # false positive for no-self-use
+  # New preview rules in ruff 0.16. RUF105 and RUF201 want every suppression in
+  # the project rewritten onto `ruff: ignore` syntax that is itself still
+  # preview, so they stay off until it stabilizes.
+  "RUF105", # `noqa` comment used instead of `ruff: ignore`
+  "RUF201", # rule code used instead of name in selectors
+  # Flags 5 call sites, the largest being the 29-statement try in on_message.
+  # Narrowing those is a refactor of the trading path, not a lint fix.
+  "PLW0717", # try clause contains too many statements
 ]
 
 task-tags = ["todo", "TODO", "fixme", "FIXME"]

@@ -46,6 +46,9 @@ RUN --mount=type=bind,target=/context,source=/dist \
     --mount=type=cache,target=/root/.cache/pip,sharing=locked \
     python -m pip install --compile $(find /context -name "*.whl")["${EXTRAS}"]
 
+# The user is created via 'useradd -r', so its uid is assigned by the base image
+# at build time and cannot be referenced numerically here.
+# hadolint ignore=DL3066
 USER infinity-grid
 
 ENTRYPOINT ["infinity-grid", "run"]
