@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        uses: step-security/harden-runner@bf7454d06d71f1098171f2acdf0cd4708d7b5920 # v2.20.0
         with:
           disable-sudo: true
           egress-policy: block
@@ -38,7 +38,7 @@ jobs:
             registry-1.docker.io:443
 
       - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # IMPORTANT: otherwise the current tag does not get fetched and the build version gets worse
 
@@ -51,7 +51,7 @@ jobs:
       # ========================================================================
       # Login to Registries
       - name: Log in to GitHub Container registry
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -87,7 +87,7 @@ jobs:
       # ========================================================================
       # Build and test container image
       - name: Build and push container image
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: Dockerfile
@@ -103,7 +103,7 @@ jobs:
 
       # Check if multi-platform build works on other actors
       - name: Build container image
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: Dockerfile
@@ -124,7 +124,7 @@ jobs:
       # images directly after building them with push=false.
       # This build will benefit from the cache created earlier.
       - name: Build container image (just to load)
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: Dockerfile
