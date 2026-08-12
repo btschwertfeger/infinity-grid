@@ -203,3 +203,23 @@ class TestNotificationConfigDTO:
         config = NotificationConfigDTO(telegram=telegram_config)
 
         assert config.telegram.enabled is True
+        assert config.status_update_interval == 3600
+
+    def test_notification_config_custom_status_update_interval(self) -> None:
+        """Test NotificationConfigDTO with custom status update interval."""
+        config = NotificationConfigDTO(
+            telegram=TelegramConfigDTO(),
+            status_update_interval=7200,
+        )
+
+        assert config.status_update_interval == 7200
+
+    def test_notification_config_invalid_status_update_interval(self) -> None:
+        """Test NotificationConfigDTO rejects non-positive status update interval."""
+        with pytest.raises(ValidationError) as exc_info:
+            NotificationConfigDTO(
+                telegram=TelegramConfigDTO(),
+                status_update_interval=0,
+            )
+
+        assert "status_update_interval must be greater than 0" in str(exc_info.value)

@@ -70,7 +70,8 @@ higher price in the future.
 
 The infinity-grid trading bot can be configured to send notifications to a
 Telegram channel. Notifications about filled orders are sent immediately, while
-the bot sends a summary notification every hour.
+the bot sends a summary notification at a configurable interval (default: once
+per hour). Use ``--status-update-interval`` to change the frequency.
 
 An example notification of a trading bot is as follows, annotated
 with explanations about the different sections:
