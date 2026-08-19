@@ -265,7 +265,8 @@ naming convention.
     * - ``INFINITY_GRID_RUN_STATUS_UPDATE_INTERVAL``
       - ``int``
       - Interval in seconds between Telegram status update notifications
-        (default: 3600).
+        (default: 3600). Values of 6 seconds or less trigger a live REST call
+        and synchronous database work on every main-loop iteration.
     * - ``INFINITY_GRID_RUN_DB_USER``
       - ``str``
       - The PostgreSQL database user.

@@ -200,10 +200,12 @@ class TestNotificationConfigDTO:
     def test_notification_config(self) -> None:
         """Test NotificationConfigDTO with telegram config."""
         telegram_config = TelegramConfigDTO(token=TOKEN, chat_id=CHAT_ID)
-        config = NotificationConfigDTO(telegram=telegram_config)
+        config = NotificationConfigDTO(
+            telegram=telegram_config,
+            status_update_interval=3600,
+        )
 
         assert config.telegram.enabled is True
-        assert config.status_update_interval == 3600
 
     def test_notification_config_custom_status_update_interval(self) -> None:
         """Test NotificationConfigDTO with custom status update interval."""

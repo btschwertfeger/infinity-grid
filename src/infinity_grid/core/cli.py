@@ -435,7 +435,7 @@ def run(ctx: Context, **kwargs: dict[str, Any]) -> None:
             chat_id=kwargs.pop("telegram_chat_id", None),
             thread_id=kwargs.pop("telegram_thread_id", None),
         ),
-        status_update_interval=kwargs.pop("status_update_interval", 3600),
+        status_update_interval=kwargs.pop("status_update_interval"),
     )
     metrics_config = MetricsConfigDTO(
         enabled=kwargs.pop("metrics_enabled"),

@@ -149,7 +149,7 @@ class NotificationConfigDTO(BaseModel):
     """Pydantic model for notification service configuration."""
 
     telegram: TelegramConfigDTO
-    status_update_interval: int = 3600
+    status_update_interval: int
 
     @field_validator("status_update_interval")
     @classmethod

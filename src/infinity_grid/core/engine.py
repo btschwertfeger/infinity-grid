@@ -49,7 +49,6 @@ class BotEngine:
         self.__event_bus = EventBus()
         self.__state_machine = StateMachine()
         self.__config = bot_config
-        self.__notification_config = notification_config
 
         # == Infrastructure components =========================================
         ##
@@ -69,12 +68,14 @@ class BotEngine:
             )
 
         # Create the appropriate strategy based on config
-        self.__strategy = self.__strategy_factory()
+        self.__strategy = self.__strategy_factory(
+            notification_config.status_update_interval,
+        )
 
         # Setup event subscriptions
         self.__setup_event_handlers()
 
-    def __strategy_factory(self: Self) -> GridStrategyBase:
+    def __strategy_factory(self: Self, status_update_interval: int) -> GridStrategyBase:
         from infinity_grid.strategies import (  # pylint: disable=import-outside-toplevel # noqa: PLC0415
             CDCAStrategy,
             GridHODLStrategy,
@@ -97,7 +98,7 @@ class BotEngine:
             state_machine=self.__state_machine,
             event_bus=self.__event_bus,
             db=self.__db,
-            status_update_interval=self.__notification_config.status_update_interval,
+            status_update_interval=status_update_interval,
         )
 
     def __setup_event_handlers(self: Self) -> None:

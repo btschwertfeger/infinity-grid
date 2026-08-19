@@ -67,8 +67,7 @@ class GridStrategyBase:
         event_bus: EventBus,
         state_machine: StateMachine,
         db: DBConnect,
-        *,
-        status_update_interval: int = 3600,
+        status_update_interval: int,
     ) -> None:
         self._config: BotConfigDTO = config
         self._event_bus: EventBus = event_bus
@@ -98,6 +97,12 @@ class GridStrategyBase:
         # this only happens once per configured interval.
         self._last_status_update: datetime | None = None
         self._status_update_interval: int = status_update_interval
+        if self._status_update_interval <= 6:
+            LOG.warning(
+                "status_update_interval=%s is at or below the 6s main-loop sleep; "
+                "each status update performs a live REST call and synchronous DB work.",
+                self._status_update_interval,
+            )
 
         self._cost_decimals: int
         self._amount_per_grid_plus_fee: float
@@ -172,11 +177,11 @@ class GridStrategyBase:
         ):
             await self.__ws_client.subscribe(subscription)
 
+        status_update_delta = timedelta(seconds=self._status_update_interval)
         while True:
             try:
-                status_update_threshold = (now := datetime.now()) - timedelta(
-                    seconds=self._status_update_interval,
-                )
+                now = datetime.now()
+                status_update_threshold = now - status_update_delta
 
                 if self._state_machine.state == States.RUNNING and (
                     self._last_price_time
