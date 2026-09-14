@@ -51,8 +51,21 @@ class AssetPairInfoSchema(BaseModel):
     aclass_quote: str
     lot_decimals: int  #: Number of decimals for lot/base size, e.g. 8
     cost_decimals: int  #: Number of decimals for cost/quote, e.g. 5
-    #: Fees for maker orders, e.g. [[0, 0.25], [10000, 0.2], ...]
-    fees_maker: list[list[float]] = Field(..., description="Maker fees structure")
+
+
+class FeeScheduleTierSchema(BaseModel):
+    """Schema for a single tier of a fee schedule"""
+
+    maker_fee: float  #: Maker fee percentage for this tier, e.g. 0.4 (i.e. 0.4%)
+
+
+class FeeScheduleSchema(BaseModel):
+    """Schema for the fee schedule of a pair"""
+
+    pair: str  #: The pair this fee schedule applies to
+    #: Fee tiers ordered by ascending volume threshold; the first tier is the
+    #: base rate that applies without any trading volume.
+    tiers: list[FeeScheduleTierSchema] = Field(..., min_length=1)
 
 
 class OrderInfoSchema(BaseModel):

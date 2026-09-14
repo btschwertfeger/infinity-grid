@@ -64,6 +64,7 @@ from infinity_grid.models.exchange import (
     CreateOrderResponseSchema,
     ExchangeDomain,
     ExecutionsUpdateSchema,
+    FeeScheduleSchema,
     OnMessageSchema,
     OrderInfoSchema,
     PairBalanceSchema,
@@ -473,6 +474,22 @@ class KrakenExchangeRESTServiceAdapter(IExchangeRESTService):
                 " Please check the pair name and try again.",
             )
         return AssetPairInfoSchema(**pair_info[next(iter(pair_info))])
+
+    @lru_cache(maxsize=1)  # noqa: B019
+    def get_fee_schedule(self: Self) -> FeeScheduleSchema:
+        """Get the fee schedule for the current trading pair."""
+        if not (
+            schedules := self.__user_service.get_trade_volume(
+                pair=self.ws_symbol,
+                fee_schedule=True,
+            ).get("schedules")
+        ):
+            self.__state_machine.transition_to(States.ERROR)
+            raise BotStateError(
+                f"Could not get fee schedule for {self.rest_symbol}."
+                " Please check the pair name and try again.",
+            )
+        return FeeScheduleSchema(**schedules[0])
 
     @lru_cache(maxsize=1)  # noqa: B019
     def get_exchange_domain(self) -> ExchangeDomain:

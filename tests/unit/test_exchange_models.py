@@ -21,6 +21,7 @@ from infinity_grid.models.exchange import (
     CreateOrderResponseSchema,
     ExchangeDomain,
     ExecutionsUpdateSchema,
+    FeeScheduleSchema,
     OnMessageSchema,
     OrderInfoSchema,
     PairBalanceSchema,
@@ -63,7 +64,6 @@ class TestAssetPairInfoSchema:
             quote="ZUSD",
             cost_decimals=5,
             lot_decimals=8,
-            fees_maker=[[0, 0.25], [10000, 0.2]],
             aclass_base="currency",
             aclass_quote="currency",
         )
@@ -71,18 +71,23 @@ class TestAssetPairInfoSchema:
         assert pair_info.quote == "ZUSD"
         assert pair_info.cost_decimals == 5
 
-    def test_empty_fees_maker(self) -> None:
-        """Test that empty fees_maker list is valid"""
-        pair_info = AssetPairInfoSchema(
-            base="ETH",
-            quote="USD",
-            cost_decimals=2,
-            lot_decimals=8,
-            fees_maker=[],
-            aclass_base="currency",
-            aclass_quote="currency",
+
+class TestFeeScheduleSchema:
+    """Test cases for FeeScheduleSchema model"""
+
+    def test_valid_fee_schedule(self) -> None:
+        """Test creating a valid FeeScheduleSchema instance"""
+        fee_schedule = FeeScheduleSchema(
+            pair="XXBTZUSD",
+            tiers=[{"maker_fee": 0.4}, {"maker_fee": 0.3}],
         )
-        assert pair_info.fees_maker == []
+        assert fee_schedule.pair == "XXBTZUSD"
+        assert fee_schedule.tiers[0].maker_fee == 0.4
+
+    def test_empty_tiers_invalid(self) -> None:
+        """Test that an empty tiers list is rejected"""
+        with pytest.raises(ValidationError):
+            FeeScheduleSchema(pair="XXBTZUSD", tiers=[])
 
 
 class TestOrderInfoSchema:
