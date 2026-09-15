@@ -477,7 +477,7 @@ GRIDSELL_UNFILLED_SURPLUS_AAPLXUSD_EXPECTATIONS = GridSellUnfilledSurplusTestDat
         order_price=257.42,
         n_open_orders=5,
         expected_sell_price=262.6,
-        expected_sell_volume=0.38065504,
+        expected_sell_volume=0.38272091,
     ),
 )
 

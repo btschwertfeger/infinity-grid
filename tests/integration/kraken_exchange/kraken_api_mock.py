@@ -311,6 +311,42 @@ class KrakenMockAPI(Market, Trade, User, MockExchangeAPI):
         """Get the user's current balances."""
         return deepcopy(self.__balances)
 
+    def get_asset_pairs(self: Self, **kwargs: Any) -> dict:  # noqa: ARG002
+        """Get static asset pair information instead of hitting the live API."""
+        # self.__base_currency carries the '.T' suffix used for balance dict
+        # keys (see __init__); the real AssetPairs response has no such
+        # suffix, the adapter appends it itself for tokenized assets.
+        base = self.__base_currency.removesuffix(".T")
+        asset_class = "tokenized_asset" if base.endswith("x") else "currency"
+        return {
+            self.__pair: {
+                "base": base,
+                "quote": self.__quote_currency,
+                "aclass_base": asset_class,
+                "aclass_quote": "currency",
+                "lot_decimals": self.base_decimal_places,
+                "cost_decimals": self.cost_decimal_places,
+            },
+        }
+
+    def get_trade_volume(self: Self, **kwargs: Any) -> dict:  # noqa: ARG002
+        """Get a static fee schedule instead of hitting the live API."""
+        return {
+            "currency": self.__quote_currency,
+            "volume": "0.0000",
+            "schedules": [
+                {
+                    "pair": self.__pair,
+                    "tiers": [
+                        {
+                            "maker_fee": self.__fee * 100,
+                            "taker_fee": self.__fee * 100,
+                        },
+                    ],
+                },
+            ],
+        }
+
     @lru_cache(maxsize=1024)  # noqa: B019
     def truncate_cost(self: Self, value: float | Decimal) -> str:
         return f"{Decimal(value):.{self.cost_decimal_places}f}"

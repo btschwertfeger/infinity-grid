@@ -22,6 +22,7 @@ from infinity_grid.models.exchange import (
     AssetPairInfoSchema,
     CreateOrderResponseSchema,
     ExchangeDomain,
+    FeeScheduleSchema,
     OnMessageSchema,
     OrderInfoSchema,
     PairBalanceSchema,
@@ -319,6 +320,13 @@ class IExchangeRESTService(ABC):
     @abstractmethod
     def get_asset_pair_info(self: Self) -> AssetPairInfoSchema:
         """Get available asset pair info from the exchange."""
+        raise NotImplementedError(
+            "This method must be implemented in the concrete exchange class.",
+        )
+
+    @abstractmethod
+    def get_fee_schedule(self: Self) -> FeeScheduleSchema:
+        """Get the fee schedule for the current trading pair."""
         raise NotImplementedError(
             "This method must be implemented in the concrete exchange class.",
         )

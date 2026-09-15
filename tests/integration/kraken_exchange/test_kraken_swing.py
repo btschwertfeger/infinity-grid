@@ -162,7 +162,7 @@ SWING_AAPLXUSD_EXPECTATIONS = SWINGTestData(
             0.39629071,
             0.40025616,
             0.40426908,
-            0.37689471,
+            0.37894017,
         ),
         sides=("buy", "buy", "buy", "buy", "buy", "sell"),
     ),
@@ -179,10 +179,10 @@ SWING_AAPLXUSD_EXPECTATIONS = SWINGTestData(
         volumes=(
             0.40025616,
             0.40426908,
-            0.37689471,
-            0.38447638,
-            0.38832996,
-            0.39221539,
+            0.37894017,
+            0.38656299,
+            0.39043748,
+            0.394344,
         ),
         sides=("buy", "buy", "sell", "sell", "sell", "sell"),
     ),
@@ -202,10 +202,10 @@ SWING_AAPLXUSD_EXPECTATIONS = SWINGTestData(
         volumes=(
             0.40025616,
             0.40426908,
-            0.37689471,
-            0.38447638,
-            0.38832996,
-            0.39221539,
+            0.37894017,
+            0.38656299,
+            0.39043748,
+            0.394344,
             0.40831325,
             0.41240514,
             0.41654517,
@@ -237,9 +237,9 @@ SWING_AAPLXUSD_EXPECTATIONS = SWINGTestData(
         volumes=(
             0.40025616,
             0.40426908,
-            0.37689471,
-            0.38447638,
-            0.38832996,
+            0.37894017,
+            0.38656299,
+            0.39043748,
             0.40831325,
             0.41240514,
             0.41654517,
@@ -369,13 +369,13 @@ SWING_UNFILLED_SURPLUS_AAPLXUSD_EXPECTATIONS = SWINGUnfilledSurplusTestData(
             0.39629071,
             0.40025616,
             0.40426908,
-            0.37689471,
+            0.37894017,
         ),
         sides=("buy", "buy", "buy", "buy", "buy", "sell"),
     ),
     initial_balances=BalanceExpectation(
-        expected_base_balance=99.62310529,  # Adjusted for initial sell order
-        expected_base_hold=0.37689471,
+        expected_base_balance=99.62105983,  # Adjusted for initial sell order
+        expected_base_hold=0.37894017,
         expected_quote_balance=999_499.995,
         expected_quote_hold=499.99990071522,
     ),
@@ -387,8 +387,8 @@ SWING_UNFILLED_SURPLUS_AAPLXUSD_EXPECTATIONS = SWINGUnfilledSurplusTestData(
         vol_of_unfilled_remaining_max_price=257.42,
     ),
     partial_fill_balances=BalanceExpectation(
-        expected_base_balance=99.92310529,  # Adjusted for SWING initial sell order
-        expected_base_hold=0.37689471,
+        expected_base_balance=99.92105983,  # Adjusted for SWING initial sell order
+        expected_base_hold=0.37894017,
         expected_quote_balance=999_422.769,
         expected_quote_hold=422.7740107152,
     ),
@@ -396,7 +396,7 @@ SWING_UNFILLED_SURPLUS_AAPLXUSD_EXPECTATIONS = SWINGUnfilledSurplusTestData(
         order_price=257.42,
         n_open_orders=6,
         expected_sell_price=262.6,
-        expected_sell_volume=0.38065504,
+        expected_sell_volume=0.38272091,
     ),
     check_max_investment_reached=MaxInvestmentExpectation(
         current_price=257.42,
