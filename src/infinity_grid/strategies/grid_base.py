@@ -377,7 +377,7 @@ class GridStrategyBase:
             # This is the case if the '--fee' parameter was not passed, then we
             # take the highest maker fee.
             fee_schedule = self._rest_api.get_fee_schedule()
-            self._config.fee = fee_schedule.tiers[0].maker_fee / 100
+            self._config.fee = max(tier.maker_fee for tier in fee_schedule.tiers) / 100
 
         self._cost_decimals = pair_info.cost_decimals
         self._amount_per_grid_plus_fee = self._config.amount_per_grid * (
