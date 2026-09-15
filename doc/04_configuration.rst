@@ -104,15 +104,17 @@ open buy orders.
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 Lastly, exchanges charge fees. The fee is usually a percentage of the traded
-amount. If the fee is not set during program start, the highest taker fee for
-that currency pair is assumed which doesn't mean that the highest fee is paid.
-It is used internally to calculate order sizes, prices, and ensures that profits
-are calculated correctly.
+amount. If the fee is not set during program start, the bot assumes the
+highest maker fee tier for that currency pair, which doesn't mean that the
+highest fee is actually paid. It is used internally to calculate order sizes,
+prices, and ensures that profits are calculated correctly.
 
-Setting a custom fee via the ``--fee`` or ``INFINITY_GRID_RUN_FEE`` option
-enables, depending on the strategy, a more accurate profit calculation. For the
-average user, this is not necessary. For more information about the fees, check
-the fee schedule of the respective exchange.
+This assumption can be suboptimal, e.g. for accounts that qualify for a lower
+volume tier, or for pairs with a fee schedule that doesn't decrease with
+volume. Setting a custom fee via the ``--fee`` or ``INFINITY_GRID_RUN_FEE``
+option is recommended to get a more accurate profit calculation. For more
+information about the fees, check the fee schedule of the respective
+exchange.
 
 .. NOTE:: The fee is always paid in the quote currency.
 
