@@ -37,6 +37,7 @@ class TestCDCAStrategy:
                 event_bus=mock_dependencies["event_bus"],
                 state_machine=mock_dependencies["state_machine"],
                 db=mock_dependencies["db"],
+                status_update_interval=3600,
             )
 
             # Mock the configuration table

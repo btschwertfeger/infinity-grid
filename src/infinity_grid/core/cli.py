@@ -377,6 +377,14 @@ def cli(ctx: Context, **kwargs: dict) -> None:
         type=STRING,
         help="The telegram thread ID to use.",
     ),
+    option(
+        "--status-update-interval",
+        type=INT,
+        default=3600,
+        show_default=True,
+        callback=ensure_larger_than_zero,
+        help="Interval in seconds between Telegram status update notifications.",
+    ),
 )
 @option_group(
     "Metrics Server Options",
@@ -427,6 +435,7 @@ def run(ctx: Context, **kwargs: dict[str, Any]) -> None:
             chat_id=kwargs.pop("telegram_chat_id", None),
             thread_id=kwargs.pop("telegram_thread_id", None),
         ),
+        status_update_interval=kwargs.pop("status_update_interval"),
     )
     metrics_config = MetricsConfigDTO(
         enabled=kwargs.pop("metrics_enabled"),

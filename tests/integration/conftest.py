@@ -21,7 +21,10 @@ from .framework.base_test_manager import BaseIntegrationTestManager, ExchangeTes
 
 @pytest.fixture(scope="session")
 def notification_config() -> NotificationConfigDTO:
-    return NotificationConfigDTO(telegram=TelegramConfigDTO(token=None, chat_id=None))
+    return NotificationConfigDTO(
+        telegram=TelegramConfigDTO(token=None, chat_id=None),
+        status_update_interval=3600,
+    )
 
 
 @pytest.fixture
