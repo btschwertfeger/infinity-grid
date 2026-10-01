@@ -32,6 +32,7 @@ class TestNotificationService:
         """Test initialization with disabled telegram config"""
         config = NotificationConfigDTO(
             telegram=TelegramConfigDTO(token=None, chat_id=None),
+            status_update_interval=3600,
         )
         service = NotificationService(config)
 
@@ -45,6 +46,7 @@ class TestNotificationService:
         """Test initialization with enabled telegram config"""
         config = NotificationConfigDTO(
             telegram=TelegramConfigDTO(token=TOKEN, chat_id=CHAT_ID),
+            status_update_interval=3600,
         )
         _ = NotificationService(config)
 
@@ -55,6 +57,7 @@ class TestNotificationService:
         """Test adding a notification channel"""
         config = NotificationConfigDTO(
             telegram=TelegramConfigDTO(token=None, chat_id=None),
+            status_update_interval=3600,
         )
         service = NotificationService(config)
 
@@ -75,6 +78,7 @@ class TestNotificationService:
         """Test adding telegram channel via convenience method"""
         config = NotificationConfigDTO(
             telegram=TelegramConfigDTO(token=None, chat_id=None),
+            status_update_interval=3600,
         )
         service = NotificationService(config)
 
@@ -86,6 +90,7 @@ class TestNotificationService:
         """Test notification when no channels are configured"""
         config = NotificationConfigDTO(
             telegram=TelegramConfigDTO(token=None, chat_id=None),
+            status_update_interval=3600,
         )
         service = NotificationService(config)
 
@@ -97,6 +102,7 @@ class TestNotificationService:
         """Test notification with single successful channel"""
         config = NotificationConfigDTO(
             telegram=TelegramConfigDTO(token=None, chat_id=None),
+            status_update_interval=3600,
         )
         service = NotificationService(config)
 
@@ -113,6 +119,7 @@ class TestNotificationService:
         """Test notification with single failing channel"""
         config = NotificationConfigDTO(
             telegram=TelegramConfigDTO(token=None, chat_id=None),
+            status_update_interval=3600,
         )
         service = NotificationService(config)
 
@@ -129,6 +136,7 @@ class TestNotificationService:
         """Test notification with multiple channels having mixed success/failure"""
         config = NotificationConfigDTO(
             telegram=TelegramConfigDTO(token=None, chat_id=None),
+            status_update_interval=3600,
         )
         service = NotificationService(config)
 
@@ -153,6 +161,7 @@ class TestNotificationService:
         """Test notification when all channels fail"""
         config = NotificationConfigDTO(
             telegram=TelegramConfigDTO(token=None, chat_id=None),
+            status_update_interval=3600,
         )
         service = NotificationService(config)
 
@@ -176,6 +185,7 @@ class TestNotificationService:
         """Test that notify logs the message being sent"""
         config = NotificationConfigDTO(
             telegram=TelegramConfigDTO(token=None, chat_id=None),
+            status_update_interval=3600,
         )
         service = NotificationService(config)
 
@@ -194,6 +204,7 @@ class TestNotificationService:
         """Test on_notification event handler"""
         config = NotificationConfigDTO(
             telegram=TelegramConfigDTO(token=None, chat_id=None),
+            status_update_interval=3600,
         )
         service = NotificationService(config)
 
@@ -211,6 +222,7 @@ class TestNotificationService:
         """Test on_notification with missing message key"""
         config = NotificationConfigDTO(
             telegram=TelegramConfigDTO(token=None, chat_id=None),
+            status_update_interval=3600,
         )
         service = NotificationService(config)
 
@@ -232,6 +244,7 @@ class TestNotificationService:
 
         config = NotificationConfigDTO(
             telegram=TelegramConfigDTO(token=TOKEN, chat_id=CHAT_ID),
+            status_update_interval=3600,
         )
 
         # This should trigger _setup_channels_from_config in __init__
@@ -243,6 +256,7 @@ class TestNotificationService:
         """Test that _setup_channels_from_config doesn't create channels when disabled"""
         config = NotificationConfigDTO(
             telegram=TelegramConfigDTO(token=None, chat_id=None),
+            status_update_interval=3600,
         )
 
         service = NotificationService(config)

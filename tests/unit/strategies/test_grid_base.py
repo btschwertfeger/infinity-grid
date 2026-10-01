@@ -55,6 +55,7 @@ class TestGridBaseBuyOrderPrice:
                 event_bus=mock_dependencies["event_bus"],
                 state_machine=mock_dependencies["state_machine"],
                 db=mock_dependencies["db"],
+                status_update_interval=3600,
             )
 
             strategy._configuration_table = Mock()
@@ -118,6 +119,7 @@ class TestGridBaseBuyOrderPrice:
                     event_bus=mock_dependencies["event_bus"],
                     state_machine=mock_dependencies["state_machine"],
                     db=mock_dependencies["db"],
+                status_update_interval=3600,
                 )
                 strategy._configuration_table = Mock()
                 strategy._ticker = 50000.0
@@ -162,6 +164,7 @@ class TestGridBaseSellOrderPrice:
                 event_bus=mock_dependencies["event_bus"],
                 state_machine=mock_dependencies["state_machine"],
                 db=mock_dependencies["db"],
+                status_update_interval=3600,
             )
 
             strategy._configuration_table = Mock()
@@ -224,6 +227,7 @@ class TestGridBaseSellOrderPrice:
                     event_bus=mock_dependencies["event_bus"],
                     state_machine=mock_dependencies["state_machine"],
                     db=mock_dependencies["db"],
+                status_update_interval=3600,
                 )
                 strategy._configuration_table = Mock()
                 strategy._configuration_table.get.return_value = {
