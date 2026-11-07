@@ -5,7 +5,7 @@
 # https://github.com/btschwertfeger
 #
 
-FROM python:3.15-slim-bookworm
+FROM python:3.15-slim-trixie
 
 ARG EXTRAS="kraken"
 ARG VERSION
